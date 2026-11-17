@@ -8,6 +8,7 @@ Ein CLI-Werkzeug, das aus lokalen Dokumenten mit KI überprüfbare Karteikarten 
 - [AGENTS.md](./AGENTS.md) enthält die verbindlichen Regeln für Architektur, Never Nesting, Docstrings, Konfiguration, Tests und kleine Commits.
 - Diese README beschreibt kompakt die **aktuell implementierte** Bedienung.
 - [docs/benutzerhandbuch.html](./docs/benutzerhandbuch.html) ist das ausführliche Benutzerhandbuch mit einfachen Erklärungen, allen Befehlen und Optionen, Suchfunktion und kopierbaren Beispielen. Öffne die Datei direkt in einem Browser; kein Server ist erforderlich.
+- [docs/entwicklerhandbuch.html](./docs/entwicklerhandbuch.html) ist das Entwicklerhandbuch: Architektur, alle Module und Funktionen, ein Ablaufdiagramm vom Befehl bis zum APKG, Konfigurationsauflösung, Teststrategie, Erweiterungsrezepte sowie geprüfte Randfälle. Ebenfalls ohne Server im Browser nutzbar.
 
 Der erste MVP ist funktionsfähig. Never Nesting, kleine fachliche Einheiten und vollständige Funktions-/Klassendokumentation sind im Bestand umgesetzt und durch Ruff abgesichert. Die zentrale YAML-Konfiguration ist einschließlich Modellprofilen, Prioritäten, Pfaden und Diagnose vollständig in die CLI integriert. Native PDF-Verarbeitung ist für ausdrücklich freigegebene OpenAI-Modelle implementiert; lokale Extraktion bleibt Standard. Web-UI und Proxmox-/Container-Deployment sind weiterhin spätere Ausbaustufen.
 
@@ -249,7 +250,7 @@ Dokument → Textextraktion → Chunks → LiteLLM → validierte Karten
 - `apkg.py`: Erstellung, Erweiterung und Inspektion von Anki-Paketen
 - `cli.py`: ausschließlich Kommandozeilen-Workflow und Darstellung
 
-Die Kernfunktionen akzeptieren normale Python-Objekte und sind deshalb ohne CLI aufrufbar. Eine spätere FastAPI-/Web-Schicht muss weder PDF-Verarbeitung noch Anki-Logik duplizieren.
+Diagramme und Einzelheiten zu jedem Modul stehen im [Entwicklerhandbuch](./docs/entwicklerhandbuch.html). Die Kernfunktionen akzeptieren normale Python-Objekte und sind deshalb ohne CLI aufrufbar. Eine spätere FastAPI-/Web-Schicht muss weder PDF-Verarbeitung noch Anki-Logik duplizieren.
 
 ## Qualität und Tests
 

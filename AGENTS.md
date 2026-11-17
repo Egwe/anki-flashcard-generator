@@ -7,6 +7,7 @@ Diese Regeln gelten für das gesamte Repository und für menschliche wie automat
 - [requirements.md](./requirements.md) ist die verbindliche, konsolidierte Fach- und Technikspezifikation.
 - [req.md](./req.md), [req-2.md](./req-2.md) und [req-3.md](./req-3.md) sind die unveränderten Originalvorgaben.
 - [README.md](./README.md) beschreibt den aktuell nutzbaren Stand und konkrete Bedienung.
+- [docs/entwicklerhandbuch.html](./docs/entwicklerhandbuch.html) erklärt Architektur, Module, Abläufe, Datenformate, Test-Nahtstellen und Erweiterungspunkte des aktuellen Codes.
 - Diese Datei beschreibt **wie** gearbeitet wird, nicht den behaupteten Implementierungsstand.
 
 Bei Konflikten zwischen bereits implementiertem Verhalten und den Anforderungen wird das Verhalten nicht stillschweigend geändert: Zuerst Anforderung, Auswirkung und gewünschten Status klären, dann Code, Tests und Dokumentation gemeinsam aktualisieren. Neue Anforderungen sind „offen“, bis sie implementiert und validiert sind.
@@ -175,6 +176,7 @@ Reine Markdown-Änderungen benötigen keine Python-Tests. Git-Diff und Dokumenta
 - [docs/benutzerhandbuch.html](./docs/benutzerhandbuch.html) ist das ausführliche, benutzerfreundliche Referenzhandbuch für alle Befehle, Argumente, Optionen und typischen Anwendungsfälle. Es bleibt ohne Build-Schritt direkt im Browser nutzbar.
 - **Bei jeder Änderung des Benutzerverhaltens müssen README und docs/benutzerhandbuch.html im selben Anforderungspaket angepasst werden.** Das gilt insbesondere für neue oder geänderte Befehle, Argumente, Optionen, Defaults, Pfade, Provider-Fähigkeiten, Konfiguration, Fehlerverhalten und künftige GUI-Funktionen. Neue GUI-Bereiche benötigen dort eine eigene verständliche Bedienungsanleitung.
 - Vor dem Abschluss einer solchen Änderung muss das HTML-Handbuch gegen die tatsächliche CLI-Hilfe beziehungsweise die tatsächliche GUI geprüft werden. Suchfunktion, Links, aufklappbare Bereiche und Kopierfunktionen müssen weiterhin funktionieren; das Handbuch darf keine externen Ressourcen voraussetzen.
+- [docs/entwicklerhandbuch.html](./docs/entwicklerhandbuch.html) ist das technische Gegenstück für Mitwirkende. **Bei Änderungen an Modulen, öffentlichen Funktionen, Abläufen, Datenformaten, Fehlerbehandlung, Test-Nahtstellen oder Erweiterungspunkten wird es im selben Anforderungspaket angepasst**, einschließlich betroffener Diagramme. Behobene Einträge unter „Randfälle und bekannte Abweichungen“ werden dort entfernt. Für Suche, Modulfilter, Links, Kopierfunktionen und den Verzicht auf externe Ressourcen gelten dieselben Regeln wie für das Benutzerhandbuch.
 - CLI-Hilfe wird aus den echten Optionen erzeugt und erklärt Pflichtparameter, Kurz-/Langformen, Defaults, Wertebereiche, Beispiele und Dateibehandlung.
 - requirements.md erhält stabile Requirement-IDs und einen ehrlichen Status; Originalanforderungen werden nicht überschrieben.
 - Keine zusätzlichen Planungs- oder Notizdateien anlegen, wenn die Information in requirements.md, README.md oder dieser Datei gehört.
