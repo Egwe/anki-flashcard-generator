@@ -100,6 +100,10 @@ def test_missing_explicit_file_is_an_error(tmp_path: Path) -> None:
             {"models": {"test": {"model": "openai/test", "options": {"api_key": "bad"}}}},
             "reserved or may expose a secret",
         ),
+        (
+            {"models": {"test": {"model": "openai/test", "options": {"access_token": "bad"}}}},
+            "reserved or may expose a secret",
+        ),
     ],
 )
 def test_invalid_schema_and_secrets_are_rejected(payload: object, match: str) -> None:
@@ -229,7 +233,7 @@ def test_example_configuration_is_valid_and_covers_required_providers() -> None:
 
     assert config.default_profile == "ollama-local"
     providers = {profile.model.split("/", 1)[0] for profile in config.models.values()}
-    assert {"ollama", "openai", "anthropic", "gemini", "moonshot"} <= providers
+    assert {"ollama_chat", "openai", "anthropic", "gemini", "moonshot"} <= providers
     assert config.models["ollama-local"].pdf_mode == PDFMode.LOCAL
     assert config.models["openai-native-pdf"].pdf_mode == PDFMode.NATIVE
     assert config.generation.pdf_mode == PDFMode.LOCAL

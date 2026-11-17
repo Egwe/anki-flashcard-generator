@@ -137,11 +137,11 @@ Die Hilfe funktioniert auch mit `-h` und enthält Beispiele, Pflicht- und option
 
 ## Zentrale YAML-Konfiguration
 
-[config.example.yaml](./config.example.yaml) enthält sichere, direkt aktivierbare Modellbausteine für Ollama, OpenAI, Anthropic, Gemini und Moonshot. Der Service in `config.py` lädt versionierte YAML-Dateien, validiert unbekannte Felder und Werte strikt, löst Modellprofile auf und speichert Änderungen atomar. API-Schlüssel werden nicht gespeichert; `api_key_env` enthält ausschließlich den Namen der zugehörigen Umgebungsvariablen.
+[config.example.yaml](./config.example.yaml) enthält sichere, direkt aktivierbare Modellbausteine für Ollama, OpenAI, Anthropic, Gemini und Moonshot. [.env.example](./.env.example) enthält die zugehörigen Credential-Platzhalter und die Links zu den Token-Verwaltungsseiten der Anbieter. Der Service in `config.py` lädt versionierte YAML-Dateien, validiert unbekannte Felder und Werte strikt, löst Modellprofile auf und speichert Änderungen atomar. API-Schlüssel werden nicht gespeichert; `api_key_env` enthält ausschließlich den Namen der zugehörigen Umgebungsvariablen.
 
 Die Konfiguration wird mit `--config PFAD` oder `ANKI_CONFIG=PFAD` ausgewählt. Ohne Angabe wird eine optionale `config.yaml` im aktuellen Arbeitsverzeichnis gelesen; ohne diese Datei gelten die bisherigen Defaults und Workflows unverändert. Eine ausdrücklich angegebene fehlende Datei ist ein Fehler.
 
-Die Priorität ist **eingebauter Default → YAML/Profil → Umgebung/`.env` → ausdrücklicher CLI-Wert**. `--model` und `ANKI_MODEL` überschreiben das Profilmodell; `--extend/--no-extend` überschreibt YAML in beiden Richtungen. Auch `--limit 0` und eine leere `--instructions ''` gelten als explizite CLI-Werte.
+Die Priorität ist **eingebauter Default → YAML/Profil → ausdrücklicher CLI-Wert**. `--model` überschreibt das Profilmodell; `--extend/--no-extend` überschreibt YAML in beiden Richtungen. Auch `--limit 0` und eine leere `--instructions ''` gelten als explizite CLI-Werte. `.env` ist ausschließlich für Zugangsdaten vorgesehen und überschreibt keine Modelle oder Endpunkte. Die alten Variablen `ANKI_MODEL` und `LLM_API_BASE` werden nicht ausgewertet.
 
 Relative `input_dir`- und `output_dir`-Pfade werden relativ zur YAML-Datei aufgelöst. Ein reiner Eingabedateiname wird unter `input_dir` gesucht; ausdrückliche relative CLI-Pfade bleiben relativ zum aktuellen Arbeitsverzeichnis. Ohne `--output` wird `<eingabedateiname>.apkg` unter `output_dir` angelegt. `generation.deck` kann auch für `export` den Decknamen vorgeben.
 
@@ -154,36 +154,39 @@ anki-flashcards export biologie.cards.json --config config.yaml
 anki-flashcards config show skript.pdf --config config.yaml --output output/deck.apkg
 ```
 
-`config show` gibt die effektiven Werte und ihre Herkunft (`built-in`, `config`, `environment`, `cli`) als JSON aus. API-Schlüssel werden ausschließlich als `set (hidden)` beziehungsweise `not set` dargestellt, niemals mit ihrem Wert. `--profile NAME` wählt ein bestimmtes YAML-Profil.
+`config show` gibt die effektiven Werte und ihre Herkunft (`built-in`, `config`, `cli`) als JSON aus. API-Schlüssel werden ausschließlich als `set (hidden)` beziehungsweise `not set` dargestellt, niemals mit ihrem Wert. `--profile NAME` wählt ein bestimmtes YAML-Profil.
 
-## KI-Provider konfigurieren
+## KI-Provider und Zugangsdaten vorbereiten
 
-Das Modell wird als `provider/modell` angegeben und entweder über `--model` oder `ANKI_MODEL` gesetzt. Schlüssel stehen in einer lokalen `.env` oder in der Umgebung; sie werden nicht in das APKG oder die JSON-Datei geschrieben.
+Die YAML-Datei ist die Hauptkonfiguration für Modell, Endpunkt, Timeout, PDF-Modus und Provider-Optionen. `.env` enthält nur geheime Zugangsdaten. Diese Trennung verhindert, dass ein alter Modellname aus `.env` unbemerkt das YAML-Profil überschreibt.
 
-```bash
-cp .env.example .env
-```
+1. Kopiere beide Beispieldateien:
 
-Beispiele:
+   ```bash
+   cp config.example.yaml config.yaml
+   cp .env.example .env
+   ```
 
-| Anbieter | `ANKI_MODEL` | Umgebungsvariable |
-| --- | --- | --- |
-| Ollama | `ollama/llama3.2` | kein Schlüssel nötig |
-| OpenAI | `openai/gpt-4o-mini` | `OPENAI_API_KEY` |
-| Anthropic | `anthropic/claude-sonnet-4-5` | `ANTHROPIC_API_KEY` |
-| Google Gemini | `gemini/gemini-2.5-flash` | `GEMINI_API_KEY` |
-| Moonshot | `moonshot/kimi-k2-0711-preview` | `MOONSHOT_API_KEY` |
+2. Wähle in `config.yaml` ein Profil mit `default_profile`. Passe `model` und `api_base` an. Für Ollama muss das Modell bereits auf dem Server installiert sein. Cloud-Modelle benötigen ein Konto und einen API-Token des jeweiligen Anbieters.
+3. Trage in `.env` nur den benötigten Token ein. Der Profilschlüssel `api_key_env` verweist auf den Namen dieser Variablen, nicht auf ihren Wert.
+4. Prüfe die effektive Konfiguration vor dem ersten Lauf:
 
-Die verfügbaren Modellnamen ändern sich unabhängig von diesem Projekt. Maßgeblich sind die Modelllisten des jeweiligen Anbieters und die [LiteLLM-Provider-Dokumentation](https://docs.litellm.ai/docs/providers).
+   ```bash
+   anki-flashcards config show dokument.pdf --config config.yaml
+   ```
 
-Für einen kompatiblen eigenen Endpunkt können zusätzlich gesetzt werden:
+Die Beispieldateien enthalten bereits Standardendpunkte, Profilfelder und kommentierte Optionen:
 
-```dotenv
-LLM_API_BASE=http://localhost:11434
-LLM_API_KEY=optionaler-schluessel
-```
+| Anbieter | Beispielmodell in YAML | Standardendpunkt | Credential in `.env` |
+| --- | --- | --- | --- |
+| Ollama | `ollama_chat/qwen3.6:27b` | `http://localhost:11434` | normalerweise keiner |
+| OpenAI | `openai/gpt-4o-mini` | `https://api.openai.com/v1` | `OPENAI_API_KEY` |
+| Anthropic | `anthropic/claude-sonnet-4-5` | `https://api.anthropic.com` | `ANTHROPIC_API_KEY` |
+| Google Gemini | `gemini/gemini-2.5-flash` | `https://generativelanguage.googleapis.com` | `GEMINI_API_KEY` |
+| Moonshot | `moonshot/moonshot-v1-8k` | `https://api.moonshot.ai/v1` | `MOONSHOT_API_KEY` |
+| Eigener kompatibler Server | `openai/dein-modellname` | `http://localhost:8000/v1` | `CUSTOM_LLM_API_KEY` |
 
-Alternativ ist `--api-base` verfügbar. Anfragen verwenden strukturierte JSON-Ausgaben, zwei Wiederholversuche und einen konfigurierbaren Timeout. Die Antwort wird mit Pydantic validiert.
+`--model`, `--profile` und `--api-base` überschreiben die YAML-Werte für den aktuellen Aufruf. Die verfügbaren Modellnamen und unterstützten Optionen können sich ändern. Maßgeblich sind die Modelllisten des Anbieters und die [LiteLLM-Provider-Dokumentation](https://docs.litellm.ai/docs/providers). Anfragen verwenden strukturierte JSON-Ausgaben, zwei Wiederholversuche und einen konfigurierbaren Timeout. Die Antwort wird mit Pydantic validiert.
 
 ## Native PDF-Verarbeitung
 

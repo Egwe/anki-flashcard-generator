@@ -12,6 +12,23 @@ from anki_flashcards.errors import FlashcardError
 runner = CliRunner()
 
 
+@pytest.fixture(autouse=True)
+def isolate_cli_from_user_config(tmp_path: Path, monkeypatch) -> None:
+    """Run CLI tests without the developer's local YAML or dotenv overrides.
+
+    Args:
+        tmp_path: Pytest-provided isolated directory.
+        monkeypatch: Pytest fixture used to change directory and clear variables.
+
+    Returns:
+        None. Each test starts with empty configuration unless it writes its own.
+    """
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("ANKI_CONFIG", raising=False)
+    monkeypatch.delenv("ANKI_MODEL", raising=False)
+    monkeypatch.delenv("LLM_API_BASE", raising=False)
+
+
 @pytest.mark.parametrize("command", [[], ["generate"], ["export"], ["decks"], ["config", "show"]])
 def test_help_documents_usage_defaults_files_and_examples(command: list[str]) -> None:
     """Verify every CLI help page includes its operational contract.
@@ -431,6 +448,50 @@ def test_generate_local_mode_never_calls_native_adapter(tmp_path: Path, monkeypa
     assert output.is_file()
 
 
+def test_dotenv_loads_credentials_but_not_legacy_model_override(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """Verify dotenv credentials work while YAML owns the selected model.
+
+    Args:
+        tmp_path: Pytest-provided isolated directory.
+        monkeypatch: Pytest fixture used to change directory and set legacy env.
+
+    Returns:
+        None. Assertions check the credential, YAML model, and endpoint.
+    """
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / ".env").write_text(
+        "TEST_PROVIDER_KEY=credential-from-dotenv\nANKI_MODEL=ollama/llama3.2\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "config.yaml").write_text(
+        "default_profile: test\n"
+        "models:\n"
+        "  test:\n"
+        "    model: ollama_chat/qwen3.6:27b\n"
+        "    api_base: http://localhost:11434\n"
+        "    api_key_env: TEST_PROVIDER_KEY\n",
+        encoding="utf-8",
+    )
+    monkeypatch.delenv("TEST_PROVIDER_KEY", raising=False)
+
+    from anki_flashcards.cli import find_dotenv, load_dotenv
+    from anki_flashcards.settings import load_selected_config, resolve_generate_settings
+
+    load_dotenv(find_dotenv(usecwd=True))
+    config, config_path = load_selected_config(None)
+    settings = resolve_generate_settings(
+        {"input_file": Path("source.txt"), "output": Path("out.apkg")},
+        config,
+        config_path,
+    )
+
+    assert settings.ai.api_key == "credential-from-dotenv"
+    assert settings.ai.model == "ollama_chat/qwen3.6:27b"
+    assert settings.ai.api_base == "http://localhost:11434"
+
+
 def test_extend_requires_existing_output(tmp_path: Path) -> None:
     """Verify extend mode rejects a missing APKG before writing cards.
 
@@ -532,7 +593,7 @@ def test_run_prints_expected_errors_without_a_traceback(monkeypatch, capsys) -> 
         raise FlashcardError("Ungültiges Paket")
 
     monkeypatch.setattr("anki_flashcards.cli.app", fail)
-    monkeypatch.setattr("anki_flashcards.cli.load_dotenv", lambda: None)
+    monkeypatch.setattr("anki_flashcards.cli.load_dotenv", lambda *args, **kwargs: None)
 
     with pytest.raises(SystemExit):
         run()

@@ -63,7 +63,7 @@ Die lokale Extraktion muss für geeignete Modelle optional durch die native Vera
 Gängige KI-Anbieter müssen über eine gemeinsame Schnittstelle ansprechbar sein. LiteLLM bildet diese Schnittstelle; Modelle werden in der Form `provider/modell` angegeben. Vorgesehen und dokumentiert sind insbesondere OpenAI, Anthropic, Google Gemini, Moonshot/Kimi und Ollama. Weitere von LiteLLM unterstützte Provider sollen ohne eigene CLI-Befehle nutzbar sein.
 
 **R-021 – Provider-Parameter · muss · umgesetzt**
-Modell, API-Endpunkt, Timeout und API-Schlüssel müssen konfigurierbar sein. Aktuell erfolgt dies über CLI-Optionen, `.env` beziehungsweise Umgebungsvariablen. Eine zentrale Modellkonfiguration wird zusätzlich gemäß R-110 bis R-119 eingeführt.
+Modell, API-Endpunkt und Timeout werden primär über YAML-Modellprofile konfiguriert und können durch explizite CLI-Optionen überschrieben werden. API-Schlüssel werden ausschließlich über `.env` beziehungsweise Umgebungsvariablen bereitgestellt. `ANKI_MODEL` und `LLM_API_BASE` sind keine Konfigurationsschicht und werden nicht ausgewertet.
 
 **R-022 – Geheimnisse · muss · umgesetzt und dauerhaft einzuhalten**
 API-Schlüssel dürfen niemals ins Repository, in APKG-Dateien, in Karten-JSON oder in Logs geschrieben werden. Konfigurationsdateien dürfen später nur den **Namen** einer Umgebungsvariablen referenzieren, nicht deren geheimen Wert.
@@ -231,10 +231,9 @@ Für jeden effektiven Wert gilt von niedriger zu hoher Priorität:
 
 1. eingebauter Programmdefault,
 2. Wert aus der ausgewählten YAML-Konfiguration beziehungsweise dem gewählten Profil,
-3. unterstützte Umgebungsvariable beziehungsweise `.env`,
-4. ausdrücklich gesetzter CLI-Wert.
+3. ausdrücklich gesetzter CLI-Wert.
 
-CLI-Werte müssen Konfigurationsdefaults daher immer überschreiben. Secrets werden ausschließlich aus der Umgebung gelesen. Für konfigurierbare boolesche Werte müssen CLI-Optionen beide Richtungen ermöglichen, beispielsweise `--extend/--no-extend`, damit auch ein konfigurierter `true`-Wert überschrieben werden kann.
+`.env` beziehungsweise Umgebungsvariablen bilden **keine** Konfigurationsschicht für Modelle, Endpunkte oder Generierungsparameter. Sie liefern ausschließlich Zugangsdaten für das in YAML referenzierte `api_key_env`. `ANKI_CONFIG` wählt nur den YAML-Dateipfad aus. Frühere Variablen `ANKI_MODEL` und `LLM_API_BASE` werden ignoriert. CLI-Werte müssen Konfigurationsdefaults daher immer überschreiben. Secrets werden ausschließlich aus der Umgebung gelesen. Für konfigurierbare boolesche Werte müssen CLI-Optionen beide Richtungen ermöglichen, beispielsweise `--extend/--no-extend`, damit auch ein konfigurierter `true`-Wert überschrieben werden kann.
 
 **R-116 – Konfiguration anzeigen · soll · umgesetzt**
 Ein Diagnosebefehl soll die effektiv zusammengeführte Konfiguration und deren Herkunft anzeigen können. Geheimnisse müssen dabei vollständig weggelassen oder eindeutig maskiert werden. Dies erleichtert Support und spätere Web-UI-Validierung.
@@ -246,7 +245,7 @@ Laden, Validieren und Zusammenführen der Konfiguration muss als UI-unabhängige
 Bestehende Aufrufe ohne YAML-Datei müssen weiterhin funktionieren. Die Einführung der Konfiguration darf weder API-Schlüssel erzwingen noch bestehende `--model`- und `.env`-Workflows grundlos brechen.
 
 **R-119 – Konfigurationstests · muss · umgesetzt**
-Tests müssen mindestens leere Datei, fehlende implizite und explizite Datei, ungültige YAML/Typen/Felder, Profilauflösung, Pfadauflösung, sämtliche Prioritätsebenen, boolesche CLI-Überschreibung, Secret-Nichtpersistenz und atomares Speichern abdecken.
+Tests müssen mindestens leere Datei, fehlende implizite und explizite Datei, ungültige YAML/Typen/Felder, Profilauflösung, Pfadauflösung, sämtliche Prioritätsebenen, boolesche CLI-Überschreibung, Secret-Nichtpersistenz und atomares Speichern abdecken. Sie müssen zusätzlich beweisen, dass `ANKI_MODEL` und `LLM_API_BASE` YAML nicht überschreiben und dass Credential-Variablen aus `.env` weiterhin funktionieren.
 
 ## 10. Native PDF-Verarbeitung durch KI-Provider
 
@@ -295,7 +294,7 @@ Wichtige Ist-Eigenschaften:
 - Ohne `--extend` muss die Ausgabedatei neu sein; mit `--extend` muss sie bereits existieren.
 - Fehlende Elternordner der Ausgabe werden erstellt.
 - `--limit` akzeptiert nichtnegative ganze Zahlen; `0` bedeutet Unlimited.
-- API-Schlüssel werden über provider-spezifische Umgebungsvariablen oder `LLM_API_KEY` bereitgestellt.
+- API-Schlüssel werden über die in YAML referenzierten provider-spezifischen Umgebungsvariablen aus `.env` oder der Prozessumgebung bereitgestellt; `.env` enthält keine Modelle oder Endpunkte.
 
 ## 13. Abnahmekriterien für die noch offenen Hauptpakete
 

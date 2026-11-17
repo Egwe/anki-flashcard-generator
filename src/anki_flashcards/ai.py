@@ -1,7 +1,6 @@
 """Generate validated flashcards from source text through LiteLLM providers."""
 
 import math
-import os
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
@@ -75,7 +74,7 @@ def generate_cards(
     if limit < 0:
         raise ValueError("Card limit must be non-negative")
     if not settings.model.strip():
-        raise FlashcardError("No AI model configured. Use --model or set ANKI_MODEL.")
+        raise FlashcardError("No AI model configured. Use --model or select a YAML profile.")
 
     chunks = chunk_text(document.text, max_chars=chunk_size)
     cards: list[Card] = []
@@ -173,12 +172,10 @@ def _provider_options(settings: AISettings) -> dict[str, Any]:
         Optional ``api_key`` and ``api_base`` keyword arguments for LiteLLM.
     """
     options: dict[str, Any] = {}
-    api_key = settings.api_key or os.getenv("LLM_API_KEY")
-    api_base = settings.api_base or os.getenv("LLM_API_BASE")
-    if api_key:
-        options["api_key"] = api_key
-    if api_base:
-        options["api_base"] = api_base
+    if settings.api_key:
+        options["api_key"] = settings.api_key
+    if settings.api_base:
+        options["api_base"] = settings.api_base
     return options
 
 

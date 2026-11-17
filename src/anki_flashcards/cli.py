@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any
 
 import typer
-from dotenv import load_dotenv
+from dotenv import find_dotenv, load_dotenv
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.table import Table
@@ -135,10 +135,9 @@ def generate(
         None,
         "--model",
         "-m",
-        envvar="ANKI_MODEL",
         help=(
             "LiteLLM provider/model, for example ollama/llama3.2 or "
-            "openai/gpt-4o-mini. May also be set with ANKI_MODEL."
+            "openai/gpt-4o-mini. Overrides the model from the YAML profile."
         ),
     ),
     limit: int | None = typer.Option(
@@ -177,8 +176,8 @@ def generate(
         None,
         "--api-base",
         help=(
-            "Optional provider endpoint override. May also be set with "
-            "LLM_API_BASE; provider defaults are used otherwise."
+            "Optional provider endpoint override. Overrides YAML api_base; "
+            "provider defaults are used when neither is configured."
         ),
     ),
     timeout: int | None = typer.Option(
@@ -523,7 +522,7 @@ def run() -> None:
             standard error. Exception chaining is suppressed at the CLI boundary
             so users do not see an implementation traceback.
     """
-    load_dotenv()
+    load_dotenv(find_dotenv(usecwd=True))
     try:
         app()
     except FlashcardError as error:

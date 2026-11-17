@@ -1,4 +1,4 @@
-"""Resolve configuration, environment, and CLI values into runtime settings."""
+"""Resolve YAML configuration, dotenv credentials, and CLI runtime settings."""
 
 import os
 from collections.abc import Mapping
@@ -19,11 +19,14 @@ from anki_flashcards.errors import FlashcardError
 
 
 class ValueSource(StrEnum):
-    """Identify the precedence layer that supplied an effective value."""
+    """Identify the precedence layer that supplied an effective value.
+
+    Credentials are read from dotenv/environment but intentionally do not form
+    a configuration precedence layer for models, endpoints, or generation.
+    """
 
     BUILT_IN = "built-in"
     CONFIG = "config"
-    ENVIRONMENT = "environment"
     CLI = "cli"
 
 
@@ -111,8 +114,11 @@ def load_selected_config(path: Path | None) -> tuple[AppConfig, Path | None]:
     environment_path = os.getenv("ANKI_CONFIG")
     selected_path = path or (Path(environment_path) if environment_path else None)
     config = load_config(selected_path)
-    if selected_path is None and not Path("config.yaml").exists():
-        return config, None
+    if selected_path is None:
+        implicit_path = Path("config.yaml")
+        if not implicit_path.exists():
+            return config, None
+        selected_path = implicit_path
     return config, selected_path.absolute()
 
 
@@ -121,7 +127,7 @@ def resolve_generate_settings(
     config: AppConfig,
     config_path: Path | None,
 ) -> GenerateSettings:
-    """Merge generation defaults, YAML, environment, and explicit CLI values.
+    """Merge generation defaults, YAML, credentials, and explicit CLI values.
 
     Args:
         cli: Command options including only explicitly supplied values for
@@ -353,7 +359,7 @@ def _resolve_deck(cli_deck: str | None, config: AppConfig, input_file: Path) -> 
 
 
 def _resolve_model(supplied: str | None, profile: ModelProfile | None) -> SourcedValue:
-    """Resolve direct model settings with environment and CLI precedence.
+    """Resolve direct model settings with YAML and explicit CLI precedence.
 
     Args:
         supplied: Explicit CLI model or None.
@@ -361,32 +367,28 @@ def _resolve_model(supplied: str | None, profile: ModelProfile | None) -> Source
 
     Returns:
         Model identifier and its source, empty when no model is configured.
+        Non-secret environment overrides are deliberately not consulted.
     """
     if supplied is not None:
         return SourcedValue(supplied, ValueSource.CLI)
-    environment_model = os.getenv("ANKI_MODEL")
-    if environment_model:
-        return SourcedValue(environment_model, ValueSource.ENVIRONMENT)
     if profile is not None:
         return SourcedValue(profile.model, ValueSource.CONFIG)
     return SourcedValue("", ValueSource.BUILT_IN)
 
 
 def _resolve_api_base(supplied: str | None, profile: ModelProfile | None) -> SourcedValue:
-    """Resolve API endpoint with CLI over environment over profile.
+    """Resolve API endpoint with explicit CLI over the YAML profile.
 
     Args:
         supplied: Explicit CLI endpoint or None.
         profile: Optional selected model profile.
 
     Returns:
-        Optional endpoint and its source.
+        Optional endpoint and its source. Non-secret environment overrides are
+        deliberately not consulted; YAML owns provider connection settings.
     """
     if supplied is not None:
         return SourcedValue(supplied, ValueSource.CLI)
-    environment_base = os.getenv("LLM_API_BASE")
-    if environment_base:
-        return SourcedValue(environment_base, ValueSource.ENVIRONMENT)
     if profile is not None and profile.api_base is not None:
         return SourcedValue(profile.api_base, ValueSource.CONFIG)
     return SourcedValue(None, ValueSource.BUILT_IN)
