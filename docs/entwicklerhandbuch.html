@@ -1,0 +1,1897 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Entwicklerhandbuch für den Anki Flashcard Generator. Architektur, Module, Funktionen, Datenflüsse und Erweiterungspunkte mit Diagrammen.">
+  <title>Anki Flashcard Generator – Entwicklerhandbuch</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #172a3a;
+      --muted: #536778;
+      --paper: #f4f7f9;
+      --card: #ffffff;
+      --line: #d9e3e9;
+      --brand: #116b68;
+      --brand-dark: #0b4848;
+      --brand-soft: #e4f4ef;
+      --accent: #e2a63d;
+      --code: #152e3c;
+      --code-ink: #eaf4f5;
+      --warning: #fff5d9;
+      --warning-line: #c48213;
+      --danger: #a23b34;
+      --shadow: 0 10px 30px rgb(25 57 70 / 8%);
+      /* Modulfarben für Diagramme und Markierungen */
+      --c-cli: #116b68;      --c-cli-soft: #e4f4ef;
+      --c-cfg: #9a6a12;      --c-cfg-soft: #fff4d6;
+      --c-doc: #2f6690;      --c-doc-soft: #e5eff8;
+      --c-ai: #6a4c9c;       --c-ai-soft: #f0ebf8;
+      --c-model: #3f7a3a;    --c-model-soft: #e8f3e4;
+      --c-apkg: #b4532a;     --c-apkg-soft: #fbece4;
+      --c-ext: #5d7181;      --c-ext-soft: #eef2f5;
+      --c-err: #a23b34;      --c-err-soft: #fbe9e7;
+      --edge: #6b7f8c;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; scroll-padding-top: 1rem; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--paper);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 17px;
+      line-height: 1.65;
+    }
+    a { color: var(--brand-dark); text-underline-offset: .2em; }
+    a:hover { color: var(--brand); }
+    button, input, select { font: inherit; }
+    button { cursor: pointer; }
+    button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, summary:focus-visible {
+      outline: 3px solid var(--accent);
+      outline-offset: 3px;
+    }
+    .skip-link { position: absolute; top: -5rem; left: 1rem; padding: .7rem 1rem; background: var(--card); z-index: 10; }
+    .skip-link:focus { top: 1rem; }
+    .hero {
+      color: #fff;
+      background: linear-gradient(125deg, #123645 0%, #116b68 68%, #16877a 100%);
+      padding: 4.5rem 1.25rem 3.5rem;
+    }
+    .hero-inner, .page { max-width: 1180px; margin: 0 auto; }
+    .eyebrow { margin: 0 0 .75rem; color: #bce5d8; font-size: .78rem; font-weight: 750; letter-spacing: .13em; text-transform: uppercase; }
+    .section-heading .eyebrow { color: var(--brand); }
+    h1 { max-width: 820px; margin: 0; font-size: clamp(2.1rem, 5vw, 3.6rem); line-height: 1.1; letter-spacing: -.035em; }
+    .hero-intro { max-width: 760px; margin: 1.5rem 0 0; color: #e4f2f0; font-size: 1.14rem; }
+    .hero-actions { display: flex; flex-wrap: wrap; gap: .75rem; margin-top: 2rem; }
+    .button {
+      display: inline-flex; align-items: center; justify-content: center;
+      min-height: 44px; padding: .65rem 1rem;
+      border: 1px solid var(--brand); border-radius: .55rem;
+      color: #fff; background: var(--brand);
+      font-weight: 650; text-decoration: none;
+    }
+    .button:hover { background: var(--brand-dark); color: #fff; }
+    .button.secondary { color: var(--brand-dark); background: transparent; border-color: var(--line); }
+    .button.secondary:hover { background: var(--brand-soft); color: var(--brand-dark); }
+    .hero .button { color: var(--brand-dark); background: #fff; border-color: #fff; }
+    .hero .button.secondary { color: #fff; background: transparent; border-color: #a8d6ce; }
+    .meta { margin: 1.5rem 0 0; color: #c9e2de; font-size: .9rem; }
+    .page { padding: 0 1.25rem 5rem; }
+    .toolbar {
+      position: relative; z-index: 2;
+      display: grid; grid-template-columns: 1fr auto auto; gap: .75rem;
+      margin-top: -1.5rem; padding: 1rem;
+      border: 1px solid var(--line); border-radius: .85rem;
+      background: var(--card); box-shadow: var(--shadow);
+    }
+    .search-label { display: block; margin-bottom: .25rem; font-size: .8rem; font-weight: 700; }
+    .search-input { width: 100%; min-height: 46px; padding: .65rem .85rem; border: 1px solid #a9bac5; border-radius: .45rem; color: var(--ink); background: #fff; }
+    .toolbar .button { align-self: end; min-height: 46px; }
+    .filter-row { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin: 1rem 0 0; }
+    .filter-button { min-height: 38px; padding: .35rem .75rem; border: 1px solid var(--line); border-radius: 99px; color: var(--brand-dark); background: var(--card); font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace; font-size: .85rem; }
+    .filter-button[aria-pressed="true"] { color: #fff; background: var(--brand); border-color: var(--brand); }
+    .search-status { margin: .75rem 0 0; color: var(--muted); font-size: .9rem; }
+    section { margin-top: 3.5rem; }
+    .section-heading { max-width: 820px; margin-bottom: 1.25rem; }
+    h2 { margin: 0 0 .6rem; font-size: clamp(1.65rem, 3vw, 2.2rem); line-height: 1.2; letter-spacing: -.02em; }
+    h3 { margin: 0 0 .5rem; font-size: 1.18rem; line-height: 1.3; }
+    h4 { margin: 1rem 0 .4rem; font-size: 1rem; }
+    p { margin: .5rem 0 1rem; }
+    .muted { color: var(--muted); }
+    .small { font-size: .9rem; }
+    .card { min-width: 0; padding: 1.35rem; border: 1px solid var(--line); border-radius: .75rem; background: var(--card); }
+    .grid { display: grid; gap: 1rem; }
+    .grid.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .grid.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .stack > * + * { margin-top: 1rem; }
+    .step-number {
+      display: inline-grid; place-items: center;
+      min-width: 2rem; height: 2rem; padding: 0 .4rem; margin-bottom: .7rem;
+      border-radius: 99px; color: #fff; background: var(--brand); font-weight: 750;
+    }
+    .card h3 a { text-decoration: none; }
+    .command-section { margin-top: 1.25rem; }
+    .command-header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .75rem; margin-bottom: .7rem; }
+    .command-title { margin: 0; font-size: 1.5rem; }
+    .tag { display: inline-block; padding: .15rem .55rem; border-radius: 99px; color: var(--brand-dark); background: var(--brand-soft); font-size: .78rem; font-weight: 700; }
+    .tag.cfg { color: #6e4b0b; background: var(--c-cfg-soft); }
+    .tag.doc { color: var(--c-doc); background: var(--c-doc-soft); }
+    .tag.ai { color: var(--c-ai); background: var(--c-ai-soft); }
+    .tag.model { color: var(--c-model); background: var(--c-model-soft); }
+    .tag.apkg { color: var(--c-apkg); background: var(--c-apkg-soft); }
+    .tag.ext { color: var(--c-ext); background: var(--c-ext-soft); }
+    .tag.err { color: var(--c-err); background: var(--c-err-soft); }
+    .module-card { border-left: 5px solid var(--c-cli); }
+    .module-card[data-module~="config"], .module-card[data-module~="settings"] { border-left-color: var(--c-cfg); }
+    .module-card[data-module~="documents"] { border-left-color: var(--c-doc); }
+    .module-card[data-module~="ai"], .module-card[data-module~="native_pdf"] { border-left-color: var(--c-ai); }
+    .module-card[data-module~="models"] { border-left-color: var(--c-model); }
+    .module-card[data-module~="apkg"] { border-left-color: var(--c-apkg); }
+    .module-card[data-module~="errors"] { border-left-color: var(--c-err); }
+    details { margin-top: .75rem; border: 1px solid var(--line); border-radius: .65rem; background: var(--card); overflow: clip; }
+    summary { padding: .85rem 1rem; color: var(--brand-dark); font-weight: 700; cursor: pointer; }
+    summary:hover { background: #f0f8f5; }
+    .details-body { min-width: 0; padding: 0 1rem 1rem; }
+    .option { padding: 1rem 0; border-top: 1px solid var(--line); }
+    .option:first-child { border-top: 0; }
+    .option-heading { display: flex; flex-wrap: wrap; align-items: baseline; gap: .5rem; }
+    .option-name { color: var(--brand-dark); font-size: 1.02rem; font-weight: 750; }
+    .option-meta { color: var(--muted); font-size: .84rem; }
+    .option p { margin: .35rem 0; }
+    code {
+      padding: .12em .32em; border-radius: .25rem;
+      color: #0a5555; background: #e8f2f2;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      font-size: .9em; overflow-wrap: anywhere;
+    }
+    pre {
+      position: relative; margin: .8rem 0 0; padding: 1rem 3rem 1rem 1rem;
+      border-radius: .55rem; color: var(--code-ink); background: var(--code);
+      overflow-x: auto; white-space: pre-wrap; overflow-wrap: anywhere;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      font-size: .86rem; line-height: 1.55;
+    }
+    pre code { padding: 0; color: inherit; background: transparent; font-size: inherit; }
+    pre.tree { white-space: pre; overflow-wrap: normal; }
+    .copy-button {
+      position: absolute; top: .55rem; right: .55rem;
+      min-width: 2.3rem; min-height: 2rem; padding: .25rem .5rem;
+      border: 1px solid #64818d; border-radius: .35rem;
+      color: #fff; background: #284756; font-size: .75rem;
+    }
+    .copy-button:hover { background: #3c6373; }
+    .note, .warning, .danger {
+      margin: 1rem 0; padding: 1rem 1.15rem;
+      border-left: 4px solid var(--brand);
+      border-radius: .25rem .55rem .55rem .25rem;
+      background: var(--brand-soft);
+    }
+    .warning { border-left-color: var(--warning-line); background: var(--warning); }
+    .danger { border-left-color: var(--danger); background: var(--c-err-soft); }
+    .note strong, .warning strong, .danger strong { display: block; margin-bottom: .25rem; }
+    .note p:last-child, .warning p:last-child, .danger p:last-child { margin-bottom: 0; }
+    .table-wrap { min-width: 0; max-width: 100%; overflow-x: auto; border: 1px solid var(--line); border-radius: .65rem; background: var(--card); }
+    table { width: 100%; border-collapse: collapse; min-width: 650px; }
+    caption { padding: .8rem 1rem; text-align: left; font-weight: 700; }
+    th, td { padding: .75rem .9rem; border-top: 1px solid var(--line); text-align: left; vertical-align: top; }
+    th { color: var(--brand-dark); background: #edf5f3; font-size: .9rem; }
+    td:first-child { font-weight: 650; }
+    .checklist { margin: .5rem 0; padding-left: 1.4rem; }
+    .checklist li { margin: .45rem 0; }
+    .toc { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .55rem 1rem; margin: 0; padding: 0; list-style: none; }
+    .toc a { display: block; padding: .6rem .75rem; border: 1px solid var(--line); border-radius: .45rem; background: var(--card); text-decoration: none; }
+    .toc a:hover { border-color: var(--brand); background: var(--brand-soft); }
+    .footer { margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid var(--line); color: var(--muted); font-size: .9rem; }
+    .hidden { display: none !important; }
+    .empty-state { margin-top: 2rem; text-align: center; }
+    .back-top { margin-top: 1.25rem; font-size: .9rem; }
+    /* Faktenleiste eines Moduls */
+    .facts { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: .3rem 1rem; margin: .5rem 0 1rem; padding: .85rem 1rem; border-radius: .55rem; background: #f6f9fa; font-size: .92rem; }
+    .facts dt { color: var(--muted); font-weight: 700; }
+    .facts dd { margin: 0; min-width: 0; }
+    /* Aufrufketten als Pillen */
+    .chain { display: flex; flex-wrap: wrap; align-items: center; gap: .45rem; margin: .75rem 0; padding: 0; list-style: none; }
+    .chain li { display: inline-flex; align-items: center; gap: .45rem; }
+    .chain li:not(:last-child)::after { content: "→"; color: var(--edge); font-weight: 700; }
+    .chain code { padding: .3rem .55rem; border: 1px solid var(--line); background: #fff; }
+    /* Diagramme */
+    .diagram { margin: 1.25rem 0 0; padding: 1rem; border: 1px solid var(--line); border-radius: .75rem; background: var(--card); }
+    .diagram-scroll { overflow-x: auto; }
+    .diagram svg { display: block; width: 100%; height: auto; min-width: 760px; margin: 0 auto; }
+    .diagram.wide svg { min-width: 860px; }
+    .diagram figcaption { margin-top: .75rem; color: var(--muted); font-size: .9rem; }
+    .legend { display: flex; flex-wrap: wrap; gap: .4rem .9rem; margin: 0 0 .75rem; padding: 0; list-style: none; font-size: .85rem; }
+    .legend li { display: inline-flex; align-items: center; gap: .4rem; }
+    .swatch { display: inline-block; width: 1rem; height: 1rem; border: 2px solid; border-radius: .25rem; }
+    .sw-cli { border-color: var(--c-cli); background: var(--c-cli-soft); }
+    .sw-cfg { border-color: var(--c-cfg); background: var(--c-cfg-soft); }
+    .sw-doc { border-color: var(--c-doc); background: var(--c-doc-soft); }
+    .sw-ai { border-color: var(--c-ai); background: var(--c-ai-soft); }
+    .sw-model { border-color: var(--c-model); background: var(--c-model-soft); }
+    .sw-apkg { border-color: var(--c-apkg); background: var(--c-apkg-soft); }
+    .sw-ext { border-color: var(--c-ext); background: var(--c-ext-soft); }
+    .sw-err { border-color: var(--c-err); background: var(--c-err-soft); border-style: dashed; }
+    svg text { fill: var(--ink); font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
+    svg .t-title { font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace; font-size: 15px; font-weight: 700; }
+    svg .t-title.sm { font-size: 13.5px; }
+    svg .t-head { font-size: 15px; font-weight: 750; }
+    svg .t-sub { font-size: 12.5px; fill: var(--muted); }
+    svg .t-mono { font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace; font-size: 12.5px; }
+    svg .t-label { font-size: 12px; font-weight: 700; fill: var(--muted); letter-spacing: .06em; text-transform: uppercase; }
+    svg .t-edge { font-size: 12px; font-weight: 650; fill: #3f5563; }
+    svg .t-num { font-size: 13px; font-weight: 800; fill: #fff; text-anchor: middle; }
+    svg .t-err { font-size: 12px; font-weight: 700; fill: var(--c-err); }
+    svg .box { stroke-width: 2; }
+    svg .opt { stroke-dasharray: 6 4; }
+    svg .n-cli .box { fill: var(--c-cli-soft); stroke: var(--c-cli); }   svg .n-cli .dot { fill: var(--c-cli); }
+    svg .n-cfg .box { fill: var(--c-cfg-soft); stroke: var(--c-cfg); }   svg .n-cfg .dot { fill: var(--c-cfg); }
+    svg .n-doc .box { fill: var(--c-doc-soft); stroke: var(--c-doc); }   svg .n-doc .dot { fill: var(--c-doc); }
+    svg .n-ai .box { fill: var(--c-ai-soft); stroke: var(--c-ai); }      svg .n-ai .dot { fill: var(--c-ai); }
+    svg .n-model .box { fill: var(--c-model-soft); stroke: var(--c-model); } svg .n-model .dot { fill: var(--c-model); }
+    svg .n-apkg .box { fill: var(--c-apkg-soft); stroke: var(--c-apkg); } svg .n-apkg .dot { fill: var(--c-apkg); }
+    svg .n-ext .box { fill: var(--c-ext-soft); stroke: var(--c-ext); }   svg .n-ext .dot { fill: var(--c-ext); }
+    svg .n-err .box { fill: var(--c-err-soft); stroke: var(--c-err); stroke-dasharray: 6 4; }
+    svg .band { fill: #f6f9fa; stroke: var(--line); }
+    svg .frame { fill: none; stroke-width: 2; stroke-dasharray: 7 5; }
+    svg .frame.ai { stroke: var(--c-ai); } svg .frame.ext { stroke: var(--c-ext); } svg .frame.safe { stroke: var(--c-model); fill: #f3f9f1; }
+    svg .edge { fill: none; stroke: var(--edge); stroke-width: 2; }
+    svg .edge.ret { stroke-dasharray: 6 4; }
+    svg .edge.err { stroke: var(--c-err); stroke-dasharray: 6 4; }
+    svg .life { stroke: #a9bac5; stroke-width: 2; stroke-dasharray: 4 6; }
+    svg .terminal { fill: var(--code); }
+    svg .terminal-text { fill: var(--code-ink); font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace; font-size: 13.5px; }
+    svg a { cursor: pointer; }
+    svg a:hover .box, svg a:focus-visible .box { stroke-width: 3.5; }
+    svg a:focus-visible { outline: none; }
+    svg a:focus-visible .box { stroke: var(--accent); }
+    @media (max-width: 850px) {
+      .grid.three { grid-template-columns: 1fr 1fr; }
+      .toolbar { grid-template-columns: 1fr 1fr; }
+      .toolbar .search-block { grid-column: 1 / -1; }
+    }
+    @media (max-width: 600px) {
+      body { font-size: 16px; }
+      .hero { padding-top: 3rem; }
+      .grid.two, .grid.three, .toc { grid-template-columns: 1fr; }
+      .toolbar { grid-template-columns: 1fr; }
+      .toolbar .button { width: 100%; }
+      .card { padding: 1rem; }
+      .page { padding-inline: .85rem; }
+      .facts { grid-template-columns: 1fr; }
+      .diagram { padding: .6rem; }
+    }
+    @media print {
+      :root { --paper: #fff; --card: #fff; }
+      body { font-size: 11pt; }
+      .hero { padding: 1.5rem; color: #000; background: none; border-bottom: 2px solid #000; }
+      .hero-intro, .meta, .eyebrow { color: #222; }
+      .hero-actions, .toolbar, .filter-row, .copy-button, .back-top, .skip-link { display: none !important; }
+      .page { padding: 0; }
+      section { margin-top: 1.5rem; break-inside: auto; }
+      .card, details, .table-wrap { box-shadow: none; break-inside: avoid; }
+      .diagram { break-inside: avoid; }
+      .diagram svg { min-width: 0; }
+      .diagram-scroll { overflow: visible; }
+      details > .details-body { display: block !important; }
+      details:not([open]) > .details-body { display: block !important; }
+      summary { list-style: none; }
+      summary::-webkit-details-marker { display: none; }
+      pre { white-space: pre-wrap; }
+      a { color: #000; }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#inhalt">Zum Inhalt springen</a>
+  <header class="hero">
+    <div class="hero-inner">
+      <p class="eyebrow">Entwicklerhandbuch · Version 0.1.0 · Stand 17. November 2026</p>
+      <h1>Anki Flashcard Generator</h1>
+      <p class="hero-intro">Wie das Projekt intern funktioniert: Schichten, Module, Funktionen und Datenflüsse. Vom Kommandozeilenaufruf bis zur fertigen <code>.apkg</code>-Datei – mit Diagrammen, Einzelheiten und Erweiterungsrezepten.</p>
+      <div class="hero-actions">
+        <a class="button" href="#anfrage">Den Weg einer Anfrage verfolgen</a>
+        <a class="button secondary" href="#module">Alle Module im Detail</a>
+      </div>
+      <p class="meta">Für Entwicklerinnen und Entwickler · Offline lesbar · Keine externen Ressourcen nötig · Ergänzt das <a href="benutzerhandbuch.html" style="color:#fff">Benutzerhandbuch</a></p>
+    </div>
+  </header>
+
+  <main class="page" id="inhalt">
+    <div class="toolbar" role="search">
+      <div class="search-block">
+        <label class="search-label" for="guide-search">Modul, Funktion oder Thema suchen</label>
+        <input class="search-input" id="guide-search" type="search" placeholder="Zum Beispiel: append_apkg, Priorität, zstd, Chunk oder FlashcardError" autocomplete="off">
+      </div>
+      <button class="button secondary" id="expand-all" type="button">Alles öffnen</button>
+      <button class="button secondary" id="print-guide" type="button">Drucken</button>
+    </div>
+    <div class="filter-row" aria-label="Nach Modul filtern">
+      <span class="small muted">Nach Modul filtern:</span>
+      <button class="filter-button" type="button" data-filter="cli" aria-pressed="false">cli</button>
+      <button class="filter-button" type="button" data-filter="settings" aria-pressed="false">settings</button>
+      <button class="filter-button" type="button" data-filter="config" aria-pressed="false">config</button>
+      <button class="filter-button" type="button" data-filter="documents" aria-pressed="false">documents</button>
+      <button class="filter-button" type="button" data-filter="ai" aria-pressed="false">ai</button>
+      <button class="filter-button" type="button" data-filter="native_pdf" aria-pressed="false">native_pdf</button>
+      <button class="filter-button" type="button" data-filter="models" aria-pressed="false">models</button>
+      <button class="filter-button" type="button" data-filter="apkg" aria-pressed="false">apkg</button>
+      <button class="filter-button" type="button" data-filter="errors" aria-pressed="false">errors</button>
+    </div>
+    <p class="search-status" id="search-status" role="status" aria-live="polite"></p>
+
+    <!-- ============================================================ ÜBERBLICK -->
+    <section id="ueberblick">
+      <div class="section-heading">
+        <p class="eyebrow">Das große Bild</p>
+        <h2>Wie ist das Projekt aufgebaut?</h2>
+        <p>Das Projekt ist ein Python-Paket <code>anki_flashcards</code> im <code>src</code>-Layout. Es hat genau einen Einstiegspunkt: Der Konsolenbefehl <code>anki-flashcards</code> ist in <code>pyproject.toml</code> auf <code>anki_flashcards.cli:run</code> abgebildet. Elf Dateien mit zusammen rund 2.800 Zeilen (inklusive Docstrings) bilden vier klar getrennte Schichten.</p>
+      </div>
+      <div class="grid three">
+        <article class="card searchable" data-module="documents native_pdf">
+          <span class="step-number">1</span>
+          <h3>Eingabe verstehen</h3>
+          <p><code>documents.py</code> liest PDF, DOCX, HTML, Markdown und Text lokal und zerlegt den Text in überlappende Abschnitte. Alternativ übergibt <code>native_pdf.py</code> die Original-PDF direkt an OpenAI.</p>
+        </article>
+        <article class="card searchable" data-module="ai native_pdf models">
+          <span class="step-number">2</span>
+          <h3>Karten erzeugen</h3>
+          <p><code>ai.py</code> fragt über LiteLLM jedes beliebige Provider-Modell an. Jede Antwort wird gegen das Pydantic-Schema <code>CardBatch</code> aus <code>models.py</code> validiert und dedupliziert.</p>
+        </article>
+        <article class="card searchable" data-module="apkg models">
+          <span class="step-number">3</span>
+          <h3>Paket schreiben</h3>
+          <p><code>apkg.py</code> erzeugt neue Pakete mit <code>genanki</code> oder erweitert vorhandene Pakete über die offizielle Anki-API – atomar und ohne Verlust von Lernständen.</p>
+        </article>
+      </div>
+
+      <figure class="diagram">
+        <ul class="legend" aria-label="Farblegende">
+          <li><span class="swatch sw-cli"></span>Präsentation (CLI)</li>
+          <li><span class="swatch sw-cfg"></span>Konfiguration</li>
+          <li><span class="swatch sw-doc"></span>Dokumente</li>
+          <li><span class="swatch sw-ai"></span>KI-Generierung</li>
+          <li><span class="swatch sw-model"></span>Kartenmodell &amp; JSON</li>
+          <li><span class="swatch sw-apkg"></span>Anki-Pakete</li>
+          <li><span class="swatch sw-ext"></span>Externe Bibliotheken &amp; Dienste</li>
+          <li><span class="swatch sw-err"></span>Fehlerkonzept</li>
+        </ul>
+        <div class="diagram-scroll">
+          <svg viewBox="0 0 1000 560" aria-labelledby="arch-title arch-desc">
+            <title id="arch-title">Schichtenarchitektur des Anki Flashcard Generators</title>
+            <desc id="arch-desc">Vier Schichten: Präsentation mit cli.py, Konfiguration mit settings.py und config.py, Fachkern mit documents, ai, native_pdf, models und apkg, darunter externe Bibliotheken. errors.py liegt quer zu allen Schichten. Klick auf ein Modul springt zur Beschreibung.</desc>
+            <defs>
+              <marker id="arr-arch" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#6b7f8c"/></marker>
+            </defs>
+            <!-- Bänder -->
+            <rect class="band" x="10" y="10" width="980" height="96" rx="12"/>
+            <text class="t-label" x="26" y="34">Präsentation</text>
+            <rect class="band" x="10" y="124" width="980" height="96" rx="12"/>
+            <text class="t-label" x="26" y="148">Konfiguration</text>
+            <rect class="band" x="10" y="238" width="980" height="172" rx="12"/>
+            <text class="t-label" x="26" y="262">Fachkern</text>
+            <rect class="band" x="10" y="428" width="980" height="122" rx="12"/>
+            <text class="t-label" x="26" y="452">Externe Grenzen</text>
+            <!-- Präsentation -->
+            <a href="#mod-main"><g class="n-cli"><rect class="box" x="170" y="34" width="170" height="60" rx="10"/>
+              <text class="t-title" x="186" y="58">__main__.py</text><text class="t-sub" x="186" y="80">python -m …</text></g></a>
+            <path class="edge" d="M340 64 H372" marker-end="url(#arr-arch)"/>
+            <a href="#mod-cli"><g class="n-cli"><rect class="box" x="376" y="34" width="600" height="60" rx="10"/>
+              <text class="t-title" x="392" y="58">cli.py</text><text class="t-sub" x="392" y="80">generate · export · decks · config show · run() — Typer, Rich, python-dotenv</text></g></a>
+            <!-- Konfiguration -->
+            <a href="#mod-settings"><g class="n-cfg"><rect class="box" x="170" y="148" width="390" height="60" rx="10"/>
+              <text class="t-title" x="186" y="172">settings.py</text><text class="t-sub" x="186" y="194">Prioritäten · Pfade · API-Key aus Umgebung · Diagnose</text></g></a>
+            <path class="edge" d="M560 178 H582" marker-end="url(#arr-arch)"/>
+            <a href="#mod-config"><g class="n-cfg"><rect class="box" x="586" y="148" width="390" height="60" rx="10"/>
+              <text class="t-title" x="602" y="172">config.py</text><text class="t-sub" x="602" y="194">YAML-Schema (Pydantic) · laden · atomar speichern</text></g></a>
+            <path class="edge" d="M560 94 V144" marker-end="url(#arr-arch)"/>
+            <text class="t-edge" x="568" y="124">1 · Einstellungen auflösen</text>
+            <!-- Fachkern -->
+            <a href="#mod-documents"><g class="n-doc"><rect class="box" x="170" y="270" width="152" height="70" rx="10"/>
+              <text class="t-title" x="182" y="295">documents</text><text class="t-sub" x="182" y="316">Text extrahieren</text><text class="t-sub" x="182" y="332">Chunks bilden</text></g></a>
+            <a href="#mod-ai"><g class="n-ai"><rect class="box" x="333" y="270" width="152" height="70" rx="10"/>
+              <text class="t-title" x="345" y="295">ai</text><text class="t-sub" x="345" y="316">Prompt · LiteLLM</text><text class="t-sub" x="345" y="332">Antwort validieren</text></g></a>
+            <a href="#mod-native_pdf"><g class="n-ai"><rect class="box" x="496" y="270" width="152" height="70" rx="10"/>
+              <text class="t-title" x="508" y="295">native_pdf</text><text class="t-sub" x="508" y="316">PDF-Upload</text><text class="t-sub" x="508" y="332">OpenAI-Adapter</text></g></a>
+            <a href="#mod-models"><g class="n-model"><rect class="box" x="659" y="270" width="152" height="70" rx="10"/>
+              <text class="t-title" x="671" y="295">models</text><text class="t-sub" x="671" y="316">Card · CardBatch</text><text class="t-sub" x="671" y="332">JSON · Dedupe</text></g></a>
+            <a href="#mod-apkg"><g class="n-apkg"><rect class="box" x="822" y="270" width="154" height="70" rx="10"/>
+              <text class="t-title" x="834" y="295">apkg</text><text class="t-sub" x="834" y="316">neu: genanki</text><text class="t-sub" x="834" y="332">erweitern: Anki-API</text></g></a>
+            <a href="#mod-errors"><g class="n-err"><rect class="box" x="170" y="352" width="806" height="44" rx="10"/>
+              <text class="t-title" x="186" y="379">errors.py</text><text class="t-sub" x="290" y="379">FlashcardError – in allen Modulen an Bibliotheksgrenzen erzeugt, nur in cli.run() gefangen</text></g></a>
+            <path class="edge" d="M420 94 V114 H150 V305 H166" marker-end="url(#arr-arch)"/>
+            <text class="t-edge" x="34" y="300">2 · Kern</text>
+            <text class="t-edge" x="34" y="316">direkt</text>
+            <text class="t-edge" x="34" y="332">aufrufen</text>
+            <!-- Externe Grenzen -->
+            <g class="n-ext"><rect class="box" x="170" y="462" width="152" height="74" rx="10"/>
+              <text class="t-sub" x="182" y="486">pypdf</text><text class="t-sub" x="182" y="504">python-docx</text><text class="t-sub" x="182" y="522">BeautifulSoup</text></g>
+            <g class="n-ext"><rect class="box" x="333" y="462" width="152" height="74" rx="10"/>
+              <text class="t-sub" x="345" y="486">LiteLLM →</text><text class="t-sub" x="345" y="504">Ollama, OpenAI,</text><text class="t-sub" x="345" y="522">Anthropic, Gemini …</text></g>
+            <g class="n-ext"><rect class="box" x="496" y="462" width="152" height="74" rx="10"/>
+              <text class="t-sub" x="508" y="486">openai-SDK →</text><text class="t-sub" x="508" y="504">Files API</text><text class="t-sub" x="508" y="522">Responses API</text></g>
+            <g class="n-ext"><rect class="box" x="659" y="462" width="152" height="74" rx="10"/>
+              <text class="t-sub" x="671" y="486">Pydantic</text><text class="t-sub" x="671" y="504">json · tempfile</text><text class="t-sub" x="671" y="522">os.replace</text></g>
+            <g class="n-ext"><rect class="box" x="822" y="462" width="154" height="74" rx="10"/>
+              <text class="t-sub" x="834" y="486">genanki · anki</text><text class="t-sub" x="834" y="504">SQLite · zipfile</text><text class="t-sub" x="834" y="522">zstandard</text></g>
+            <path class="edge" d="M246 396 V458" marker-end="url(#arr-arch)"/>
+            <path class="edge" d="M409 396 V458" marker-end="url(#arr-arch)"/>
+            <path class="edge" d="M572 396 V458" marker-end="url(#arr-arch)"/>
+            <path class="edge" d="M735 396 V458" marker-end="url(#arr-arch)"/>
+            <path class="edge" d="M899 396 V458" marker-end="url(#arr-arch)"/>
+          </svg>
+        </div>
+        <figcaption>Schichtenmodell. Abhängigkeiten zeigen nur nach unten: Der Fachkern kennt weder Typer noch Rich. Klicke auf ein Modul, um zu seiner Beschreibung zu springen.</figcaption>
+      </figure>
+
+      <h3 style="margin-top:2rem">Leitprinzipien im Code</h3>
+      <div class="grid two">
+        <article class="card searchable" data-module="cli settings">
+          <h3>Kern ohne Oberfläche</h3>
+          <p>Nur <code>cli.py</code> importiert <code>typer</code> und <code>rich</code>. Alle anderen Module nehmen normale Python-Objekte entgegen (<code>Path</code>, <code>str</code>, <code>Card</code>, <code>AISettings</code>) und geben solche zurück. Eine spätere Web-API kann denselben Kern ohne Änderung aufrufen (R-002, R-004, R-117).</p>
+        </article>
+        <article class="card searchable" data-module="errors">
+          <h3>Fehler an der Grenze übersetzen</h3>
+          <p>Bibliotheksfehler (<code>OSError</code>, <code>PyPdfError</code>, <code>ValidationError</code> …) werden direkt an der Aufrufstelle in <code>FlashcardError</code> mit verständlicher Meldung übersetzt. Nur <code>cli.run()</code> fängt diesen Typ und beendet mit Exit-Code 1.</p>
+        </article>
+        <article class="card searchable" data-module="settings apkg native_pdf ai">
+          <h3>Unveränderliche Werteobjekte</h3>
+          <p>Aufgelöste Einstellungen und Ergebnisse sind <code>@dataclass(frozen=True)</code>: <code>AISettings</code>, <code>GenerateSettings</code>, <code>ExportSettings</code>, <code>SourceDocument</code>, <code>ExportResult</code>, <code>NativePDFResult</code>. Einmal aufgelöst, ändert sich nichts mehr unterwegs.</p>
+        </article>
+        <article class="card searchable" data-module="models config apkg">
+          <h3>Atomar schreiben</h3>
+          <p>JSON, YAML und APKG werden zuerst als Temp-Datei im Zielordner geschrieben und dann mit <code>os.replace</code> ersetzt. Ein Abbruch hinterlässt nie eine halb geschriebene Zieldatei.</p>
+        </article>
+        <article class="card searchable" data-module="ai native_pdf apkg">
+          <h3>Externe Grenzen verzögert laden</h3>
+          <p><code>litellm</code>, <code>openai</code> und <code>anki</code> werden erst innerhalb der Grenzfunktionen importiert (<code>_completion</code>, <code>_openai_client</code>, <code>_open_collection</code>). Tests ersetzen genau diese Funktionen; Befehle wie <code>--help</code> oder <code>decks</code> laden LiteLLM nie.</p>
+        </article>
+        <article class="card searchable" data-module="cli settings config documents ai native_pdf models apkg">
+          <h3>Never Nesting und Docstrings – maschinell geprüft</h3>
+          <p>Ruff erzwingt Google-Docstrings (<code>D</code>) für jede Funktion, Methode und Klasse – auch in Tests – und eine zyklomatische Komplexität von höchstens 8 (<code>C90</code>). Guard Clauses und kleine, benannte Funktionen sind deshalb überall Standard.</p>
+        </article>
+      </div>
+    </section>
+
+    <!-- ============================================================ INHALT -->
+    <section id="navigation">
+      <div class="section-heading">
+        <p class="eyebrow">Schnell finden</p>
+        <h2>Inhalt</h2>
+      </div>
+      <ul class="toc">
+        <li><a href="#anfrage">Der Weg einer generate-Anfrage (Diagramm)</a></li>
+        <li><a href="#weitere-ablaeufe">Abläufe von export, decks und config show</a></li>
+        <li><a href="#module">Alle Module und Funktionen im Detail</a></li>
+        <li><a href="#konfiguration">Konfigurationsauflösung und Prioritäten</a></li>
+        <li><a href="#ki-generierung">KI-Generierung: Chunks, Kontingent, Prompt</a></li>
+        <li><a href="#apkg-intern">Anki-Pakete erzeugen und erweitern</a></li>
+        <li><a href="#native">Native PDF-Verarbeitung</a></li>
+        <li><a href="#datenformate">Datenformate und Laufzeitobjekte</a></li>
+        <li><a href="#fehler">Fehlerkonzept und Exit-Codes</a></li>
+        <li><a href="#sicherheit">Sicherheit, Datenschutz, Dateisicherheit</a></li>
+        <li><a href="#tests">Teststrategie und Test-Nahtstellen</a></li>
+        <li><a href="#erweitern">Erweitern: Rezepte und Arbeitsablauf</a></li>
+        <li><a href="#eigenheiten">Randfälle und bekannte Abweichungen</a></li>
+        <li><a href="#glossar">Glossar für Entwickler</a></li>
+      </ul>
+    </section>
+
+    <!-- ============================================================ ANFRAGE -->
+    <section id="anfrage">
+      <div class="section-heading">
+        <p class="eyebrow">Herzstück · Schritt für Schritt</p>
+        <h2>Der Weg einer Anfrage: vom Befehl zum Anki-Paket</h2>
+        <p>Dieses Diagramm zeigt jeden Schritt eines <code>generate</code>-Aufrufs. Die Farben entsprechen den Modulen aus dem Überblick. Die Nummern führen zu den Erklärungen unter dem Diagramm – ein Klick auf einen Kasten springt direkt dorthin.</p>
+      </div>
+      <pre><button class="copy-button" type="button" aria-label="Befehl kopieren">Kopieren</button><code>anki-flashcards generate skript.pdf \
+  --output output/biologie.apkg \
+  --deck "Biologie::Grundlagen" \
+  --model ollama/llama3.2 \
+  --limit 50 \
+  --json output/biologie.cards.json</code></pre>
+
+      <figure class="diagram wide">
+        <ul class="legend" aria-label="Farblegende des Ablaufdiagramms">
+          <li><span class="swatch sw-cli"></span>cli.py</li>
+          <li><span class="swatch sw-cfg"></span>settings.py / config.py</li>
+          <li><span class="swatch sw-doc"></span>documents.py</li>
+          <li><span class="swatch sw-ai"></span>ai.py / native_pdf.py</li>
+          <li><span class="swatch sw-model"></span>models.py</li>
+          <li><span class="swatch sw-apkg"></span>apkg.py</li>
+          <li><span class="swatch sw-ext"></span>extern</li>
+          <li><span class="swatch sw-err"></span>Fehlerweg</li>
+        </ul>
+        <div class="diagram-scroll">
+          <svg viewBox="0 0 1000 1770" aria-labelledby="flow-title flow-desc">
+            <title id="flow-title">Ablauf eines generate-Aufrufs</title>
+            <desc id="flow-desc">Von cli.run über Typer, Konfiguration und Ausgabeprüfung zur Verzweigung nach pdf_mode. Lokal: read_document, chunk_text und eine LiteLLM-Anfrage je Chunk. Nativ: Prüfungen, Upload, responses.parse und Löschen bei OpenAI. Danach Ergebnisprüfung, optionales JSON, Verzweigung nach extend in create_apkg oder append_apkg und Ergebnisausgabe. Jede FlashcardError führt zurück zu cli.run und Exit-Code 1.</desc>
+            <defs>
+              <marker id="arr-flow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#6b7f8c"/></marker>
+              <marker id="arr-err" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#a23b34"/></marker>
+            </defs>
+
+            <!-- Fehlerweg zu run() -->
+            <path class="edge err" d="M978 1732 V124 H744" marker-end="url(#arr-err)"/>
+            <text class="t-err" transform="translate(993 930) rotate(-90)" text-anchor="middle">jede FlashcardError steigt bis cli.run() auf → „Fehler: …“ auf stderr · Exit-Code 1</text>
+
+            <!-- Start -->
+            <rect class="terminal" x="150" y="16" width="700" height="44" rx="8"/>
+            <text class="terminal-text" x="168" y="43">$ anki-flashcards generate skript.pdf -o output/biologie.apkg --json cards.json</text>
+            <path class="edge" d="M500 60 V90" marker-end="url(#arr-flow)"/>
+
+            <a href="#schritt-1"><g class="n-cli"><rect class="box" x="260" y="94" width="480" height="60" rx="10"/><circle class="dot" cx="288" cy="124" r="16"/><text class="t-num" x="288" y="128.5">1</text>
+              <text class="t-title" x="314" y="120">cli.run()</text><text class="t-sub" x="314" y="141">lädt .env (nur Zugangsdaten) · startet die Typer-App</text></g></a>
+            <path class="edge" d="M500 154 V180" marker-end="url(#arr-flow)"/>
+
+            <a href="#schritt-2"><g class="n-cli"><rect class="box" x="260" y="184" width="480" height="60" rx="10"/><circle class="dot" cx="288" cy="214" r="16"/><text class="t-num" x="288" y="218.5">2</text>
+              <text class="t-title" x="314" y="210">Typer parst Befehl &amp; Optionen</text><text class="t-sub" x="314" y="231">Typen und Wertebereiche · Bedienfehler → Exit-Code 2</text></g></a>
+            <path class="edge" d="M500 244 V270" marker-end="url(#arr-flow)"/>
+
+            <a href="#schritt-3"><g class="n-cli"><rect class="box" x="260" y="274" width="480" height="60" rx="10"/><circle class="dot" cx="288" cy="304" r="16"/><text class="t-num" x="288" y="308.5">3</text>
+              <text class="t-title" x="314" y="300">cli.generate()</text><text class="t-sub" x="314" y="321">_explicit_values(): nur gesetzte Optionen behalten</text></g></a>
+            <path class="edge" d="M500 334 V360" marker-end="url(#arr-flow)"/>
+
+            <a href="#schritt-4"><g class="n-cfg"><rect class="box" x="260" y="364" width="480" height="60" rx="10"/><circle class="dot" cx="288" cy="394" r="16"/><text class="t-num" x="288" y="398.5">4</text>
+              <text class="t-title" x="314" y="390">load_selected_config()</text><text class="t-sub" x="314" y="411">--config › ANKI_CONFIG › ./config.yaml → AppConfig</text></g></a>
+            <path class="edge" d="M500 424 V450" marker-end="url(#arr-flow)"/>
+
+            <a href="#schritt-5"><g class="n-cfg"><rect class="box" x="260" y="454" width="480" height="60" rx="10"/><circle class="dot" cx="288" cy="484" r="16"/><text class="t-num" x="288" y="488.5">5</text>
+              <text class="t-title" x="314" y="480">resolve_generate_settings()</text><text class="t-sub" x="314" y="501">Default → YAML/Profil → CLI · Pfade · API-Key</text></g></a>
+            <path class="edge" d="M740 484 H756" marker-end="url(#arr-flow)"/>
+            <g class="n-cfg"><rect class="box opt" x="760" y="464" width="196" height="40" rx="20"/><text class="t-mono" x="778" y="489">GenerateSettings</text></g>
+            <path class="edge" d="M500 514 V540" marker-end="url(#arr-flow)"/>
+
+            <a href="#schritt-6"><g class="n-cli"><rect class="box" x="260" y="544" width="480" height="60" rx="10"/><circle class="dot" cx="288" cy="574" r="16"/><text class="t-num" x="288" y="578.5">6</text>
+              <text class="t-title" x="314" y="570">_validate_output()</text><text class="t-sub" x="314" y="591">Endung .apkg? neu ↔ --extend? – vor jeder KI-Anfrage</text></g></a>
+            <path class="edge" d="M500 604 V630" marker-end="url(#arr-flow)"/>
+
+            <g class="n-cli"><polygon class="box" points="500,634 600,674 500,714 400,674"/><text class="t-title" x="500" y="679" text-anchor="middle">pdf_mode?</text></g>
+            <path class="edge" d="M400 674 H255 V756" marker-end="url(#arr-flow)"/>
+            <text class="t-edge" x="268" y="664">local (Standard)</text>
+            <path class="edge" d="M600 674 H745 V756" marker-end="url(#arr-flow)"/>
+            <text class="t-edge" x="612" y="664">native (nur ausdrücklich)</text>
+
+            <!-- Lokaler Zweig -->
+            <a href="#schritt-7"><g class="n-doc"><rect class="box" x="40" y="760" width="430" height="60" rx="10"/><circle class="dot" cx="68" cy="790" r="16"/><text class="t-num" x="68" y="794.5">7a</text>
+              <text class="t-title" x="94" y="786">read_document()</text><text class="t-sub" x="94" y="807">≤ 100 MiB · Endung · extrahieren · normalisieren</text></g></a>
+            <path class="edge" d="M255 820 V846" marker-end="url(#arr-flow)"/>
+            <a href="#schritt-7"><g class="n-doc"><rect class="box" x="40" y="850" width="430" height="60" rx="10"/>
+              <text class="t-title" x="60" y="876">chunk_text()</text><text class="t-sub" x="60" y="897">≤ chunk_size Zeichen · 500 Zeichen Überlappung</text></g></a>
+            <path class="edge" d="M255 910 V936" marker-end="url(#arr-flow)"/>
+            <rect class="frame ai" x="40" y="940" width="430" height="214" rx="12"/>
+            <text class="t-label" x="56" y="962">ai.generate_cards() · je Chunk</text>
+            <a href="#ki-generierung"><g class="n-ai"><rect class="box" x="60" y="974" width="370" height="40" rx="8"/>
+              <text class="t-title" x="76" y="999">_build_prompt()</text><text class="t-sub" x="230" y="999">Kontingent + Quelltext</text></g></a>
+            <path class="edge" d="M245 1014 V1024" marker-end="url(#arr-flow)"/>
+            <a href="#ki-generierung"><g class="n-ext"><rect class="box" x="60" y="1028" width="370" height="40" rx="8"/>
+              <text class="t-title" x="76" y="1053">litellm.completion()</text><text class="t-sub" x="268" y="1053">2 Retries · Timeout</text></g></a>
+            <path class="edge" d="M245 1068 V1078" marker-end="url(#arr-flow)"/>
+            <a href="#ki-generierung"><g class="n-model"><rect class="box" x="60" y="1082" width="370" height="40" rx="8"/>
+              <text class="t-title" x="76" y="1107">CardBatch</text><text class="t-sub" x="168" y="1107">prüfen · deduplizieren · kürzen</text></g></a>
+            <path class="edge" d="M430 1102 H448 V994 H434" marker-end="url(#arr-flow)"/>
+            <text class="t-edge" transform="translate(466 1048) rotate(-90)" text-anchor="middle">nächster Chunk</text>
+            <text class="t-sub" x="60" y="1144">Limit erreicht → Schleife bricht sofort ab</text>
+
+            <!-- Nativer Zweig -->
+            <a href="#schritt-7"><g class="n-ai"><rect class="box" x="530" y="760" width="430" height="60" rx="10"/><circle class="dot" cx="558" cy="790" r="16"/><text class="t-num" x="558" y="794.5">7b</text>
+              <text class="t-title" x="584" y="786">generate_native_cards()</text><text class="t-sub" x="584" y="807">nur .pdf · keine lokale Extraktion</text></g></a>
+            <path class="edge" d="M745 820 V846" marker-end="url(#arr-flow)"/>
+            <a href="#native"><g class="n-ai"><rect class="box" x="530" y="850" width="430" height="60" rx="10"/>
+              <text class="t-head" x="550" y="876">Vor dem Upload prüfen</text><text class="t-sub" x="550" y="897">Modell-Allowlist · Datei &lt; 50 MiB · OPENAI_API_KEY</text></g></a>
+            <path class="edge" d="M745 910 V936" marker-end="url(#arr-flow)"/>
+            <rect class="frame ext" x="530" y="940" width="430" height="214" rx="12"/>
+            <text class="t-label" x="546" y="962">OpenAI-API · offizielles SDK</text>
+            <a href="#native"><g class="n-ext"><rect class="box" x="550" y="974" width="390" height="40" rx="8"/>
+              <text class="t-title" x="566" y="999">files.create()</text><text class="t-sub" x="708" y="999">purpose="user_data"</text></g></a>
+            <path class="edge" d="M745 1014 V1024" marker-end="url(#arr-flow)"/>
+            <a href="#native"><g class="n-ext"><rect class="box" x="550" y="1028" width="390" height="40" rx="8"/>
+              <text class="t-title" x="566" y="1053">responses.parse()</text><text class="t-sub" x="736" y="1053">CardBatch · store=False</text></g></a>
+            <path class="edge" d="M745 1068 V1078" marker-end="url(#arr-flow)"/>
+            <a href="#native"><g class="n-ext"><rect class="box" x="550" y="1082" width="390" height="40" rx="8"/>
+              <text class="t-title" x="566" y="1107">files.delete()</text><text class="t-sub" x="708" y="1107">im finally – auch nach Fehlern</text></g></a>
+            <text class="t-sub" x="550" y="1144">Löschfehler → nur Warnung mit Datei-ID</text>
+
+            <!-- Zusammenführung -->
+            <path class="edge" d="M255 1154 V1176 H400 V1196" marker-end="url(#arr-flow)"/>
+            <path class="edge" d="M745 1154 V1176 H600 V1196" marker-end="url(#arr-flow)"/>
+            <a href="#schritt-8"><g class="n-model"><rect class="box" x="260" y="1200" width="480" height="60" rx="10"/><circle class="dot" cx="288" cy="1230" r="16"/><text class="t-num" x="288" y="1234.5">8</text>
+              <text class="t-title" x="314" y="1226">list[Card] prüfen</text><text class="t-sub" x="314" y="1247">validiert · dedupliziert · gekürzt · leer → Fehler</text></g></a>
+            <path class="edge" d="M500 1260 V1286" marker-end="url(#arr-flow)"/>
+            <a href="#schritt-9"><g class="n-model"><rect class="box opt" x="260" y="1290" width="480" height="60" rx="10"/><circle class="dot" cx="288" cy="1320" r="16"/><text class="t-num" x="288" y="1324.5">9</text>
+              <text class="t-title" x="314" y="1316">save_cards()</text><text class="t-sub" x="314" y="1337">nur mit --json · Schema v1 · atomar · vor dem APKG</text></g></a>
+            <path class="edge" d="M500 1350 V1376" marker-end="url(#arr-flow)"/>
+
+            <g class="n-cli"><polygon class="box" points="500,1380 600,1420 500,1460 400,1420"/><text class="t-title" x="500" y="1425" text-anchor="middle">extend?</text></g>
+            <path class="edge" d="M400 1420 H255 V1496" marker-end="url(#arr-flow)"/>
+            <text class="t-edge" x="268" y="1410">nein → neue Datei</text>
+            <path class="edge" d="M600 1420 H745 V1496" marker-end="url(#arr-flow)"/>
+            <text class="t-edge" x="612" y="1410">ja → vorhandene Datei erweitern</text>
+
+            <a href="#schritt-10"><g class="n-apkg"><rect class="box" x="40" y="1500" width="430" height="78" rx="10"/><circle class="dot" cx="68" cy="1539" r="16"/><text class="t-num" x="68" y="1543.5">10a</text>
+              <text class="t-title" x="94" y="1526">create_apkg()</text><text class="t-sub" x="94" y="1547">genanki · stabile Deck-ID und GUIDs</text><text class="t-sub" x="94" y="1566">HTML-escaped · Temp-Datei → os.replace</text></g></a>
+            <a href="#schritt-10"><g class="n-apkg"><rect class="box" x="530" y="1500" width="430" height="78" rx="10"/><circle class="dot" cx="558" cy="1539" r="16"/><text class="t-num" x="558" y="1543.5">10b</text>
+              <text class="t-title" x="584" y="1526">append_apkg()</text><text class="t-sub" x="584" y="1547">entpacken · offizielle Anki-API · Duplikate</text><text class="t-sub" x="584" y="1566">WAL-Checkpoint · neu packen → os.replace</text></g></a>
+            <path class="edge" d="M255 1578 V1600 H400 V1616" marker-end="url(#arr-flow)"/>
+            <path class="edge" d="M745 1578 V1600 H600 V1616" marker-end="url(#arr-flow)"/>
+
+            <a href="#schritt-11"><g class="n-cli"><rect class="box" x="260" y="1620" width="480" height="60" rx="10"/><circle class="dot" cx="288" cy="1650" r="16"/><text class="t-num" x="288" y="1654.5">11</text>
+              <text class="t-title" x="314" y="1646">_print_result()</text><text class="t-sub" x="314" y="1667">„Fertig: N Karten in 'Deck' → Pfad …“ · Exit-Code 0</text></g></a>
+            <path class="edge" d="M500 1680 V1706" marker-end="url(#arr-flow)"/>
+            <g class="n-ext"><rect class="box" x="340" y="1710" width="320" height="44" rx="22"/><text class="t-title" x="500" y="1737" text-anchor="middle">output/biologie.apkg</text></g>
+          </svg>
+        </div>
+        <figcaption>Gestrichelte Kästen sind optional. Der rote Weg rechts gilt für jeden Schritt: Erwartete Fehler werden als <code>FlashcardError</code> bis <code>cli.run()</code> durchgereicht. Bedienfehler (Schritt 2) beendet Typer selbst mit Exit-Code 2.</figcaption>
+      </figure>
+
+      <h3 style="margin-top:2rem">Die Schritte im Einzelnen</h3>
+      <div class="grid two">
+        <article class="card searchable" data-module="cli" id="schritt-1">
+          <span class="step-number">1</span>
+          <h3>Einstieg: <code>cli.run()</code></h3>
+          <p>Der Konsolenbefehl ruft <code>run()</code> auf; <code>python -m anki_flashcards</code> erreicht über <code>__main__.py</code> dieselbe Funktion. <code>run()</code> lädt zuerst eine <code>.env</code> mit <code>find_dotenv(usecwd=True)</code> – die Suche beginnt im aktuellen Arbeitsordner und geht nach oben. Bereits gesetzte Umgebungsvariablen bleiben unverändert (Standard von python-dotenv).</p>
+          <p>Danach startet <code>run()</code> die Typer-App in einem <code>try</code>-Block. Jede <code>FlashcardError</code> erscheint als <code>Fehler: …</code> auf stderr; <code>raise SystemExit(1) from None</code> unterdrückt den Traceback.</p>
+        </article>
+        <article class="card searchable" data-module="cli" id="schritt-2">
+          <span class="step-number">2</span>
+          <h3>Typer parst den Befehl</h3>
+          <p>Typer (auf Basis von Click) wählt <code>generate</code>, wandelt Typen um (<code>Path</code>, <code>int</code>, <code>PDFMode</code>) und prüft Wertebereiche: <code>--limit ≥ 0</code>, <code>--chunk-size 1000..100000</code>, <code>--timeout 1..3600</code>. Ein Verstoß ist ein Bedienfehler: Click zeigt die Usage und beendet mit Exit-Code 2, bevor Anwendungscode läuft.</p>
+          <p><strong>Wichtiger Kniff:</strong> Fast alle Optionen haben den Default <code>None</code>. Nur so lässt sich später „nicht angegeben“ von „ausdrücklich angegeben“ unterscheiden. Die Defaults in der Hilfe sind deshalb reiner Text (<code>show_default=False</code>); die echten Defaults stehen in <code>config.py</code>.</p>
+        </article>
+        <article class="card searchable" data-module="cli" id="schritt-3">
+          <span class="step-number">3</span>
+          <h3><code>cli.generate()</code> sammelt explizite Werte</h3>
+          <p><code>_explicit_values()</code> entfernt alle <code>None</code>-Werte. <code>False</code>, <code>0</code> und <code>""</code> bleiben erhalten. Deshalb überschreiben <code>--no-extend</code>, <code>--limit 0</code> und <code>--instructions ""</code> einen YAML-Wert wirksam.</p>
+          <p>Das Ergebnis ist ein einfaches <code>dict</code>. Kein Typer-Objekt gelangt in die Konfigurationsschicht oder den Kern.</p>
+        </article>
+        <article class="card searchable" data-module="settings config" id="schritt-4">
+          <span class="step-number">4</span>
+          <h3>Konfiguration laden</h3>
+          <p><code>load_selected_config()</code> wählt die Datei: <code>--config</code> (Typer füllt diese Option auch aus <code>ANKI_CONFIG</code>) → <code>ANKI_CONFIG</code> → optionale <code>./config.yaml</code>. <code>load_config()</code> liest mit <code>yaml.safe_load</code> und validiert streng mit Pydantic (<code>AppConfig</code>, unbekannte Schlüssel verboten).</p>
+          <p>Rückgabe: typisiertes <code>AppConfig</code> und der absolute Dateipfad – wichtig für relative YAML-Pfade – oder <code>None</code>, wenn keine Datei existiert. Fehlt eine ausdrücklich gewählte Datei oder ist sie ungültig, entsteht eine <code>FlashcardError</code> mit Fehlerort.</p>
+        </article>
+        <article class="card searchable" data-module="settings" id="schritt-5">
+          <span class="step-number">5</span>
+          <h3>Einstellungen auflösen</h3>
+          <p><code>resolve_generate_settings(cli, config, config_path)</code> legt die drei Schichten übereinander (siehe <a href="#konfiguration">Konfigurationsauflösung</a>). Reihenfolge: Profilname → Profil (unbekannt → Fehler) → Eingabepfad → Ausgabepfad (weder <code>--output</code> noch <code>output_dir</code> → Fehler) → Deck → JSON-Pfad → Modell → Endpunkt → Timeout → PDF-Modus → Herkunftslabels.</p>
+          <p>Nur hier wird der API-Schlüssel gelesen: <code>os.getenv(profile.api_key_env)</code>. Ergebnis ist ein unveränderliches <code>GenerateSettings</code> mit eingebettetem <code>AISettings</code>.</p>
+        </article>
+        <article class="card searchable" data-module="cli" id="schritt-6">
+          <span class="step-number">6</span>
+          <h3>Ausgabe vorab prüfen</h3>
+          <p><code>_validate_output()</code> prüft, bevor Kosten entstehen: Endung <code>.apkg</code> (ohne Beachtung der Groß-/Kleinschreibung); bei <code>extend=True</code> muss die Datei existieren, bei <code>extend=False</code> darf sie nicht existieren.</p>
+          <p>So wird nie eine KI-Anfrage bezahlt, deren Ergebnis anschließend nicht geschrieben werden darf.</p>
+        </article>
+        <article class="card searchable" data-module="documents ai native_pdf" id="schritt-7">
+          <span class="step-number">7</span>
+          <h3>Karten erzeugen: lokal oder nativ</h3>
+          <p><strong>7a · lokal (Standard, alle Formate):</strong> <code>read_document()</code> prüft Größe und Endung, extrahiert Text je Format und normalisiert Leerraum. Ein Rich-Spinner startet; <code>ai.generate_cards()</code> teilt den Text mit <code>chunk_text()</code> auf und sendet je Chunk eine Anfrage über LiteLLM. Jede Antwort wird gegen <code>CardBatch</code> validiert und mit <code>deduplicate_cards(cards, limit)</code> bereinigt. Ist das Limit erreicht, werden restliche Chunks nicht mehr angefragt. → <a href="#ki-generierung">KI-Generierung</a></p>
+          <p><strong>7b · nativ:</strong> Die CLI meldet den Upload. <code>generate_native_cards()</code> akzeptiert nur <code>.pdf</code> und ruft <code>read_document()</code> nie auf. Allowlist, Größe und API-Schlüssel werden vor dem Upload geprüft. Es gibt genau eine Modellanfrage; <code>chunk_size</code> wirkt hier nicht. → <a href="#native">Native PDF</a></p>
+        </article>
+        <article class="card searchable" data-module="cli models" id="schritt-8">
+          <span class="step-number">8</span>
+          <h3>Ergebnis prüfen</h3>
+          <p>Beide Wege liefern dieselbe Form: <code>list[Card]</code> – Pydantic-validiert, dedupliziert und auf das Limit gekürzt. Ab hier ist der Rest des Ablaufs identisch.</p>
+          <p>Ist die Liste leer, bricht <code>generate</code> mit „The AI did not return any usable cards“ ab. Ein leeres Deck wird nie geschrieben.</p>
+        </article>
+        <article class="card searchable" data-module="models" id="schritt-9">
+          <span class="step-number">9</span>
+          <h3>Optional: JSON schreiben</h3>
+          <p>Nur mit <code>--json</code> oder <code>generation.json_output</code>: <code>save_cards()</code> schreibt <code>schema_version</code>, <code>deck</code>, <code>cards</code> und <code>source</code> atomar. Eine vorhandene JSON-Datei wird ersetzt.</p>
+          <p>Das JSON entsteht <em>vor</em> dem APKG. Schlägt das Schreiben des Pakets fehl, bleiben die bereits bezahlten Karten erhalten und lassen sich mit <code>export</code> erneut verwenden.</p>
+        </article>
+        <article class="card searchable" data-module="cli apkg" id="schritt-10">
+          <span class="step-number">10</span>
+          <h3>Paket schreiben</h3>
+          <p><code>_write_deck()</code> lehnt einen leeren Decknamen ab und verzweigt nach <code>extend</code>.</p>
+          <p><strong>10a · neu:</strong> <code>create_apkg()</code> baut mit genanki einen Notiztyp mit fester ID, ein Deck mit stabiler ID und je Karte eine Notiz mit HTML-escapten Feldern und stabiler GUID. Ziel: Temp-Datei <code>.&lt;name&gt;.&lt;PID&gt;.tmp</code>, dann <code>os.replace</code>.</p>
+          <p><strong>10b · erweitern:</strong> <code>append_apkg()</code> entpackt die Sammlung in einen Temp-Ordner, schreibt über die offizielle Anki-API, überspringt vorhandene Fragen, führt einen WAL-Checkpoint aus und packt das ZIP neu. → <a href="#apkg-intern">Anki-Pakete</a></p>
+        </article>
+        <article class="card searchable" data-module="cli" id="schritt-11">
+          <span class="step-number">11</span>
+          <h3>Ergebnis melden</h3>
+          <p><code>_print_result()</code> schreibt auf stdout: <code>Fertig: N Karten in 'Deck' → Pfad (M Duplikate übersprungen)</code> und gegebenenfalls den JSON-Pfad. Typer beendet regulär mit Exit-Code 0.</p>
+          <p class="small muted">Bei <code>create_apkg()</code> ist die Duplikatzahl immer 0, weil die Liste bereits in Schritt 7 dedupliziert wurde. Nur <code>append_apkg()</code> kann gegen vorhandene Karten zusätzliche Duplikate finden.</p>
+        </article>
+      </div>
+    </section>
+
+    <!-- ============================================================ WEITERE ABLÄUFE -->
+    <section id="weitere-ablaeufe">
+      <div class="section-heading">
+        <p class="eyebrow">Die anderen Befehle</p>
+        <h2>Abläufe von <code>export</code>, <code>decks</code> und <code>config show</code></h2>
+        <p>Die übrigen Befehle verwenden dieselben Bausteine in kürzeren Ketten. Keiner davon ruft ein KI-Modell auf.</p>
+      </div>
+      <div class="stack">
+        <article class="card searchable" data-module="cli settings models apkg" id="ablauf-export">
+          <div class="command-header"><h3 class="command-title"><code>export</code></h3><span class="tag model">JSON → APKG ohne KI</span></div>
+          <ol class="chain">
+            <li><code>load_selected_config()</code></li>
+            <li><code>resolve_export_settings()</code></li>
+            <li><code>_validate_output()</code></li>
+            <li><code>load_cards()</code></li>
+            <li><code>deduplicate_cards()</code></li>
+            <li><code>_write_deck()</code></li>
+            <li><code>_print_result()</code></li>
+          </ol>
+          <ul class="checklist">
+            <li>Das Zieldeck kommt aus <code>--deck</code> oder <code>generation.deck</code>; fehlen beide, ist das ein Fehler. Das Feld <code>deck</code> in der JSON-Datei wird beim Laden bewusst ignoriert.</li>
+            <li>Ohne <code>--output</code> entsteht <code>output_dir/&lt;json-name-ohne-.json&gt;.apkg</code> – aus <code>biologie.cards.json</code> wird also <code>biologie.cards.apkg</code>.</li>
+            <li>Es gibt kein Limit; <code>deduplicate_cards()</code> läuft mit <code>limit=0</code> und entfernt nur doppelte Fragen.</li>
+            <li><code>--extend</code> verhält sich exakt wie bei <code>generate</code>, weil beide <code>_validate_output()</code> und <code>_write_deck()</code> teilen.</li>
+          </ul>
+        </article>
+        <article class="card searchable" data-module="cli apkg" id="ablauf-decks">
+          <div class="command-header"><h3 class="command-title"><code>decks</code></h3><span class="tag apkg">Paket nur lesen</span></div>
+          <ol class="chain">
+            <li><code>Typer: exists=True</code></li>
+            <li><code>inspect_apkg()</code></li>
+            <li><code>_extract_collection()</code></li>
+            <li><code>_open_collection()</code></li>
+            <li><code>decks.all_names_and_ids()</code></li>
+            <li><code>decks.card_count()</code></li>
+            <li><code>Rich-Tabelle</code></li>
+          </ol>
+          <ul class="checklist">
+            <li>Als einziger Befehl lässt <code>decks</code> Typer die Datei prüfen (<code>exists=True</code>, <code>readable=True</code>). Eine fehlende Datei ist deshalb ein Bedienfehler mit Exit-Code 2.</li>
+            <li>Die Sammlung wird in einen Temp-Ordner kopiert; das Original bleibt unberührt. Gefilterte Decks werden ausgeschlossen (<code>include_filtered=False</code>), gezählt werden nur direkte Karten (<code>include_subdecks=False</code>).</li>
+            <li>Es wird keine YAML-Konfiguration geladen.</li>
+          </ul>
+        </article>
+        <article class="card searchable" data-module="cli settings" id="ablauf-config-show">
+          <div class="command-header"><h3 class="command-title"><code>config show</code></h3><span class="tag cfg">Diagnose</span></div>
+          <ol class="chain">
+            <li><code>load_selected_config()</code></li>
+            <li><code>resolve_generate_settings()</code></li>
+            <li><code>configuration_diagnostics()</code></li>
+            <li><code>console.print_json()</code></li>
+          </ol>
+          <ul class="checklist">
+            <li>Die Optionen spiegeln <code>generate</code>, damit dieselbe Auflösung ohne Seiteneffekte sichtbar wird. Die Eingabedatei muss nicht existieren.</li>
+            <li>Ausgegeben werden effektive Werte und <code>sources</code> (<code>built-in</code>, <code>config</code>, <code>cli</code>). Der API-Schlüssel erscheint nur als <code>set (hidden)</code> oder <code>not set</code>, Provider-Optionen nur als sortierte Schlüsselliste.</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <!-- ============================================================ MODULE -->
+    <section id="module">
+      <div class="section-heading">
+        <p class="eyebrow">Referenz</p>
+        <h2>Alle Module und Funktionen im Detail</h2>
+        <p>Jedes Modul hat genau eine fachliche Aufgabe. Die Karten nennen Abhängigkeiten, öffentliche Schnittstellen, interne Bausteine und die Einzelheiten, die man beim Ändern kennen muss. Funktionen mit führendem Unterstrich sind modulintern.</p>
+      </div>
+
+      <h3>Wer importiert wen?</h3>
+      <div class="table-wrap searchable" data-module="cli settings config documents ai native_pdf models apkg errors">
+        <table>
+          <thead><tr><th>Modul</th><th>importiert aus dem Paket</th><th>wird verwendet von</th></tr></thead>
+          <tbody>
+            <tr><td><code>cli</code></td><td><code>ai</code>, <code>apkg</code>, <code>config</code>, <code>documents</code>, <code>errors</code>, <code>models</code>, <code>native_pdf</code>, <code>settings</code></td><td><code>__main__</code>, Konsolenbefehl</td></tr>
+            <tr><td><code>settings</code></td><td><code>ai</code> (<code>AISettings</code>), <code>config</code>, <code>errors</code></td><td><code>cli</code></td></tr>
+            <tr><td><code>config</code></td><td><code>errors</code></td><td><code>settings</code>, <code>cli</code> (<code>PDFMode</code>)</td></tr>
+            <tr><td><code>native_pdf</code></td><td><code>ai</code> (<code>SYSTEM_PROMPT</code>, <code>AISettings</code>), <code>errors</code>, <code>models</code></td><td><code>cli</code></td></tr>
+            <tr><td><code>ai</code></td><td><code>documents</code> (<code>SourceDocument</code>, <code>chunk_text</code>), <code>errors</code>, <code>models</code></td><td><code>cli</code>, <code>settings</code>, <code>native_pdf</code></td></tr>
+            <tr><td><code>apkg</code></td><td><code>errors</code>, <code>models</code> (<code>Card</code>)</td><td><code>cli</code></td></tr>
+            <tr><td><code>documents</code></td><td><code>errors</code></td><td><code>cli</code>, <code>ai</code></td></tr>
+            <tr><td><code>models</code></td><td><code>errors</code></td><td><code>cli</code>, <code>ai</code>, <code>native_pdf</code>, <code>apkg</code></td></tr>
+            <tr><td><code>errors</code></td><td>–</td><td>alle Module</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="small muted">Der Graph ist zyklenfrei. <code>models</code>, <code>documents</code> und <code>errors</code> sind Blätter und lassen sich ohne den Rest testen.</p>
+
+      <!-- errors.py -->
+      <article class="card command-section module-card searchable" data-module="errors" id="mod-errors">
+        <div class="command-header"><h3 class="command-title"><code>errors.py</code></h3><span class="tag err">Querschnitt · Fehlerkonzept</span></div>
+        <p>Definiert genau eine Klasse: <code>FlashcardError(Exception)</code> – einen <em>erwarteten</em>, für Nutzer verständlichen Fehler. Alles, was ein Nutzer beheben kann (falscher Pfad, ungültige YAML, Provider nicht erreichbar, ungültige KI-Antwort), wird in diesen Typ übersetzt.</p>
+        <dl class="facts">
+          <dt>Importiert</dt><dd>nichts</dd>
+          <dt>Gefangen in</dt><dd>ausschließlich <code>cli.run()</code></dd>
+          <dt>Tests</dt><dd>indirekt in allen Testdateien; <code>test_cli.py</code> prüft Ausgabe ohne Traceback</dd>
+        </dl>
+        <details>
+          <summary>Wichtige Einzelheiten</summary>
+          <div class="details-body">
+            <ul class="checklist">
+              <li>Übersetzungen nutzen <code>raise FlashcardError(...) from error</code>. Die Ursache bleibt im Debugger sichtbar, der Nutzer sieht nur die Meldung.</li>
+              <li>Unerwartete Ausnahmen (Programmierfehler) werden bewusst <em>nicht</em> abgefangen und erscheinen mit Traceback. Das trennt Bedienprobleme sauber von Bugs.</li>
+              <li>Die vollständige Übersicht aller Übersetzungsstellen steht unter <a href="#fehler">Fehlerkonzept</a>.</li>
+            </ul>
+          </div>
+        </details>
+      </article>
+
+      <!-- models.py -->
+      <article class="card command-section module-card searchable" data-module="models" id="mod-models">
+        <div class="command-header"><h3 class="command-title"><code>models.py</code></h3><span class="tag model">Fachkern · Kartenmodell</span></div>
+        <p>Das gemeinsame Datenmodell aller Wege: Pydantic-Klassen für eine Karte und eine Kartenliste, das versionierte JSON-Format und die Duplikaterkennung. Lokale KI, native KI, JSON-Import und APKG-Ausgabe sprechen alle über <code>Card</code>.</p>
+        <dl class="facts">
+          <dt>Importiert</dt><dd><code>errors</code> · Pydantic, <code>json</code>, <code>tempfile</code>, <code>os</code></dd>
+          <dt>Verwendet von</dt><dd><code>ai</code>, <code>native_pdf</code>, <code>apkg</code>, <code>cli</code></dd>
+          <dt>Tests</dt><dd><code>tests/test_models.py</code> (4 Tests)</dd>
+        </dl>
+        <details open>
+          <summary>Öffentliche Schnittstelle</summary>
+          <div class="details-body">
+            <div class="option">
+              <div class="option-heading"><span class="option-name"><code>class Card(BaseModel)</code></span><span class="option-meta">Pydantic-Modell</span></div>
+              <p>Eine Klartext-Karte: <code>front</code> (1–2.000 Zeichen), <code>back</code> (1–20.000 Zeichen), <code>tags</code> (höchstens 20). <code>str_strip_whitespace=True</code> entfernt Leerraum am Rand aller Strings.</p>
+              <p><code>validate_tags()</code> trimmt Tags, entfernt leere und doppelte Einträge (Reihenfolge bleibt) und lehnt Tags mit Leerzeichen ab – Anki trennt Tags an Leerzeichen.</p>
+            </div>
+            <div class="option">
+              <div class="option-heading"><span class="option-name"><code>class CardBatch(BaseModel)</code></span><span class="option-meta">Pydantic-Modell</span></div>
+              <p><code>cards: list[Card]</code>. Eine leere Liste ist an dieser Grenze erlaubt. <code>CardBatch</code> ist zugleich das <strong>Antwortschema für die KI</strong>: LiteLLM erhält es als <code>response_format</code>, das OpenAI-SDK als <code>text_format</code>.</p>
+            </div>
+            <div class="option">
+              <div class="option-heading"><span class="option-name"><code>save_cards(path, cards, *, deck, source=None) → None</code></span><span class="option-meta">schreibt Datei</span></div>
+              <p>Schreibt <code>{"schema_version": 1, "deck", "cards", "source"?}</code> als UTF-8-JSON (<code>ensure_ascii=False</code>, Einrückung 2). Elternordner werden angelegt. Atomar: <code>NamedTemporaryFile</code> im Zielordner, dann <code>os.replace</code>; die Temp-Datei wird im <code>finally</code> entfernt.</p>
+            </div>
+            <div class="option">
+              <div class="option-heading"><span class="option-name"><code>load_cards(path) → list[Card]</code></span><span class="option-meta">liest Datei</span></div>
+              <p>Verlangt ein JSON-Objekt mit <code>schema_version == 1</code> und validiert es als <code>CardBatch</code>. Zusätzliche Felder wie <code>deck</code> und <code>source</code> werden ignoriert. Lese-, Parse- und Validierungsfehler werden zu <code>FlashcardError</code>.</p>
+            </div>
+            <div class="option">
+              <div class="option-heading"><span class="option-name"><code>deduplicate_cards(cards, limit=0) → list[Card]</code></span><span class="option-meta">rein funktional</span></div>
+              <p>Behält pro <em>normalisierter</em> Frage die erste Karte. Schlüssel: <code>" ".join(front.casefold().split())</code> – Groß-/Kleinschreibung und Leerraum spielen keine Rolle. Bei <code>limit &gt; 0</code> endet die Liste nach <code>limit</code> Karten; <code>0</code> bedeutet kein Limit.</p>
+            </div>
+          </div>
+        </details>
+        <details>
+          <summary>Wichtige Einzelheiten</summary>
+          <div class="details-body">
+            <ul class="checklist">
+              <li>Dieselbe Normalisierung steckt in <code>apkg._normalize_front()</code>. Ändert man die eine, muss man die andere mitziehen, sonst weichen Duplikate in Liste und Paket voneinander ab.</li>
+              <li>Die Grenzen 2.000/20.000/20 stammen aus R-024. Ungültige Karten einer KI-Antwort machen den <em>ganzen</em> Batch ungültig – es gibt kein Teil-Retten.</li>
+            </ul>
+          </div>
+        </details>
+      </article>
+
+      <!-- documents.py -->
+      <article class="card command-section module-card searchable" data-module="documents" id="mod-documents">
+        <div class="command-header"><h3 class="command-title"><code>documents.py</code></h3><span class="tag doc">Fachkern · Eingabe</span></div>
+        <p>Liest lokale Dokumente, macht daraus normalisierten Klartext und teilt diesen in überlappende Abschnitte für Modellanfragen. Unterstützt: <code>.pdf</code>, <code>.docx</code>, <code>.html</code>, <code>.htm</code>, <code>.md</code>, <code>.markdown</code>, <code>.txt</code>; höchstens 100 MiB.</p>
+        <dl class="facts">
+          <dt>Importiert</dt><dd><code>errors</code> · pypdf, python-docx, BeautifulSoup</dd>
+          <dt>Verwendet von</dt><dd><code>cli</code> (<code>read_document</code>), <code>ai</code> (<code>SourceDocument</code>, <code>chunk_text</code>)</dd>
+          <dt>Tests</dt><dd><code>tests/test_documents.py</code> (5 Tests)</dd>
+        </dl>
+        <details open>
+          <summary>Öffentliche Schnittstelle</summary>
+          <div class="details-body">
+            <div class="option">
+              <div class="option-heading"><span class="option-name"><code>SourceDocument(path, text)</code></span><span class="option-meta">frozen dataclass</span></div>
+              <p>Quelle und nicht leerer, normalisierter Text. Das ist alles, was <code>ai.generate_cards()</code> vom Dokument braucht.</p>
+            </div>
+            <div class="option">
+              <div class="option-heading"><span class="option-name"><code>read_document(path) → SourceDocument</code></span><span class="option-meta">liest Datei</span></div>
+              <p>Pipeline aus vier Schritten: <code>_validate_document_path</code> → <code>_extract_text</code> → <code>_normalize_text</code> → Prüfung auf leeren Text („No extractable text found“).</p>
+            </div>
+            <div class="option">
+              <div class="option-heading"><span class="option-name"><code>chunk_text(text, max_chars=24_000, overlap=500) → list[str]</code></span><span class="option-meta">rein funktional</span></div>
+              <p>Teilt Text in Abschnitte von höchstens <code>max_chars</code> Zeichen; benachbarte Abschnitte überlappen um <code>overlap</code> Zeichen. Kurzer Text ergibt genau einen Abschnitt. <code>ValueError</code> bei <code>max_chars &lt; 1000</code> oder <code>overlap ≥ max_chars // 2</code>. → <a href="#ki-generierung">Diagramm</a></p>
+            </div>
+          </div>
+        </details>
+        <details>
+          <summary>Interne Bausteine</summary>
+          <div class="details-body">
+            <div class="option"><div class="option-heading"><span class="option-name"><code>_validate_document_path(path)</code></span></div><p><code>stat()</code> (fehlende Datei → <code>FlashcardError</code>), Größe &gt; 100 MiB, nicht unterstützte Endung. Läuft vor jedem Parser.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>_extract_text(path)</code></span></div><p>Bibliotheksgrenze: fängt <code>OSError</code>, <code>UnicodeError</code>, <code>ValueError</code>, <code>PyPdfError</code>, <code>PackageNotFoundError</code>, <code>BadZipFile</code> und übersetzt sie in <code>FlashcardError</code>.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>_extract_supported_text(path)</code></span></div><p>Verzweigt nach Endung: PDF → <code>_read_pdf</code>, DOCX → <code>_read_docx</code>, HTML → <code>_html_to_text</code>; alles andere wird als UTF-8 gelesen (<code>utf-8-sig</code> toleriert ein BOM).</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>_read_pdf(path)</code> / <code>_extract_pdf_page(number, page)</code></span></div><p>Verschlüsselte PDFs werden mit leerem Passwort entschlüsselt; nicht unterstützte Verschlüsselung → Fehler. Jede Seite mit Text erhält die Markierung <code>[Seite N]</code>; leere Seiten (z. B. Scans) entfallen.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>_read_docx(path)</code></span></div><p>Erst alle Absätze, danach alle Tabellenzeilen mit <code>" | "</code> zwischen Zellen. Tabellen stehen also am Ende, nicht an ihrer Originalposition.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>_html_to_text(html)</code></span></div><p>BeautifulSoup mit <code>html.parser</code>; <code>script</code>, <code>style</code>, <code>noscript</code> und <code>template</code> werden entfernt, Textknoten mit Zeilenumbruch verbunden.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>_normalize_text(text)</code></span></div><p>Pro Zeile Leerzeichen/Tabs zusammenfassen und trimmen; drei oder mehr Zeilenumbrüche werden zu einer Leerzeile. Absätze bleiben erkennbar – wichtig für <code>_chunk_end</code>.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>_chunk_end(text, start, max_chars)</code></span></div><p>Sucht das Abschnittsende in der zweiten Fensterhälfte: zuerst <code>\n\n</code>, dann ein Leerzeichen, sonst harter Schnitt bei <code>max_chars</code>.</p></div>
+          </div>
+        </details>
+      </article>
+
+      <!-- ai.py -->
+      <article class="card command-section module-card searchable" data-module="ai" id="mod-ai">
+        <div class="command-header"><h3 class="command-title"><code>ai.py</code></h3><span class="tag ai">Fachkern · KI über LiteLLM</span></div>
+        <p>Providerunabhängige Kartengenerierung aus Text. Baut je Abschnitt einen Prompt, ruft LiteLLM mit strukturierter Ausgabe auf, validiert die Antwort und führt alle Abschnitte zu einer deduplizierten, begrenzten Liste zusammen.</p>
+        <dl class="facts">
+          <dt>Importiert</dt><dd><code>documents</code>, <code>errors</code>, <code>models</code> · LiteLLM (verzögert)</dd>
+          <dt>Verwendet von</dt><dd><code>cli</code> (<code>generate_cards</code>), <code>settings</code> (<code>AISettings</code>), <code>native_pdf</code> (<code>SYSTEM_PROMPT</code>, <code>AISettings</code>)</dd>
+          <dt>Tests</dt><dd><code>tests/test_ai.py</code> (3 Tests, <code>_completion</code> simuliert)</dd>
+        </dl>
+        <details open>
+          <summary>Öffentliche Schnittstelle</summary>
+          <div class="details-body">
+            <div class="option">
+              <div class="option-heading"><span class="option-name"><code>SYSTEM_PROMPT</code></span><span class="option-meta">Konstante</span></div>
+              <p>Gemeinsamer Systemprompt für lokalen und nativen Weg: nur gültiges JSON in der Form <code>{"cards": [...]}</code>, eine eigenständige Tatsache pro Karte, nichts erfinden, Klartext, Tags ohne Leerzeichen, keine Metafragen über das Dokument, lieber weniger als schwache Karten.</p>
+            </div>
+            <div class="option">
+              <div class="option-heading"><span class="option-name"><code>AISettings(model, api_key=None, api_base=None, timeout=180, options={})</code></span><span class="option-meta">frozen dataclass</span></div>
+              <p>Alles, was eine Provider-Anfrage braucht – unabhängig von CLI oder Web. <code>options</code> sind die validierten Zusatzparameter des YAML-Profils.</p>
+            </div>
+            <div class="option">
+              <div class="option-heading"><span class="option-name"><code>generate_cards(document, settings, *, limit=50, language="Deutsch", instructions="", chunk_size=24_000, progress=None) → list[Card]</code></span><span class="option-meta">Netzwerk</span></div>
+              <p>Guard Clauses: <code>limit &lt; 0</code> → <code>ValueError</code>; leeres Modell → <code>FlashcardError</code> („No AI model configured“). Danach je Abschnitt: Kontingent berechnen → <code>_build_prompt</code> → <code>_request_batch</code> → Karten anhängen → <code>deduplicate_cards(cards, limit)</code> → <code>progress(i, n, anzahl)</code> → bei erreichtem Limit abbrechen.</p>
+            </div>
+          </div>
+        </details>
+        <details>
+          <summary>Interne Bausteine</summary>
+          <div class="details-body">
+            <div class="option"><div class="option-heading"><span class="option-name"><code>_request_batch(prompt, settings, chunk_number) → CardBatch</code></span></div><p>Ruft <code>_completion()</code> mit <code>messages=[system, user]</code>, <code>response_format=CardBatch</code>, <code>timeout</code>, <code>num_retries=2</code>, <code>drop_params=True</code>, den Profil-<code>options</code> und <code>_provider_options()</code>. Die Antwort wird mit <code>CardBatch.model_validate_json</code> geprüft. <code>ValidationError</code>/<code>ValueError</code>/<code>TypeError</code> → „invalid card data for document chunk N“, jede andere Ausnahme → „request failed for document chunk N“ (bewusste Bibliotheksgrenze).</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>_build_prompt(text, *, allocation, language, instructions)</code></span></div><p>„Create at most N cards“ oder – im Unlimited-Modus – „as many useful cards as the source supports“, Sprache, optionale Zusatzanweisungen und der Quelltext in <code>&lt;source_document&gt;…&lt;/source_document&gt;</code>. Die Begrenzer kennzeichnen den Text als Daten, nicht als Anweisung.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>_provider_options(settings)</code></span></div><p>Gibt <code>api_key</code> und <code>api_base</code> nur zurück, wenn sie gesetzt sind. Ohne Schlüssel liest LiteLLM die providerspezifische Variable selbst (z. B. <code>OPENAI_API_KEY</code>).</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>_completion(**kwargs)</code></span></div><p>Einzige Stelle, die <code>litellm</code> importiert – verzögert. Tests ersetzen genau diese Funktion.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>_response_content(response)</code> / <code>_strip_code_fence(content)</code></span></div><p>Liest <code>choices[0].message.content</code>, lehnt leere Antworten ab und entfernt einen umschließenden Markdown-Codeblock (<code>```json … ```</code>), den manche Modelle trotz JSON-Modus liefern.</p></div>
+          </div>
+        </details>
+      </article>
+
+      <!-- native_pdf.py -->
+      <article class="card command-section module-card searchable" data-module="native_pdf" id="mod-native_pdf">
+        <div class="command-header"><h3 class="command-title"><code>native_pdf.py</code></h3><span class="tag ai">Fachkern · Provider-Adapter</span></div>
+        <p>Native PDF-Verarbeitung: Die Original-PDF wird beim Provider hochgeladen, statt lokal Text zu extrahieren. Aktuell gibt es genau einen geprüften Adapter für OpenAI (Files API + Responses API über das offizielle <code>openai</code>-SDK). Das Ergebnis ist dieselbe <code>CardBatch</code>-Struktur wie im lokalen Weg.</p>
+        <dl class="facts">
+          <dt>Importiert</dt><dd><code>ai</code>, <code>errors</code>, <code>models</code> · <code>openai</code> (verzögert)</dd>
+          <dt>Verwendet von</dt><dd><code>cli</code> (<code>generate_native_cards</code>)</dd>
+          <dt>Tests</dt><dd><code>tests/test_native_pdf.py</code> (9 Tests, Fake-Client und lokaler HTTP-Server)</dd>
+        </dl>
+        <details open>
+          <summary>Öffentliche Schnittstelle</summary>
+          <div class="details-body">
+            <div class="option">
+              <div class="option-heading"><span class="option-name"><code>class NativePDFAdapter(Protocol)</code></span><span class="option-meta">Erweiterungspunkt</span></div>
+              <p>Vertrag für jeden nativen Adapter: <code>generate(path, settings, *, limit, language, instructions) → NativePDFResult</code>. Strukturelle Typisierung – ein Adapter muss nicht erben, nur diese Methode anbieten.</p>
+            </div>
+            <div class="option">
+              <div class="option-heading"><span class="option-name"><code>NativePDFResult(cards, deleted)</code></span><span class="option-meta">frozen dataclass</span></div>
+              <p>Validierte Karten und ob der Upload gelöscht wurde. <code>deleted</code> wird derzeit nur zurückgegeben; sichtbar wird ein Löschfehler über die <code>RuntimeWarning</code>.</p>
+            </div>
+            <div class="option">
+              <div class="option-heading"><span class="option-name"><code>native_openai_model(model) → str | None</code></span><span class="option-meta">Allowlist</span></div>
+              <p>Gibt den nackten OpenAI-Modellnamen nur für geprüfte Modelle zurück: <code>gpt-4o</code>, <code>gpt-4o-mini</code>, <code>gpt-4.1</code> (Schlüssel von <code>OPENAI_MODEL_DOCUMENTATION</code>) sowie datierte Snapshots mit den Präfixen <code>gpt-4o-</code> und <code>gpt-4.1-</code> plus exakt <code>JJJJ-MM-TT</code>. Ein Provider-Präfix muss <code>openai/</code> sein oder fehlen. Alles andere → <code>None</code>.</p>
+            </div>
+            <div class="option">
+              <div class="option-heading"><span class="option-name"><code>generate_native_cards(path, settings, *, limit=50, language="Deutsch", instructions="", adapter=None) → list[Card]</code></span><span class="option-meta">Netzwerk · Upload</span></div>
+              <p>Lehnt Nicht-PDFs sofort ab, nutzt standardmäßig <code>OpenAINativePDFAdapter()</code> und dedupliziert das Ergebnis mit <code>limit</code>. Der Parameter <code>adapter</code> erlaubt Tests und künftige Adapter ohne Monkeypatching.</p>
+            </div>
+            <div class="option">
+              <div class="option-heading"><span class="option-name"><code>class OpenAINativePDFAdapter</code></span><span class="option-meta">Adapter</span></div>
+              <p><code>generate()</code> arbeitet in fester Reihenfolge: Modell prüfen → Größe prüfen → Client bauen → hochladen → <code>try</code>: strukturierte Anfrage → <code>finally</code>: Upload löschen. Die ersten drei Schritte übertragen nichts.</p>
+            </div>
+          </div>
+        </details>
+        <details>
+          <summary>Interne Bausteine</summary>
+          <div class="details-body">
+            <div class="option"><div class="option-heading"><span class="option-name"><code>_validate_openai_pdf(path)</code></span></div><p>Datei muss <em>kleiner</em> als 50 MiB sein (<code>OPENAI_FILE_SIZE_LIMIT</code>); genau 50 MiB wird abgelehnt.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>_openai_client(settings)</code></span></div><p>Schlüssel aus <code>settings.api_key</code>, sonst <code>OPENAI_API_KEY</code>; fehlt beides → Fehler vor jedem Upload. <code>api_base</code> wird zu <code>base_url</code>. Test-Nahtstelle für den Fake-Client.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>_upload_pdf(client, path, timeout)</code></span></div><p><code>client.files.create(file=…, purpose="user_data")</code> → Datei-ID. Jede Ausnahme wird zu „Native PDF upload failed“.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>_request_openai_batch(client, file_id, model, settings, *, limit, language, instructions)</code></span></div><p><code>client.responses.parse(model, instructions=SYSTEM_PROMPT, input=[input_file, input_text], text_format=CardBatch, store=False, timeout, **settings.options)</code>. Ist <code>output_parsed</code> kein <code>CardBatch</code> (z. B. Ablehnung durch das Modell), entsteht ein Fehler.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>_delete_uploaded_file(client, file_id) → bool</code></span></div><p>Best-Effort-Löschung. Scheitert sie, erscheint eine <code>RuntimeWarning</code> mit Datei-ID zur manuellen Bereinigung – der Lauf gilt trotzdem als erfolgreich.</p></div>
+          </div>
+        </details>
+      </article>
+
+      <!-- config.py -->
+      <article class="card command-section module-card searchable" data-module="config" id="mod-config">
+        <div class="command-header"><h3 class="command-title"><code>config.py</code></h3><span class="tag cfg">Konfiguration · Schema &amp; Persistenz</span></div>
+        <p>UI-unabhängiger Konfigurationsdienst: das versionierte YAML-Schema als Pydantic-Modelle, die eingebauten Defaults, Laden mit klaren Fehlermeldungen und atomares Speichern. Kein CLI-Wissen, keine Prioritätslogik – das macht <code>settings.py</code>.</p>
+        <dl class="facts">
+          <dt>Importiert</dt><dd><code>errors</code> · PyYAML, Pydantic</dd>
+          <dt>Verwendet von</dt><dd><code>settings</code>, <code>cli</code> (nur <code>PDFMode</code>)</dd>
+          <dt>Tests</dt><dd><code>tests/test_config.py</code> (15 Tests inklusive Parametrisierung)</dd>
+        </dl>
+        <details open>
+          <summary>Schema und Konstanten</summary>
+          <div class="details-body">
+            <div class="option"><div class="option-heading"><span class="option-name">Eingebaute Defaults</span><span class="option-meta">Modulkonstanten</span></div><p><code>CONFIG_SCHEMA_VERSION = 1</code>, <code>DEFAULT_CONFIG_PATH = config.yaml</code>, <code>DEFAULT_LIMIT = 50</code>, <code>DEFAULT_LANGUAGE = "Deutsch"</code>, <code>DEFAULT_CHUNK_SIZE = 24_000</code>, <code>DEFAULT_TIMEOUT = 180</code>. Diese Werte sind die unterste Prioritätsschicht.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>PDFMode(StrEnum)</code></span></div><p><code>local</code> oder <code>native</code>. Typer nutzt dasselbe Enum direkt für <code>--pdf-mode</code>.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>StrictModel</code></span></div><p>Basisklasse mit <code>extra="forbid"</code> und <code>str_strip_whitespace=True</code>. Ein Tippfehler in einem YAML-Schlüssel wird so sofort mit Fehlerort gemeldet statt ignoriert.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>GenerationConfig</code></span></div><p>Defaults für die Generierung: <code>profile</code>, <code>deck</code>, <code>limit ≥ 0</code>, <code>language</code>, <code>instructions</code>, <code>chunk_size 1000..100000</code>, <code>timeout 1..3600 | None</code>, <code>json_output</code>, <code>extend</code>, <code>pdf_mode | None</code>. Der Profilname <code>cli</code> ist reserviert.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>ModelProfile</code></span></div><p><code>model</code> muss dem Muster <code>provider/modell</code> entsprechen. <code>api_key_env</code> muss ein gültiger Variablenname sein – ein eingefügter Schlüssel fällt dadurch auf. <code>options</code> verbietet <code>api_key</code>, <code>api_base</code>, <code>model</code>, <code>messages</code>, <code>response_format</code> sowie geheim wirkende Schlüssel (<code>secret</code>, <code>password</code>, <code>credential</code>, <code>apikey</code>, <code>token</code>, <code>*_token</code>, <code>token_*</code>) – auch verschachtelt. <code>max_tokens</code> bleibt erlaubt.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>AppConfig</code></span></div><p>Wurzel des Schemas: <code>schema_version</code> (nur <code>1</code>), <code>default_profile</code>, <code>input_dir</code>, <code>output_dir</code>, <code>generation</code>, <code>models</code>. Der Modell-Validator prüft, dass referenzierte Profile existieren und dass nicht gleichzeitig <code>default_profile</code> und <code>generation.profile</code> gesetzt sind. <code>selected_profile_name()</code> liefert den einen konfigurierten Profilnamen.</p></div>
+          </div>
+        </details>
+        <details>
+          <summary>Laden und Speichern</summary>
+          <div class="details-body">
+            <div class="option"><div class="option-heading"><span class="option-name"><code>load_config(path=None) → AppConfig</code></span></div><p>Ohne Pfad und ohne <code>./config.yaml</code> → <code>AppConfig()</code> mit Defaults. Leere Datei → Defaults. Nicht-Objekt, YAML-Fehler, Lesefehler oder Schemafehler → <code>FlashcardError</code>; Pydantic-Meldungen enthalten den betroffenen Schlüssel.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>save_config(path, config) → None</code> / <code>_atomic_write(path, content)</code></span></div><p>Serialisiert mit <code>model_dump(mode="json", exclude_none=True)</code> und <code>yaml.safe_dump(sort_keys=False)</code>, schreibt atomar. Die CLI nutzt das noch nicht; es ist für eine spätere Web-Oberfläche (R-117) vorbereitet und getestet. Hinweis: Kommentare der Originaldatei gehen beim Speichern verloren.</p></div>
+          </div>
+        </details>
+      </article>
+
+      <!-- settings.py -->
+      <article class="card command-section module-card searchable" data-module="settings" id="mod-settings">
+        <div class="command-header"><h3 class="command-title"><code>settings.py</code></h3><span class="tag cfg">Konfiguration · Auflösung</span></div>
+        <p>Die Prioritätslogik: führt eingebaute Defaults, YAML/Profil und explizite CLI-Werte zu fertigen Laufzeit-Einstellungen zusammen, löst Pfade auf, liest den API-Schlüssel aus der Umgebung und erzeugt eine geheimnisfreie Diagnoseansicht.</p>
+        <dl class="facts">
+          <dt>Importiert</dt><dd><code>ai</code> (<code>AISettings</code>), <code>config</code>, <code>errors</code></dd>
+          <dt>Verwendet von</dt><dd><code>cli</code></dd>
+          <dt>Tests</dt><dd><code>tests/test_settings.py</code> (8 Tests)</dd>
+        </dl>
+        <details open>
+          <summary>Öffentliche Schnittstelle</summary>
+          <div class="details-body">
+            <div class="option"><div class="option-heading"><span class="option-name"><code>ValueSource</code> · <code>SourcedValue(value, source)</code></span></div><p>Herkunftsschicht eines Wertes: <code>built-in</code>, <code>config</code>, <code>cli</code>. Bewusst ohne „env“ – die Umgebung liefert nur Schlüssel, keine Einstellungen.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>GenerateSettings</code> · <code>ExportSettings</code></span><span class="option-meta">frozen dataclasses</span></div><p>Vollständig aufgelöste Werte für einen Lauf inklusive <code>origins</code> (Herkunft je Wert). <code>GenerateSettings.ai</code> ist das fertige <code>AISettings</code>.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>load_selected_config(path) → (AppConfig, Path | None)</code></span></div><p>Wählt explizite Datei → <code>ANKI_CONFIG</code> → optionale <code>./config.yaml</code> und liefert zusätzlich den absoluten Pfad als Basis für relative YAML-Pfade.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>resolve_generate_settings(cli, config, config_path) → GenerateSettings</code></span></div><p><code>cli</code> ist ein einfaches Mapping, das nur explizit gesetzte Werte enthält. Damit ist die Funktion auch aus einer Web-Schicht nutzbar.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>resolve_export_settings(cli, config, config_path) → ExportSettings</code></span></div><p>Wie oben für <code>export</code>; zusätzlich Pflicht: Deck aus CLI oder <code>generation.deck</code>.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>configuration_diagnostics(settings, config_path) → dict</code></span></div><p>JSON-taugliche Sicht für <code>config show</code>. Schlüssel nur als <code>set (hidden)</code>/<code>not set</code>, Optionen nur als Schlüsselliste.</p></div>
+          </div>
+        </details>
+        <details>
+          <summary>Interne Resolver</summary>
+          <div class="details-body">
+            <div class="table-wrap"><table>
+              <thead><tr><th>Funktion</th><th>Aufgabe</th></tr></thead>
+              <tbody>
+                <tr><td><code>_resolve_profile_name</code> / <code>_select_profile</code></td><td><code>--profile</code> vor konfiguriertem Profil; unbekannter Name → <code>FlashcardError</code>.</td></tr>
+                <tr><td><code>_resolve_input_path</code></td><td>Pfad mit Ordneranteil → relativ zum Arbeitsordner; reiner Dateiname → unter <code>input_dir</code>.</td></tr>
+                <tr><td><code>_resolve_output_path</code></td><td><code>--output</code> oder <code>output_dir/&lt;eingabe-stem&gt;.apkg</code>; sonst Fehler.</td></tr>
+                <tr><td><code>_resolve_optional_path</code></td><td>JSON-Ziel: <code>--json</code> → <code>generation.json_output</code> (reiner Name unter <code>output_dir</code>) → keins.</td></tr>
+                <tr><td><code>_config_directory</code></td><td>Relative YAML-Pfade gelten ab dem Ordner der YAML-Datei, ohne Datei ab dem Arbeitsordner.</td></tr>
+                <tr><td><code>_resolve_deck</code></td><td><code>--deck</code> → <code>generation.deck</code> → Eingabedateiname ohne Endung.</td></tr>
+                <tr><td><code>_resolve_model</code> / <code>_resolve_api_base</code></td><td>CLI → Profil → leer bzw. <code>None</code> (Provider-Standard).</td></tr>
+                <tr><td><code>_resolve_timeout</code> / <code>_resolve_pdf_mode</code></td><td>Vierstufig: CLI → <code>generation.*</code> → Profil → Default.</td></tr>
+                <tr><td><code>_profile_api_key</code></td><td><code>os.getenv(profile.api_key_env)</code> – die einzige Stelle, an der ein Schlüssel gelesen wird.</td></tr>
+                <tr><td><code>_source_for_option</code> / <code>_pdf_mode_origin</code> / <code>_generate_origins</code></td><td>Bauen die Herkunftslabels für die Diagnose.</td></tr>
+              </tbody>
+            </table></div>
+          </div>
+        </details>
+      </article>
+
+      <!-- apkg.py -->
+      <article class="card command-section module-card searchable" data-module="apkg" id="mod-apkg">
+        <div class="command-header"><h3 class="command-title"><code>apkg.py</code></h3><span class="tag apkg">Fachkern · Anki-Persistenz</span></div>
+        <p>Erzeugt neue Anki-Pakete mit <code>genanki</code>, erweitert vorhandene Pakete über die offizielle <code>anki</code>-Python-API und listet Decks auf. Klassische und zstd-komprimierte Sammlungen werden gelesen und im ursprünglichen Format zurückgeschrieben.</p>
+        <dl class="facts">
+          <dt>Importiert</dt><dd><code>errors</code>, <code>models</code> · genanki, anki (verzögert), sqlite3, zipfile, zstandard</dd>
+          <dt>Verwendet von</dt><dd><code>cli</code></dd>
+          <dt>Tests</dt><dd><code>tests/test_apkg.py</code> (5 Tests, darunter ein echter Anki-Export)</dd>
+        </dl>
+        <details open>
+          <summary>Öffentliche Schnittstelle</summary>
+          <div class="details-body">
+            <div class="option"><div class="option-heading"><span class="option-name"><code>ExportResult(path, deck, added, skipped)</code></span><span class="option-meta">frozen dataclass</span></div><p>Zusammenfassung für die Ergebnisausgabe.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>create_apkg(path, deck_name, cards) → ExportResult</code></span><span class="option-meta">schreibt Datei</span></div><p>Neues klassisches Paket (<code>collection.anki2</code> + <code>media</code>). Leere Kartenliste → Fehler. Schreibt in <code>.&lt;name&gt;.&lt;PID&gt;.tmp</code> neben dem Ziel und ersetzt dann atomar.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>append_apkg(path, deck_name, cards) → ExportResult</code></span><span class="option-meta">ändert Datei</span></div><p>Erweitert ein vorhandenes Paket in einem Temp-Ordner und ersetzt es erst am Ende atomar. Fehlende Decks und der Notiztyp werden angelegt. → <a href="#apkg-intern">Diagramm</a></p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>inspect_apkg(path) → list[dict]</code></span><span class="option-meta">nur lesen</span></div><p>Je normalem Deck <code>{"id", "name", "cards"}</code> mit direkter Kartenanzahl.</p></div>
+          </div>
+        </details>
+        <details>
+          <summary>Interne Bausteine</summary>
+          <div class="details-body">
+            <div class="option"><div class="option-heading"><span class="option-name"><code>_extract_collection(path, database) → str</code></span></div><p>Sucht im ZIP in der Reihenfolge <code>collection.anki21b</code> › <code>collection.anki21</code> › <code>collection.anki2</code>. <code>anki21b</code> mit zstd-Magic <code>28 B5 2F FD</code> wird entpackt (Obergrenze 2 GiB). Gibt den gefundenen Eintragsnamen zurück – er bestimmt das Rückschreibformat.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>_open_collection(database)</code></span></div><p>Öffnet die Temp-Sammlung mit <code>anki.collection.Collection</code>. Einzige Stelle, die <code>anki</code> importiert.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>_append_to_collection(collection, path, deck_name, cards)</code></span></div><p>Holt oder erzeugt den Notiztyp <code>KI Karteikarte (Front/Back)</code> und verlangt exakt die Felder <code>Front</code>, <code>Back</code>. <code>decks.id(name)</code> liefert oder erzeugt das Deck. Vorhandene Fragen des Zieldecks werden per lesendem SQL gesammelt (erstes Feld aller Notiztypen, HTML-unescaped, normalisiert). Neue Karten mit bekannter Frage werden gezählt und übersprungen.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>_add_anki_note(...)</code> / <code>_new_anki_model(collection)</code></span></div><p>Schreiben ausschließlich über die API (<code>new_note</code>, <code>add_note</code>, <code>models.add</code>). Der Notiztyp wird aus dem genanki-Modell abgeleitet, damit neue und erweiterte Pakete identisch aussehen.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>_checkpoint_collection(database)</code></span></div><p><code>PRAGMA wal_checkpoint(TRUNCATE)</code> nach dem Schließen: Alle Änderungen landen in der Hauptdatei, bevor sie verpackt wird.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>_replace_collection(path, database, collection_name)</code></span></div><p>Neues ZIP: alle Einträge außer <code>collection.*</code> 1:1 kopieren (Medien, <code>media</code>, <code>meta</code>), dann die Sammlung unter ihrem Originalnamen – bei <code>anki21b</code> wieder zstd-komprimiert – hinzufügen, dann <code>os.replace</code>.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>_note_model()</code> · <code>_stable_id()</code> · <code>_stable_guid()</code> · <code>_normalize_front()</code></span></div><p>Feste Modell-ID <code>1704219001</code>, Deck-ID aus SHA-256 des Decknamens, GUID über <code>genanki.guid_for(deck, normalisierte Frage)</code>, Normalisierung wie in <code>models</code>.</p></div>
+          </div>
+        </details>
+      </article>
+
+      <!-- cli.py -->
+      <article class="card command-section module-card searchable" data-module="cli" id="mod-cli">
+        <div class="command-header"><h3 class="command-title"><code>cli.py</code></h3><span class="tag">Präsentation</span></div>
+        <p>Die einzige Schicht mit Typer und Rich. Definiert Befehle, Optionen, Hilfetexte und Ausgaben und verdrahtet die Kernfunktionen. Enthält keine Fachlogik außer der Ausgabeprüfung und der Wahl zwischen neu und erweitern.</p>
+        <dl class="facts">
+          <dt>Importiert</dt><dd>alle Paketmodule außer <code>__main__</code> · Typer, Rich, python-dotenv</dd>
+          <dt>Verwendet von</dt><dd>Konsolenbefehl <code>anki-flashcards</code>, <code>__main__.py</code></dd>
+          <dt>Tests</dt><dd><code>tests/test_cli.py</code> (16 Tests mit <code>CliRunner</code> und einem Subprozess-Test)</dd>
+        </dl>
+        <details open>
+          <summary>Befehle und Objekte</summary>
+          <div class="details-body">
+            <div class="option"><div class="option-heading"><span class="option-name"><code>app</code> · <code>config_app</code></span></div><p>Typer-Hauptapp (<code>no_args_is_help</code>, <code>-h</code>/<code>--help</code>) und die Unter-App <code>config</code>. <code>console</code> schreibt auf stdout, <code>error_console</code> auf stderr.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>generate(...)</code></span></div><p>Der Ablauf aus <a href="#anfrage">Schritt 3 bis 11</a>. Lokale Generierung steckt in <code>_generate_local_cards()</code> mit Rich-Spinner und innerem Callback <code>update()</code>.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>export_cards(...)</code> · <code>list_decks(...)</code> · <code>show_config(...)</code></span></div><p>Die Befehle <code>export</code>, <code>decks</code> und <code>config show</code>. → <a href="#weitere-ablaeufe">Abläufe</a></p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>_explicit_values</code> · <code>_validate_output</code> · <code>_write_deck</code> · <code>_print_result</code></span></div><p>Gemeinsame Bausteine aller schreibenden Befehle.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>run()</code></span></div><p>Einstiegspunkt: <code>.env</code> laden, App starten, <code>FlashcardError</code> in stderr-Meldung und Exit-Code 1 übersetzen.</p></div>
+          </div>
+        </details>
+        <details>
+          <summary>Wichtige Einzelheiten</summary>
+          <div class="details-body">
+            <ul class="checklist">
+              <li>Typer verwendet den Docstring eines Befehls als Hilfetext. Deshalb sind Befehls-Docstrings kurze Sätze ohne Args-Abschnitt, und <code>pyproject.toml</code> schaltet für <code>cli.py</code> die Regel <code>D401</code> ab.</li>
+              <li>Ausführliche Hilfe steht in den Epilog-Konstanten <code>MAIN_EPILOG</code>, <code>GENERATE_EPILOG</code>, <code>EXPORT_EPILOG</code>, <code>DECKS_EPILOG</code>. Tests prüfen deren Inhalt.</li>
+              <li>Optionen mit konfigurierbarem Default haben den Typer-Default <code>None</code>; boolesche Werte gibt es immer als Paar (<code>--extend/--no-extend</code>).</li>
+              <li><code>--config</code> hat <code>envvar="ANKI_CONFIG"</code>.</li>
+            </ul>
+          </div>
+        </details>
+      </article>
+
+      <!-- __main__ / __init__ -->
+      <article class="card command-section module-card searchable" data-module="cli" id="mod-main">
+        <div class="command-header"><h3 class="command-title"><code>__main__.py</code> · <code>__init__.py</code></h3><span class="tag">Paketrahmen</span></div>
+        <p><code>__main__.py</code> erlaubt <code>python -m anki_flashcards</code> und ruft <code>cli.run()</code>. Der Subprozess-Test nutzt genau diesen Weg, um den echten Einstiegspunkt ohne installiertes Skript zu prüfen. <code>__init__.py</code> enthält nur den Paket-Docstring und <code>__version__ = "0.1.0"</code>.</p>
+      </article>
+    </section>
+
+    <!-- ============================================================ KONFIGURATION -->
+    <section id="konfiguration">
+      <div class="section-heading">
+        <p class="eyebrow">settings.py und config.py</p>
+        <h2>Konfigurationsauflösung und Prioritäten</h2>
+        <p>Jeder effektive Wert entsteht aus drei Schichten. Die höhere Schicht gewinnt. Umgebungsvariablen sind keine Schicht: Sie liefern ausschließlich den geheimen Schlüssel, den ein Profil über <code>api_key_env</code> benennt (R-115).</p>
+      </div>
+      <figure class="diagram">
+        <div class="diagram-scroll">
+          <svg viewBox="0 0 1000 330" aria-labelledby="prio-title prio-desc">
+            <title id="prio-title">Prioritätsschichten der Konfiguration</title>
+            <desc id="prio-desc">Unten eingebaute Defaults, darüber YAML und Profil, oben explizite CLI-Werte; jede höhere Schicht überschreibt die tiefere. Rechts: .env liefert nur den API-Schlüssel, ANKI_CONFIG wählt nur die YAML-Datei, ANKI_MODEL und LLM_API_BASE werden ignoriert.</desc>
+            <defs>
+              <marker id="arr-prio" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#6b7f8c"/></marker>
+            </defs>
+            <g class="n-cli"><rect class="box" x="40" y="24" width="580" height="70" rx="10"/><circle class="dot" cx="70" cy="59" r="16"/><text class="t-num" x="70" y="63.5">3</text>
+              <text class="t-head" x="98" y="53">Ausdrücklicher CLI-Wert</text><text class="t-sub" x="98" y="76">nur Optionen ≠ None (_explicit_values) · Pfade relativ zum Arbeitsordner</text></g>
+            <g class="n-cfg"><rect class="box" x="40" y="130" width="580" height="70" rx="10"/><circle class="dot" cx="70" cy="165" r="16"/><text class="t-num" x="70" y="169.5">2</text>
+              <text class="t-head" x="98" y="159">YAML-Datei und gewähltes Profil</text><text class="t-sub" x="98" y="182">generation.* und models.&lt;profil&gt;.* · Pfade relativ zur YAML-Datei</text></g>
+            <g class="n-ext"><rect class="box" x="40" y="236" width="580" height="70" rx="10"/><circle class="dot" cx="70" cy="271" r="16"/><text class="t-num" x="70" y="275.5">1</text>
+              <text class="t-head" x="98" y="265">Eingebauter Default</text><text class="t-sub" x="98" y="288">Konstanten in config.py und Pydantic-Feld-Defaults</text></g>
+            <path class="edge" d="M560 236 V204" marker-end="url(#arr-prio)"/>
+            <text class="t-edge" x="470" y="224">überschreibt</text>
+            <path class="edge" d="M560 130 V98" marker-end="url(#arr-prio)"/>
+            <text class="t-edge" x="470" y="118">überschreibt</text>
+
+            <g class="n-ext"><rect class="box opt" x="680" y="18" width="280" height="88" rx="10"/>
+              <text class="t-head" x="698" y="44">.env · Umgebung</text><text class="t-sub" x="698" y="66">liefert nur den Wert der Variablen</text><text class="t-sub" x="698" y="86">aus api_key_env → AISettings.api_key</text></g>
+            <g class="n-ext"><rect class="box opt" x="680" y="130" width="280" height="70" rx="10"/>
+              <text class="t-head" x="698" y="158">ANKI_CONFIG</text><text class="t-sub" x="698" y="181">wählt nur den Pfad der YAML-Datei</text></g>
+            <path class="edge ret" d="M680 165 H626" marker-end="url(#arr-prio)"/>
+            <g class="n-err"><rect class="box" x="680" y="236" width="280" height="70" rx="10"/>
+              <text class="t-head" x="698" y="264">ANKI_MODEL · LLM_API_BASE</text><text class="t-sub" x="698" y="287">werden ignoriert – keine Schicht</text></g>
+          </svg>
+        </div>
+        <figcaption>Gestrichelt: Quellen, die keine eigene Prioritätsschicht bilden. Die Altvariablen werden im Code nirgends gelesen; ein Test beweist, dass sie YAML nicht überschreiben.</figcaption>
+      </figure>
+
+      <h3 style="margin-top:2rem">Wie jeder Wert aufgelöst wird</h3>
+      <div class="table-wrap searchable" data-module="settings config">
+        <table>
+          <caption>Höchste Priorität zuerst · gilt für <code>generate</code> und <code>config show</code></caption>
+          <thead><tr><th>Effektiver Wert</th><th>Auflösungskette</th><th>Funktion</th></tr></thead>
+          <tbody>
+            <tr><td><code>profile</code></td><td><code>--profile</code> → <code>default_profile</code> oder <code>generation.profile</code> → kein Profil</td><td><code>_resolve_profile_name</code></td></tr>
+            <tr><td><code>model</code></td><td><code>--model</code> → <code>profile.model</code> → <code>""</code> (später Fehler „No AI model configured“)</td><td><code>_resolve_model</code></td></tr>
+            <tr><td><code>api_base</code></td><td><code>--api-base</code> → <code>profile.api_base</code> → <code>None</code> (Provider-Standard)</td><td><code>_resolve_api_base</code></td></tr>
+            <tr><td><code>timeout</code></td><td><code>--timeout</code> → <code>generation.timeout</code> → <code>profile.timeout</code> (Feld-Default 180) → 180</td><td><code>_resolve_timeout</code></td></tr>
+            <tr><td><code>pdf_mode</code></td><td><code>--pdf-mode</code> → <code>generation.pdf_mode</code> → <code>profile.pdf_mode</code> (Feld-Default <code>local</code>) → <code>local</code></td><td><code>_resolve_pdf_mode</code></td></tr>
+            <tr><td><code>api_key</code></td><td>nur <code>os.getenv(profile.api_key_env)</code>; ohne Profil <code>None</code> – dann liest LiteLLM die Providervariable selbst</td><td><code>_profile_api_key</code></td></tr>
+            <tr><td><code>options</code></td><td>nur <code>profile.options</code> (Kopie); keine CLI-Option</td><td><code>resolve_generate_settings</code></td></tr>
+            <tr><td><code>input_file</code></td><td>Pfad mit Ordneranteil → ab Arbeitsordner; reiner Name → <code>input_dir</code>; ohne <code>input_dir</code> → ab Arbeitsordner</td><td><code>_resolve_input_path</code></td></tr>
+            <tr><td><code>output</code></td><td><code>--output</code> (ab Arbeitsordner) → <code>output_dir/&lt;eingabe-stem&gt;.apkg</code> → Fehler</td><td><code>_resolve_output_path</code></td></tr>
+            <tr><td><code>deck</code></td><td><code>--deck</code> → <code>generation.deck</code> → Eingabedateiname ohne Endung</td><td><code>_resolve_deck</code></td></tr>
+            <tr><td><code>json_output</code></td><td><code>--json</code> (ab Arbeitsordner) → <code>generation.json_output</code> (reiner Name unter <code>output_dir</code>, sonst ab YAML-Ordner) → aus</td><td><code>_resolve_optional_path</code></td></tr>
+            <tr><td><code>extend</code>, <code>limit</code>, <code>language</code>, <code>instructions</code>, <code>chunk_size</code></td><td>CLI → <code>generation.*</code>; der eingebaute Default steckt im Pydantic-Feld von <code>GenerationConfig</code></td><td><code>cli.get(name, config.generation.name)</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="grid three" style="margin-top:1rem">
+        <article class="card searchable" data-module="settings">
+          <h3>Pfade aus dem Befehl</h3>
+          <p>Ausdrückliche relative Pfade (<code>--output</code>, <code>--json</code>, <code>input/skript.pdf</code>) gelten ab dem aktuellen Arbeitsordner. Absolute Pfade bleiben unverändert.</p>
+        </article>
+        <article class="card searchable" data-module="settings config">
+          <h3>Pfade aus der YAML</h3>
+          <p>Relative Pfade in der YAML (<code>input_dir</code>, <code>output_dir</code>, <code>json_output</code>) gelten ab dem Ordner der YAML-Datei. Darum gibt <code>load_selected_config()</code> den absoluten Dateipfad zurück.</p>
+        </article>
+        <article class="card searchable" data-module="settings">
+          <h3>Reine Dateinamen</h3>
+          <p>Ein Name ohne Ordneranteil (<code>skript.pdf</code>) wird unter <code>input_dir</code> gesucht. Achtung: <code>Path("./skript.pdf")</code> normalisiert zu <code>skript.pdf</code> und zählt deshalb ebenfalls als reiner Name.</p>
+        </article>
+      </div>
+      <div class="note">
+        <strong><code>--model</code> ersetzt nur die Modellkennung.</strong>
+        <p>Endpunkt, Schlüsselvariable, Optionen, Timeout und PDF-Modus kommen weiterhin aus dem gewählten Profil. Wer mit <code>--model</code> den Provider wechselt, während ein Profil eines anderen Providers aktiv ist, sendet an dessen <code>api_base</code>. Für einen Providerwechsel ist <code>--profile</code> der richtige Weg (siehe <a href="#eigenheiten">Randfälle</a>).</p>
+      </div>
+    </section>
+
+    <!-- ============================================================ KI-GENERIERUNG -->
+    <section id="ki-generierung">
+      <div class="section-heading">
+        <p class="eyebrow">documents.py und ai.py</p>
+        <h2>KI-Generierung: Abschnitte, Kontingent und Prompt</h2>
+        <p>Im lokalen Modus sieht das Modell nie das ganze Dokument auf einmal, sondern nacheinander überlappende Abschnitte. Das Kartenlimit wird dabei gleichmäßig auf die noch offenen Abschnitte verteilt.</p>
+      </div>
+      <figure class="diagram">
+        <div class="diagram-scroll">
+          <svg viewBox="0 0 1000 250" aria-labelledby="chunk-title chunk-desc">
+            <title id="chunk-title">Aufteilung des Textes in überlappende Abschnitte</title>
+            <desc id="chunk-desc">Der normalisierte Text wird in drei Abschnitte geteilt. Benachbarte Abschnitte überlappen um 500 Zeichen. Der Schnitt liegt bevorzugt an einer Leerzeile, sonst an einem Leerzeichen, immer in der zweiten Fensterhälfte.</desc>
+            <text class="t-label" x="40" y="26">Quelltext · Beispiel mit drei Abschnitten (schematisch)</text>
+            <g class="n-doc"><rect class="box" x="40" y="38" width="920" height="36" rx="8"/><text class="t-head" x="56" y="61">normalisierter Dokumenttext aus read_document()</text></g>
+            <rect x="400" y="100" width="30" height="96" fill="#e2a63d" opacity=".35"/>
+            <rect x="750" y="146" width="30" height="96" fill="#e2a63d" opacity=".35"/>
+            <g class="n-ai"><rect class="box" x="40" y="106" width="390" height="36" rx="8"/><text class="t-title" x="56" y="129">Chunk 1 · ≤ chunk_size</text></g>
+            <text class="t-edge" x="444" y="129">← 500 Zeichen Überlappung (overlap)</text>
+            <g class="n-ai"><rect class="box" x="400" y="152" width="380" height="36" rx="8"/><text class="t-title" x="440" y="175">Chunk 2 · ≤ chunk_size</text></g>
+            <text class="t-edge" x="794" y="175">← Überlappung</text>
+            <g class="n-ai"><rect class="box" x="750" y="198" width="210" height="36" rx="8"/><text class="t-title" x="790" y="221">Chunk 3 · Rest</text></g>
+            <text class="t-sub" x="40" y="221">Schnitt bevorzugt an einer Leerzeile, sonst an einem Leerzeichen – immer in der 2. Fensterhälfte</text>
+          </svg>
+        </div>
+        <figcaption><code>chunk_text()</code> startet den nächsten Abschnitt bei <code>max(ende − overlap, start + 1)</code>. Dadurch geht an den Grenzen kein Zusammenhang verloren und die Schleife kommt garantiert voran.</figcaption>
+      </figure>
+
+      <div class="grid two" style="margin-top:1rem">
+        <article class="card searchable" data-module="ai">
+          <h3>Kontingent pro Abschnitt</h3>
+          <p>Vor jeder Anfrage berechnet <code>generate_cards()</code>, wie viele Karten dieser Abschnitt höchstens liefern soll:</p>
+          <pre><code>allocation = max(1, ceil((limit - len(cards)) / remaining))</code></pre>
+          <p><code>remaining</code> zählt den aktuellen und alle folgenden Abschnitte. Bei <code>limit = 0</code> ist <code>allocation = None</code>; der Prompt verlangt dann „so viele nützliche Karten, wie die Quelle hergibt“, und jeder Abschnitt wird genau einmal verarbeitet.</p>
+        </article>
+        <article class="card searchable" data-module="ai models">
+          <h3>Das Limit ist hart, der Prompt nicht</h3>
+          <p>Modelle halten sich nicht immer an „at most N“. Deshalb kürzt <code>deduplicate_cards(cards, limit)</code> nach jeder Antwort. Sobald das Limit erreicht ist, endet die Schleife – weitere Abschnitte kosten dann nichts mehr.</p>
+          <p>Ein ungültiger Batch beendet den ganzen Lauf. Karten früherer Abschnitte sind zu diesem Zeitpunkt noch nirgends gespeichert.</p>
+        </article>
+      </div>
+
+      <div class="table-wrap searchable" data-module="ai models" style="margin-top:1rem">
+        <table>
+          <caption>Rechenbeispiel: <code>--limit 50</code>, drei Abschnitte</caption>
+          <thead><tr><th>Abschnitt</th><th>offen</th><th>bisher eindeutig</th><th>Kontingent im Prompt</th><th>Antwort des Modells</th><th>nach <code>deduplicate_cards(…, 50)</code></th></tr></thead>
+          <tbody>
+            <tr><td>1</td><td>3</td><td>0</td><td>⌈50 / 3⌉ = 17</td><td>17 Karten</td><td>17</td></tr>
+            <tr><td>2</td><td>2</td><td>17</td><td>⌈33 / 2⌉ = 17</td><td>17 Karten, davon 2 doppelt</td><td>32</td></tr>
+            <tr><td>3</td><td>1</td><td>32</td><td>⌈18 / 1⌉ = 18</td><td>20 Karten (zu viele)</td><td>50 → Schleife endet</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="grid two" style="margin-top:1rem">
+        <article class="card searchable" data-module="ai">
+          <h3>Der Benutzer-Prompt</h3>
+          <pre><button class="copy-button" type="button" aria-label="Prompt kopieren">Kopieren</button><code>Create at most 17 cards. Write the cards in Deutsch.
+Additional user instructions: Bevorzuge kurze Verständnisfragen.
+
+&lt;source_document&gt;
+[Seite 1]
+…Text des Abschnitts…
+&lt;/source_document&gt;</code></pre>
+          <p class="small muted">Der Systemprompt (<code>SYSTEM_PROMPT</code>) legt Format und Qualitätsregeln fest. Der Benutzer-Prompt enthält nur Kontingent, Sprache, Zusatzanweisungen und den abgegrenzten Quelltext.</p>
+        </article>
+        <article class="card searchable" data-module="ai">
+          <h3>Der LiteLLM-Aufruf</h3>
+          <pre><button class="copy-button" type="button" aria-label="Code kopieren">Kopieren</button><code>completion(
+    model=settings.model,            # "provider/modell"
+    messages=[system, user],
+    response_format=CardBatch,       # Pydantic → JSON-Schema
+    timeout=settings.timeout,
+    num_retries=2,                   # Wiederholung durch LiteLLM
+    drop_params=True,                # nicht unterstützte Parameter verwerfen
+    **settings.options,              # aus dem YAML-Profil
+    **_provider_options(settings),   # api_key / api_base, nur wenn gesetzt
+)</code></pre>
+          <p class="small muted">Wie gut ein Provider <code>response_format</code> umsetzt, ist unterschiedlich. Deshalb wird jede Antwort zusätzlich mit <code>CardBatch.model_validate_json()</code> geprüft – egal, was der Provider verspricht.</p>
+        </article>
+      </div>
+    </section>
+
+    <!-- ============================================================ APKG INTERN -->
+    <section id="apkg-intern">
+      <div class="section-heading">
+        <p class="eyebrow">apkg.py</p>
+        <h2>Anki-Pakete erzeugen und erweitern</h2>
+        <p>Eine <code>.apkg</code>-Datei ist ein ZIP-Archiv mit einer SQLite-Datenbank (der „Sammlung“) und Medien. Neue Pakete entstehen mit <code>genanki</code>. Vorhandene Pakete werden nie per Hand-SQL beschrieben, sondern mit der offiziellen <code>anki</code>-Bibliothek geöffnet und geändert (R-034).</p>
+      </div>
+      <figure class="diagram wide">
+        <div class="diagram-scroll">
+          <svg viewBox="0 0 1000 440" aria-labelledby="apkg-title apkg-desc">
+            <title id="apkg-title">create_apkg und append_apkg im Vergleich</title>
+            <desc id="apkg-desc">Neu: Karten werden zu genanki-Notizen, ein Paket wird in eine Temp-Datei geschrieben und mit os.replace ersetzt. Erweitern: Sammlung aus dem ZIP lesen, bei Bedarf zstd entpacken, im Temp-Ordner mit der Anki-API öffnen, Karten anhängen, WAL-Checkpoint, ZIP mit allen übrigen Einträgen neu packen und atomar ersetzen.</desc>
+            <defs>
+              <marker id="arr-apkg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#6b7f8c"/></marker>
+            </defs>
+            <text class="t-label" x="40" y="28">Neu · create_apkg()</text>
+            <g class="n-model"><rect class="box" x="40" y="40" width="212" height="74" rx="10"/><text class="t-title" x="56" y="66">list[Card]</text><text class="t-sub" x="56" y="87">validiert und dedupliziert</text></g>
+            <path class="edge" d="M252 77 H272" marker-end="url(#arr-apkg)"/>
+            <g class="n-apkg"><rect class="box" x="276" y="40" width="212" height="74" rx="10"/><text class="t-title" x="292" y="66">genanki.Note</text><text class="t-sub" x="292" y="87">Felder HTML-escaped</text><text class="t-sub" x="292" y="104">GUID aus Deck + Frage</text></g>
+            <path class="edge" d="M488 77 H508" marker-end="url(#arr-apkg)"/>
+            <g class="n-apkg"><rect class="box" x="512" y="40" width="212" height="74" rx="10"/><text class="t-title" x="528" y="66">genanki.Package</text><text class="t-sub" x="528" y="87">Deck mit stabiler ID</text><text class="t-sub" x="528" y="104">→ .ziel.apkg.PID.tmp</text></g>
+            <path class="edge" d="M724 77 H744" marker-end="url(#arr-apkg)"/>
+            <g class="n-ext"><rect class="box" x="748" y="40" width="212" height="74" rx="10"/><text class="t-title" x="764" y="66">os.replace</text><text class="t-sub" x="764" y="87">→ ziel.apkg (neu)</text></g>
+
+            <text class="t-label" x="40" y="160">Erweitern · append_apkg()</text>
+            <g class="n-ext"><rect class="box" x="40" y="172" width="212" height="74" rx="10"/><text class="t-title" x="56" y="198">ziel.apkg</text><text class="t-sub" x="56" y="219">ZIP mit collection.*,</text><text class="t-sub" x="56" y="236">media, Medien, meta</text></g>
+            <path class="edge" d="M252 209 H272" marker-end="url(#arr-apkg)"/>
+            <g class="n-apkg"><rect class="box" x="276" y="172" width="212" height="74" rx="10"/><text class="t-title sm" x="292" y="198">_extract_collection</text><text class="t-sub" x="292" y="219">anki21b › anki21 › anki2</text><text class="t-sub" x="292" y="236">anki21b: zstd entpacken</text></g>
+            <path class="edge" d="M488 209 H508" marker-end="url(#arr-apkg)"/>
+            <g class="n-ext"><rect class="box" x="512" y="172" width="212" height="74" rx="10"/><text class="t-head" x="528" y="198">Temp-Ordner</text><text class="t-sub" x="528" y="219">collection.anki2</text><text class="t-sub" x="528" y="236">SQLite-Kopie</text></g>
+            <path class="edge" d="M724 209 H744" marker-end="url(#arr-apkg)"/>
+            <g class="n-apkg"><rect class="box" x="748" y="172" width="212" height="74" rx="10"/><text class="t-title sm" x="764" y="198">_open_collection</text><text class="t-sub" x="764" y="219">anki.collection.Collection</text><text class="t-sub" x="764" y="236">offizielle Anki-API</text></g>
+            <path class="edge" d="M854 246 V266 H146 V286" marker-end="url(#arr-apkg)"/>
+            <g class="n-apkg"><rect class="box" x="40" y="290" width="212" height="74" rx="10"/><text class="t-title sm" x="56" y="316">_append_to_collection</text><text class="t-sub" x="56" y="337">Notiztyp, Deck anlegen</text><text class="t-sub" x="56" y="354">Duplikate überspringen</text></g>
+            <path class="edge" d="M252 327 H272" marker-end="url(#arr-apkg)"/>
+            <g class="n-apkg"><rect class="box" x="276" y="290" width="212" height="74" rx="10"/><text class="t-title sm" x="292" y="316">_checkpoint_collection</text><text class="t-sub" x="292" y="337">nach close(): PRAGMA</text><text class="t-sub" x="292" y="354">wal_checkpoint(TRUNCATE)</text></g>
+            <path class="edge" d="M488 327 H508" marker-end="url(#arr-apkg)"/>
+            <g class="n-apkg"><rect class="box" x="512" y="290" width="212" height="74" rx="10"/><text class="t-title sm" x="528" y="316">_replace_collection</text><text class="t-sub" x="528" y="337">übrige Einträge 1:1</text><text class="t-sub" x="528" y="354">anki21b: wieder zstd</text></g>
+            <path class="edge" d="M724 327 H744" marker-end="url(#arr-apkg)"/>
+            <g class="n-ext"><rect class="box" x="748" y="290" width="212" height="74" rx="10"/><text class="t-title" x="764" y="316">os.replace</text><text class="t-sub" x="764" y="337">→ ziel.apkg (erweitert)</text></g>
+            <g class="n-err"><rect class="box" x="40" y="384" width="920" height="40" rx="10"/><text class="t-err" x="56" y="409">Fehler vor os.replace → der Temp-Ordner wird verworfen, die Originaldatei bleibt unverändert</text></g>
+          </svg>
+        </div>
+        <figcaption>Oben der einfache Weg für neue Pakete, unten der datenerhaltende Weg für vorhandene Pakete. Beide schreiben zuerst neben das Ziel und ersetzen dann atomar.</figcaption>
+      </figure>
+
+      <div class="grid two" style="margin-top:1rem">
+        <article class="card searchable" data-module="apkg models">
+          <h3>Duplikaterkennung beim Erweitern</h3>
+          <p><code>_append_to_collection()</code> liest per <code>SELECT</code> das erste Feld aller Notizen, deren Karten im Zieldeck liegen – unabhängig vom Notiztyp. Die Werte werden HTML-unescaped und wie in <code>models</code> normalisiert.</p>
+          <p>Jede neue Karte mit bekannter Frage wird gezählt und übersprungen; jede hinzugefügte Frage kommt sofort in die Vergleichsmenge. Andere Decks im Paket spielen keine Rolle.</p>
+        </article>
+        <article class="card searchable" data-module="apkg">
+          <h3>Stabile IDs und GUIDs</h3>
+          <p><strong>Notiztyp:</strong> feste ID <code>1704219001</code>, Name <code>KI Karteikarte (Front/Back)</code>. <strong>Deck</strong> (nur neu): <code>sha256("deck:" + name)</code>, erste 4 Byte modulo 2·10⁹ plus 1. <strong>Notiz-GUID</strong> (neu und erweitert): <code>genanki.guid_for(deck, normalisierte Frage)</code>.</p>
+          <p>Gleiche Frage im gleichen Deck ergibt also immer dieselbe GUID. Anki erkennt beim Import so dieselbe Notiz wieder, statt sie doppelt anzulegen.</p>
+        </article>
+        <article class="card searchable" data-module="apkg">
+          <h3>Notiztyp und Darstellung</h3>
+          <p>Zwei Felder <code>Front</code>/<code>Back</code>, eine Vorlage <code>Karte 1</code>: Vorderseite <code>{{Front}}</code>, Rückseite <code>{{FrontSide}}&lt;hr id="answer"&gt;{{Back}}</code>. Das CSS setzt <code>white-space: pre-wrap</code>, damit Zeilenumbrüche im escapten Klartext sichtbar bleiben.</p>
+          <p>Beim Erweitern wird ein vorhandener Notiztyp gleichen Namens wiederverwendet; hat er andere Felder, bricht der Lauf ab.</p>
+        </article>
+        <article class="card searchable" data-module="apkg">
+          <h3>Formate im ZIP</h3>
+          <div class="table-wrap"><table style="min-width:0">
+            <thead><tr><th>Eintrag</th><th>Bedeutung</th></tr></thead>
+            <tbody>
+              <tr><td><code>collection.anki2</code></td><td>Klassische SQLite-Sammlung; genanki erzeugt nur diese. Moderne Exporte legen hier einen Platzhalter für alte Anki-Versionen ab.</td></tr>
+              <tr><td><code>collection.anki21</code></td><td>Klassisch, neueres Schema.</td></tr>
+              <tr><td><code>collection.anki21b</code></td><td>Aktuelles Format, zstd-komprimiertes SQLite. Wird bevorzugt gelesen.</td></tr>
+              <tr><td><code>media</code>, <code>0</code>, <code>1</code>, …, <code>meta</code></td><td>Medienindex, Mediendateien, Versionsinfo – beim Erweitern unverändert kopiert.</td></tr>
+            </tbody>
+          </table></div>
+        </article>
+      </div>
+    </section>
+
+    <!-- ============================================================ NATIVE -->
+    <section id="native">
+      <div class="section-heading">
+        <p class="eyebrow">native_pdf.py</p>
+        <h2>Native PDF-Verarbeitung</h2>
+        <p>Mit <code>pdf_mode: native</code> bekommt das Modell die Original-PDF – inklusive Seitenbildern – statt extrahierten Texts. Das Sequenzdiagramm zeigt, wer wann mit wem spricht. Entscheidend: Alle Prüfungen laufen, bevor ein Byte den Rechner verlässt.</p>
+      </div>
+      <figure class="diagram wide">
+        <div class="diagram-scroll">
+          <svg viewBox="0 0 1000 560" aria-labelledby="native-title native-desc">
+            <title id="native-title">Sequenz der nativen PDF-Verarbeitung</title>
+            <desc id="native-desc">cli.generate ruft generate_native_cards auf. native_pdf prüft Endung, Modell-Allowlist, Dateigröße und API-Schlüssel. Danach Upload über files.create, Anfrage über responses.parse mit CardBatch und store=False, Löschen über files.delete im finally-Block. Zurück an die CLI geht eine deduplizierte Kartenliste.</desc>
+            <defs>
+              <marker id="arr-nat" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#6b7f8c"/></marker>
+            </defs>
+            <a href="#mod-cli"><g class="n-cli"><rect class="box" x="30" y="16" width="240" height="44" rx="10"/><text class="t-title" x="150" y="43" text-anchor="middle">cli.generate()</text></g></a>
+            <a href="#mod-native_pdf"><g class="n-ai"><rect class="box" x="380" y="16" width="240" height="44" rx="10"/><text class="t-title" x="500" y="43" text-anchor="middle">native_pdf</text></g></a>
+            <g class="n-ext"><rect class="box" x="730" y="16" width="240" height="44" rx="10"/><text class="t-head" x="850" y="43" text-anchor="middle">OpenAI-API</text></g>
+            <line class="life" x1="150" y1="60" x2="150" y2="545"/>
+            <line class="life" x1="500" y1="60" x2="500" y2="545"/>
+            <line class="life" x1="850" y1="60" x2="850" y2="545"/>
+
+            <text class="t-mono" x="166" y="86">generate_native_cards(path, ai, limit, …)</text>
+            <path class="edge" d="M150 94 H496" marker-end="url(#arr-nat)"/>
+
+            <rect class="frame safe" x="330" y="110" width="340" height="164" rx="10"/>
+            <text class="t-label" x="346" y="129">Prüfen – noch keine Übertragung</text>
+            <g class="n-ai"><rect class="box" x="360" y="140" width="280" height="28" rx="6"/><text class="t-mono" x="374" y="159">Endung .pdf?</text></g>
+            <g class="n-ai"><rect class="box" x="360" y="172" width="280" height="28" rx="6"/><text class="t-mono" x="374" y="191">native_openai_model(): Allowlist</text></g>
+            <g class="n-ai"><rect class="box" x="360" y="204" width="280" height="28" rx="6"/><text class="t-mono" x="374" y="223">_validate_openai_pdf(): &lt; 50 MiB</text></g>
+            <g class="n-ai"><rect class="box" x="360" y="236" width="280" height="28" rx="6"/><text class="t-mono" x="374" y="255">_openai_client(): API-Schlüssel</text></g>
+
+            <text class="t-mono" x="516" y="296">files.create(file, purpose="user_data")</text>
+            <path class="edge" d="M500 304 H846" marker-end="url(#arr-nat)"/>
+            <text class="t-mono" x="770" y="328">file_id</text>
+            <path class="edge ret" d="M850 336 H504" marker-end="url(#arr-nat)"/>
+
+            <text class="t-mono" x="516" y="364">responses.parse(input_file, input_text,</text>
+            <text class="t-mono" x="516" y="381">text_format=CardBatch, store=False)</text>
+            <path class="edge" d="M500 390 H846" marker-end="url(#arr-nat)"/>
+            <text class="t-mono" x="620" y="414">output_parsed: CardBatch</text>
+            <path class="edge ret" d="M850 422 H504" marker-end="url(#arr-nat)"/>
+
+            <text class="t-mono" x="516" y="452">finally: files.delete(file_id)</text>
+            <path class="edge" d="M500 460 H846" marker-end="url(#arr-nat)"/>
+            <text class="t-sub" x="520" y="484">ok · sonst RuntimeWarning mit Datei-ID</text>
+            <path class="edge ret" d="M850 492 H504" marker-end="url(#arr-nat)"/>
+
+            <text class="t-mono" x="166" y="522">list[Card] (dedupliziert, Limit)</text>
+            <path class="edge ret" d="M500 530 H154" marker-end="url(#arr-nat)"/>
+          </svg>
+        </div>
+        <figcaption>Durchgezogene Pfeile sind Aufrufe, gestrichelte Pfeile Rückgaben. Der grüne Bereich läuft vollständig lokal; scheitert dort eine Prüfung, findet kein Upload statt und es gibt keinen stillen Wechsel zur lokalen Extraktion.</figcaption>
+      </figure>
+
+      <div class="grid three" style="margin-top:1rem">
+        <article class="card searchable" data-module="native_pdf">
+          <h3>Konservative Freigabe</h3>
+          <p>Fähigkeiten werden nicht aus Modellnamen geraten (R-121). Freigegeben ist nur, was in <code>OPENAI_MODEL_DOCUMENTATION</code> mit offizieller Quelle steht, plus datierte Snapshots, deren Präfix in <code>NATIVE_OPENAI_SNAPSHOT_PREFIXES</code> eingetragen ist. Die geprüfte Fähigkeitenmatrix mit Quellen und Prüfdatum (17.11.2026) steht in der README.</p>
+        </article>
+        <article class="card searchable" data-module="native_pdf">
+          <h3>Upload-Lebenszyklus</h3>
+          <p>Upload mit <code>purpose="user_data"</code>, Anfrage mit <code>store=False</code>, Löschung im <code>finally</code> – auch wenn die Anfrage scheitert. Scheitert die Löschung, gilt der Lauf trotzdem als erfolgreich; die Warnung nennt die Datei-ID für die manuelle Bereinigung.</p>
+        </article>
+        <article class="card searchable" data-module="native_pdf models">
+          <h3>Gleiches Ergebnis wie lokal</h3>
+          <p>Das SDK parst die Antwort direkt in <code>CardBatch</code>. Danach laufen dieselbe Deduplizierung, dieselbe JSON-Ausgabe und dieselbe APKG-Erzeugung wie im lokalen Weg (R-122). Profil-<code>options</code> werden 1:1 an <code>responses.parse()</code> weitergereicht.</p>
+        </article>
+      </div>
+    </section>
+
+    <!-- ============================================================ DATENFORMATE -->
+    <section id="datenformate">
+      <div class="section-heading">
+        <p class="eyebrow">Was zwischen den Modulen fließt</p>
+        <h2>Datenformate und Laufzeitobjekte</h2>
+      </div>
+      <div class="grid two">
+        <article class="card searchable" data-module="models">
+          <h3>Karten-JSON (Schema-Version 1)</h3>
+          <p>Geschrieben von <code>save_cards()</code>, gelesen von <code>load_cards()</code>. <code>source</code> fehlt, wenn die Karten nicht aus einem Dokument stammen.</p>
+          <pre><button class="copy-button" type="button" aria-label="JSON kopieren">Kopieren</button><code>{
+  "schema_version": 1,
+  "deck": "Biologie::Grundlagen",
+  "cards": [
+    {
+      "front": "Welche Funktion haben Mitochondrien?",
+      "back": "Sie erzeugen den Großteil des ATP der Zelle.",
+      "tags": ["zellbiologie"]
+    }
+  ],
+  "source": "/home/nutzer/projekt/input/skript.pdf"
+}</code></pre>
+        </article>
+        <article class="card searchable" data-module="config">
+          <h3>YAML-Schema als Baum</h3>
+          <p>Pydantic-Modelle aus <code>config.py</code>; Werte in Klammern sind eingebaute Defaults. Unbekannte Schlüssel sind auf jeder Ebene verboten.</p>
+          <pre class="tree"><code>AppConfig
+├─ schema_version: 1
+├─ default_profile: str | null
+├─ input_dir / output_dir: Pfad | null
+├─ generation: GenerationConfig
+│  ├─ profile, deck: str | null
+│  ├─ limit ≥ 0 (50) · language ("Deutsch")
+│  ├─ instructions ("") · chunk_size (24000)
+│  ├─ timeout 1..3600 | null · json_output | null
+│  └─ extend (false) · pdf_mode | null
+└─ models: {name → ModelProfile}
+   ├─ model: "provider/modell"
+   ├─ api_base | null · api_key_env | null
+   ├─ timeout (180) · pdf_mode (local)
+   └─ options: {…} ohne Secrets</code></pre>
+        </article>
+      </div>
+      <h3 style="margin-top:1.5rem">Laufzeitobjekte</h3>
+      <div class="table-wrap searchable" data-module="cli settings config documents ai native_pdf models apkg">
+        <table>
+          <thead><tr><th>Objekt</th><th>Modul</th><th>Erzeugt von</th><th>Verwendet von</th></tr></thead>
+          <tbody>
+            <tr><td><code>AppConfig</code></td><td><code>config</code></td><td><code>load_config()</code></td><td><code>settings</code></td></tr>
+            <tr><td><code>GenerateSettings</code></td><td><code>settings</code></td><td><code>resolve_generate_settings()</code></td><td><code>cli.generate</code>, <code>config show</code></td></tr>
+            <tr><td><code>ExportSettings</code></td><td><code>settings</code></td><td><code>resolve_export_settings()</code></td><td><code>cli.export_cards</code></td></tr>
+            <tr><td><code>AISettings</code></td><td><code>ai</code></td><td><code>resolve_generate_settings()</code></td><td><code>generate_cards()</code>, <code>OpenAINativePDFAdapter</code></td></tr>
+            <tr><td><code>SourceDocument</code></td><td><code>documents</code></td><td><code>read_document()</code></td><td><code>generate_cards()</code></td></tr>
+            <tr><td><code>Card</code> / <code>CardBatch</code></td><td><code>models</code></td><td>KI-Antwort, <code>load_cards()</code></td><td>alle Kernmodule</td></tr>
+            <tr><td><code>NativePDFResult</code></td><td><code>native_pdf</code></td><td><code>OpenAINativePDFAdapter.generate()</code></td><td><code>generate_native_cards()</code></td></tr>
+            <tr><td><code>ExportResult</code></td><td><code>apkg</code></td><td><code>create_apkg()</code>, <code>append_apkg()</code></td><td><code>cli._print_result()</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ============================================================ FEHLER -->
+    <section id="fehler">
+      <div class="section-heading">
+        <p class="eyebrow">errors.py und cli.run()</p>
+        <h2>Fehlerkonzept und Exit-Codes</h2>
+        <p>Breite <code>except</code>-Blöcke gibt es nur an echten Bibliotheks- und Netzwerkgrenzen. Dort wird der Fehler sofort in eine <code>FlashcardError</code> mit Kontext übersetzt.</p>
+      </div>
+      <div class="table-wrap searchable" data-module="errors config documents ai native_pdf models apkg cli">
+        <table>
+          <caption>Übersetzungsstellen</caption>
+          <thead><tr><th>Ort</th><th>Gefangen</th><th>Meldung beginnt mit</th></tr></thead>
+          <tbody>
+            <tr><td><code>config.load_config</code></td><td><code>OSError</code>, <code>UnicodeError</code>, <code>YAMLError</code> · <code>ValidationError</code></td><td>Could not read configuration · Invalid configuration</td></tr>
+            <tr><td><code>config.save_config</code></td><td><code>OSError</code>, <code>UnicodeError</code>, <code>TypeError</code>, <code>ValueError</code>, <code>YAMLError</code></td><td>Could not save configuration</td></tr>
+            <tr><td><code>documents._validate_document_path</code></td><td><code>OSError</code> (z. B. Datei fehlt)</td><td>Could not read</td></tr>
+            <tr><td><code>documents._extract_text</code></td><td><code>OSError</code>, <code>UnicodeError</code>, <code>ValueError</code>, <code>PyPdfError</code>, <code>PackageNotFoundError</code>, <code>BadZipFile</code></td><td>Could not read</td></tr>
+            <tr><td><code>documents._read_pdf</code></td><td><code>NotImplementedError</code></td><td>Encrypted PDF is not supported</td></tr>
+            <tr><td><code>ai._request_batch</code></td><td><code>ValidationError</code>, <code>ValueError</code>, <code>TypeError</code> · alle übrigen</td><td>AI returned invalid card data … chunk N · AI request failed … chunk N</td></tr>
+            <tr><td><code>native_pdf._upload_pdf</code></td><td>alle</td><td>Native PDF upload failed</td></tr>
+            <tr><td><code>native_pdf._request_openai_batch</code></td><td><code>ValidationError</code>, <code>ValueError</code>, <code>TypeError</code> · alle übrigen</td><td>Native OpenAI response contained invalid cards · Native OpenAI PDF request failed</td></tr>
+            <tr><td><code>native_pdf._delete_uploaded_file</code></td><td>alle → nur <code>RuntimeWarning</code></td><td>Native PDF upload … could not be deleted</td></tr>
+            <tr><td><code>models.load_cards</code></td><td><code>OSError</code>, <code>UnicodeError</code>, <code>JSONDecodeError</code>, <code>KeyError</code>, <code>TypeError</code>, <code>ValueError</code></td><td>Could not read valid cards</td></tr>
+            <tr><td><code>apkg.create_apkg</code></td><td>alle (genanki-Grenze)</td><td>Could not create</td></tr>
+            <tr><td><code>apkg._open_collection</code> · <code>append_apkg</code></td><td>alle (Anki-Grenze)</td><td>Anki could not open the collection · Could not extend</td></tr>
+            <tr><td><code>apkg._extract_collection</code> · <code>_replace_collection</code></td><td><code>OSError</code>, <code>BadZipFile</code>, <code>ZstdError</code></td><td>Could not read APKG · Could not save extended APKG</td></tr>
+            <tr><td><code>cli.run</code></td><td><code>FlashcardError</code></td><td><code>Fehler:</code> auf stderr, Exit-Code 1</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="grid three" style="margin-top:1rem">
+        <article class="card searchable" data-module="cli"><h3><code>0</code> · Erfolg</h3><p>Normale Ausgabe und Hilfe erscheinen auf stdout.</p></article>
+        <article class="card searchable" data-module="cli errors"><h3><code>1</code> · Anwendungsfehler</h3><p>Jede <code>FlashcardError</code>: Konfiguration, Eingabe, Provider, Paket. Meldung auf stderr, ohne Traceback.</p></article>
+        <article class="card searchable" data-module="cli"><h3><code>2</code> · Bedienfehler</h3><p>Von Typer/Click: unbekannte Option, fehlendes Argument, Wert außerhalb des Bereichs, bei <code>decks</code> auch eine fehlende Datei.</p></article>
+      </div>
+    </section>
+
+    <!-- ============================================================ SICHERHEIT -->
+    <section id="sicherheit">
+      <div class="section-heading">
+        <p class="eyebrow">Querschnittsthemen</p>
+        <h2>Sicherheit, Datenschutz und Dateisicherheit</h2>
+        <p>Diese Schutzmechanismen sind über mehrere Module verteilt. Wer eines der Module ändert, muss sie erhalten.</p>
+      </div>
+      <div class="grid three">
+        <article class="card searchable" data-module="config settings">
+          <h3>Geheimnisse</h3>
+          <ul class="checklist">
+            <li>YAML enthält nur Variablennamen (<code>api_key_env</code>, per Regex geprüft).</li>
+            <li><code>options</code> lehnt Schlüssel wie <code>api_key</code>, <code>*_token</code>, <code>password</code> ab – auch verschachtelt.</li>
+            <li>Gelesen wird ein Schlüssel nur in <code>_profile_api_key()</code> und als Fallback in <code>_openai_client()</code>.</li>
+            <li><code>config show</code> zeigt nur <code>set (hidden)</code>/<code>not set</code>.</li>
+            <li><code>save_config()</code> kann keinen Schlüssel schreiben, weil das Schema keinen enthält.</li>
+          </ul>
+        </article>
+        <article class="card searchable" data-module="ai native_pdf documents">
+          <h3>Datenschutz</h3>
+          <ul class="checklist">
+            <li>Standard ist <code>local</code>: Nur extrahierter Text geht an das Modell, bei Ollama bleibt alles lokal.</li>
+            <li><code>native</code> braucht ausdrückliche Wahl; die CLI kündigt den Upload an.</li>
+            <li>Allowlist, Größe und Schlüssel werden vor dem Upload geprüft; Upload wird im <code>finally</code> gelöscht.</li>
+            <li>Kein stiller Fallback auf lokale Extraktion oder ein anderes Modell.</li>
+            <li>Quelltext steht im Prompt zwischen <code>&lt;source_document&gt;</code>-Begrenzern.</li>
+          </ul>
+        </article>
+        <article class="card searchable" data-module="apkg models config cli">
+          <h3>Dateisicherheit</h3>
+          <ul class="checklist">
+            <li>Ohne <code>extend</code> wird kein vorhandenes APKG überschrieben – geprüft vor jeder KI-Anfrage.</li>
+            <li>JSON, YAML und APKG werden atomar über Temp-Datei und <code>os.replace</code> geschrieben.</li>
+            <li>Erweiterung arbeitet auf einer Temp-Kopie; WAL wird vor dem Packen übernommen.</li>
+            <li>Kartentext wird beim Schreiben HTML-escaped und beim Duplikatvergleich unescaped.</li>
+            <li>Nur die angegebene <code>.apkg</code> wird bearbeitet, nie die persönliche Anki-Sammlung.</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <!-- ============================================================ TESTS -->
+    <section id="tests">
+      <div class="section-heading">
+        <p class="eyebrow">tests/</p>
+        <h2>Teststrategie und Test-Nahtstellen</h2>
+        <p>65 Tests in acht Dateien, eine Datei pro Modul (<code>cli</code> deckt <code>__main__</code> mit ab). Der Standardlauf braucht weder API-Schlüssel noch Netzwerk: KI-Antworten werden simuliert, der einzige HTTP-Test läuft gegen einen lokalen Server auf <code>127.0.0.1</code>.</p>
+      </div>
+      <pre><button class="copy-button" type="button" aria-label="Befehle kopieren">Kopieren</button><code>.venv/bin/python -m ruff check src tests
+.venv/bin/python -m ruff format --check src tests
+.venv/bin/python -m pytest
+.venv/bin/python -m pytest tests/test_apkg.py -k extend   # gezielt</code></pre>
+      <div class="table-wrap searchable" data-module="cli settings config documents ai native_pdf models apkg" style="margin-top:1rem">
+        <table>
+          <thead><tr><th>Datei</th><th>Tests</th><th>Schwerpunkte</th></tr></thead>
+          <tbody>
+            <tr><td><code>test_documents.py</code></td><td>5</td><td>HTML ohne Skripte, DOCX mit Tabellen, leere und nicht unterstützte Dateien, beschädigte PDF, Überlappung beim Aufteilen</td></tr>
+            <tr><td><code>test_models.py</code></td><td>4</td><td>JSON-Roundtrip, ungültiges JSON, Tags ohne Leerzeichen, Deduplizierung</td></tr>
+            <tr><td><code>test_ai.py</code></td><td>3</td><td>Limit über Abschnitte, Unlimited-Prompt ohne erfundenes Limit, ungültige KI-Antwort</td></tr>
+            <tr><td><code>test_native_pdf.py</code></td><td>9</td><td>Allowlist, Upload/Parse/Delete, kein Upload bei falschem Modell, Nicht-PDF oder 50 MiB, Löschen nach Fehler, Löschwarnung, echtes OpenAI-SDK gegen lokalen Server</td></tr>
+            <tr><td><code>test_config.py</code></td><td>15</td><td>fehlende/leere/explizite Datei, ungültiges Schema und Secrets (parametrisiert), Profile, atomares Speichern, Gültigkeit von <code>config.example.yaml</code></td></tr>
+            <tr><td><code>test_settings.py</code></td><td>8</td><td>YAML-Pfade, Prioritäten, Altvariablen ohne Wirkung, Profil-Fallbacks, Export-Defaults, <code>ANKI_CONFIG</code>, Diagnose ohne Secrets</td></tr>
+            <tr><td><code>test_apkg.py</code></td><td>5</td><td>Neu/Erweitern/Inspizieren, Lernstand bleibt, echter moderner Anki-Export mit zstd, HTML-Escaping, Medien bleiben</td></tr>
+            <tr><td><code>test_cli.py</code></td><td>16</td><td>Hilfeseiten, Exit-Codes, alle Befehle, YAML-Integration, nativ ohne lokale Extraktion und umgekehrt, <code>.env</code>, Subprozess ohne Traceback</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <h3 style="margin-top:1.5rem">Die Nahtstellen zum Simulieren</h3>
+      <div class="table-wrap searchable" data-module="ai native_pdf cli">
+        <table>
+          <thead><tr><th>Grenze</th><th>Ersetzt wird</th><th>Wofür</th></tr></thead>
+          <tbody>
+            <tr><td>LiteLLM</td><td><code>anki_flashcards.ai._completion</code></td><td>Feste KI-Antworten pro Abschnitt; Prüfung der übergebenen Prompts und Parameter</td></tr>
+            <tr><td>OpenAI-SDK</td><td><code>anki_flashcards.native_pdf._openai_client</code></td><td><code>FakeOpenAIClient</code> mit <code>files</code> und <code>responses</code>; protokolliert Upload und Löschung</td></tr>
+            <tr><td>Adapter</td><td><code>generate_native_cards(adapter=…)</code></td><td>Injektion über das Protocol, ganz ohne Monkeypatching</td></tr>
+            <tr><td>CLI → Kern</td><td><code>anki_flashcards.cli.generate_cards</code>, <code>.read_document</code>, <code>.generate_native_cards</code></td><td>CLI-Abläufe ohne KI; Nachweis, dass nativ nie lokal extrahiert und lokal nie nativ hochlädt</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="note">
+        <strong>Dort patchen, wo der Name nachgeschlagen wird.</strong>
+        <p><code>cli.py</code> importiert <code>generate_cards</code> mit <code>from … import</code>. Ein Test muss deshalb <code>anki_flashcards.cli.generate_cards</code> ersetzen, nicht <code>anki_flashcards.ai.generate_cards</code>. Für <code>_completion</code> gilt das Gegenteil: Es wird innerhalb von <code>ai.py</code> aufgerufen.</p>
+      </div>
+      <div class="grid two">
+        <article class="card searchable" data-module="cli">
+          <h3>Isolation der CLI-Tests</h3>
+          <p>Die Autouse-Fixture <code>isolate_cli_from_user_config</code> wechselt in ein Temp-Verzeichnis und entfernt <code>ANKI_CONFIG</code>, <code>ANKI_MODEL</code> und <code>LLM_API_BASE</code>. So beeinflussen deine eigene <code>config.yaml</code> und <code>.env</code> die Tests nicht.</p>
+        </article>
+        <article class="card searchable" data-module="apkg cli native_pdf">
+          <h3>Echte Integration, wo es zählt</h3>
+          <p><code>test_apkg.py</code> erzeugt mit der Anki-Bibliothek einen echten modernen Export (<code>legacy=False</code>) und erweitert ihn. <code>test_native_pdf.py</code> lässt das echte OpenAI-SDK gegen einen lokalen <code>HTTPServer</code> laufen. <code>test_cli.py</code> startet <code>python -m anki_flashcards</code> als Subprozess.</p>
+        </article>
+      </div>
+    </section>
+
+    <!-- ============================================================ ERWEITERN -->
+    <section id="erweitern">
+      <div class="section-heading">
+        <p class="eyebrow">Weiterentwickeln</p>
+        <h2>Erweitern: Rezepte und Arbeitsablauf</h2>
+        <p>Die Rezepte nennen die Stellen, die bei typischen Erweiterungen zusammen geändert werden müssen. Verbindlich bleiben <a href="../AGENTS.md">AGENTS.md</a> und <a href="../requirements.md">requirements.md</a>.</p>
+      </div>
+
+      <article class="card searchable" data-module="cli">
+        <h3>Arbeitsablauf je Anforderungspaket</h3>
+        <ol class="chain">
+          <li><code>main</code> sauber</li>
+          <li><code>git checkout -b feature/…</code></li>
+          <li>Requirement-IDs und Ist-Verhalten prüfen</li>
+          <li>Tests gezielt, dann Ruff + pytest</li>
+          <li>README, Handbücher, requirements.md</li>
+          <li>kleiner Commit</li>
+          <li><code>git merge --no-ff</code> auf <code>main</code></li>
+          <li><code>main</code> erneut prüfen</li>
+        </ol>
+        <p class="small muted">Kein Merge bei roten Tests, kein Push ohne Auftrag. Ändert sich Benutzerverhalten, werden README und <code>docs/benutzerhandbuch.html</code> im selben Paket angepasst; ändern sich Module, Schnittstellen oder Abläufe, zusätzlich dieses Entwicklerhandbuch.</p>
+      </article>
+
+      <div class="grid two" style="margin-top:1rem">
+        <article class="card searchable" data-module="documents">
+          <span class="step-number">A</span>
+          <h3>Neues Eingabeformat</h3>
+          <ol class="checklist">
+            <li><code>documents.py</code>: Endung in <code>SUPPORTED_SUFFIXES</code>, neue Funktion <code>_read_xyz()</code> mit Docstring.</li>
+            <li>Verzweigung in <code>_extract_supported_text()</code> ergänzen; bei vielen Formaten auf eine Tabelle Endung → Funktion umstellen (Komplexität ≤ 8).</li>
+            <li>Ausnahmen der neuen Bibliothek in <code>_extract_text()</code> aufnehmen.</li>
+            <li>Abhängigkeit in <code>pyproject.toml</code>; Hilfetexte in <code>cli.py</code> (<code>GENERATE_EPILOG</code>, Argumenthilfe).</li>
+            <li>Tests: Erfolg, beschädigte Datei, leerer Inhalt. Doku: R-011, README, Benutzerhandbuch.</li>
+          </ol>
+        </article>
+        <article class="card searchable" data-module="config settings cli">
+          <span class="step-number">B</span>
+          <h3>Neue Generierungsoption</h3>
+          <ol class="checklist">
+            <li><code>config.py</code>: Feld in <code>GenerationConfig</code> mit Default und Grenzen.</li>
+            <li><code>cli.py</code>: Typer-Option mit Default <code>None</code> in <code>generate</code> <em>und</em> <code>config show</code>, an <code>_explicit_values()</code> übergeben; boolesche Werte als <code>--x/--no-x</code>.</li>
+            <li><code>settings.py</code>: Feld in <code>GenerateSettings</code>, Auflösung, Eintrag in <code>_generate_origins()</code> und <code>configuration_diagnostics()</code>.</li>
+            <li>Wert an <code>generate_cards()</code> bzw. den nativen Adapter weiterreichen.</li>
+            <li><code>config.example.yaml</code> kommentieren; Tests für Default, YAML und CLI-Vorrang.</li>
+          </ol>
+        </article>
+        <article class="card searchable" data-module="config ai">
+          <span class="step-number">C</span>
+          <h3>Neuer Provider im lokalen Modus</h3>
+          <p>Kein Code nötig: LiteLLM übernimmt die Anbindung. Ergänze ein Profil in <code>config.example.yaml</code> (Modell, offizieller Standardendpunkt, <code>api_key_env</code>, erlaubte <code>options</code>) und den Platzhalter in <code>.env.example</code>.</p>
+          <p><code>test_example_configuration_is_valid_and_covers_required_providers</code> validiert die Beispieldatei automatisch.</p>
+        </article>
+        <article class="card searchable" data-module="native_pdf">
+          <span class="step-number">D</span>
+          <h3>Neuer nativer Adapter</h3>
+          <ol class="checklist">
+            <li>Aktuelle offizielle Provider- und LiteLLM-Doku prüfen; Quelle, Datum, Modelle, Grenzen in die README-Fähigkeitenmatrix.</li>
+            <li>Klasse mit <code>generate(…) → NativePDFResult</code> nach <code>NativePDFAdapter</code>; eigene Allowlist wie <code>native_openai_model()</code>.</li>
+            <li>Alle Prüfungen vor dem Upload, Löschung im <code>finally</code>, Antwort als <code>CardBatch</code>.</li>
+            <li><code>generate_native_cards()</code> wählt heute immer den OpenAI-Adapter – eine Auswahl Provider → Adapter einführen, ohne stillen Fallback.</li>
+            <li>Tests mit Fake-Client; kein echter Upload im Standardlauf.</li>
+          </ol>
+        </article>
+      </div>
+
+      <article class="card searchable" data-module="ai apkg documents models settings" style="margin-top:1rem">
+        <span class="step-number">E</span>
+        <h3>Den Kern ohne CLI verwenden (z. B. für eine spätere Web-API)</h3>
+        <p>Alle Bausteine sind normale Funktionen. Eine Web-Schicht übergibt ihre Formularwerte als Mapping an <code>resolve_generate_settings()</code> – genau wie die CLI.</p>
+        <pre><button class="copy-button" type="button" aria-label="Code kopieren">Kopieren</button><code>from pathlib import Path
+
+from anki_flashcards.ai import generate_cards
+from anki_flashcards.apkg import create_apkg
+from anki_flashcards.documents import read_document
+from anki_flashcards.models import save_cards
+from anki_flashcards.settings import load_selected_config, resolve_generate_settings
+
+config, config_path = load_selected_config(Path("config.yaml"))
+settings = resolve_generate_settings(
+    {"input_file": Path("skript.pdf"), "limit": 20}, config, config_path
+)
+document = read_document(settings.input_file)
+cards = generate_cards(document, settings.ai, limit=settings.limit,
+                       language=settings.language, chunk_size=settings.chunk_size)
+save_cards(Path("output/skript.cards.json"), cards, deck=settings.deck)
+result = create_apkg(settings.output, settings.deck, cards)
+print(result.added, result.skipped)</code></pre>
+      </article>
+    </section>
+
+    <!-- ============================================================ EIGENHEITEN -->
+    <section id="eigenheiten">
+      <div class="section-heading">
+        <p class="eyebrow">Prüfstand 17. November 2026</p>
+        <h2>Randfälle und bekannte Abweichungen</h2>
+        <p>Diese Punkte wurden beim Schreiben dieses Handbuchs am tatsächlichen Code nachgeprüft. Sie beschreiben den Ist-Stand und sind keine beschlossenen Änderungen. Wird einer davon behoben, muss der Eintrag hier im selben Paket entfernt oder angepasst werden.</p>
+      </div>
+      <div class="grid two">
+        <article class="card searchable" data-module="native_pdf config">
+          <span class="tag err">Abweichung</span>
+          <h3>Beispielprofil <code>openai-native-pdf</code> und <code>max_tokens</code></h3>
+          <p><code>_request_openai_batch()</code> reicht <code>settings.options</code> unverändert an <code>client.responses.parse()</code> weiter. Diese Methode kennt <code>max_tokens</code> nicht (dort heißt es <code>max_output_tokens</code>) und wirft <code>TypeError</code>. Das Beispielprofil setzt <code>max_tokens: 8192</code>.</p>
+          <p><strong>Folge:</strong> Der Lauf scheitert erst nach dem Upload mit der irreführenden Meldung „Native OpenAI response contained invalid cards: … unexpected keyword argument 'max_tokens'“. Die Datei wird trotzdem gelöscht.</p>
+        </article>
+        <article class="card searchable" data-module="native_pdf">
+          <span class="tag err">Abweichung</span>
+          <h3>Datierte <code>gpt-4o-mini</code>-Snapshots</h3>
+          <p>Benutzerhandbuch und README nennen „datierte Snapshots dieser Modelle“ als freigegeben. <code>native_openai_model()</code> kennt aber nur die Präfixe <code>gpt-4o-</code> und <code>gpt-4.1-</code> mit direkt folgendem Datum. <code>gpt-4o-mini-2024-07-18</code> ergibt deshalb <code>None</code> und wird abgelehnt.</p>
+        </article>
+        <article class="card searchable" data-module="settings">
+          <span class="tag cfg">Verhalten</span>
+          <h3><code>--model</code> behält das Profil</h3>
+          <p>Mit einem aktiven Profil ersetzt <code>--model</code> nur die Kennung. Beispiel mit <code>config.example.yaml</code>: <code>--model openai/gpt-4o-mini</code> behält <code>api_base: http://localhost:11434</code> und die Ollama-Optionen des Profils <code>ollama-local</code>. Für einen Providerwechsel <code>--profile</code> verwenden.</p>
+        </article>
+        <article class="card searchable" data-module="settings">
+          <span class="tag cfg">Randfall</span>
+          <h3><code>./skript.pdf</code> gilt als reiner Dateiname</h3>
+          <p><code>Path("./skript.pdf").parent == Path(".")</code>. Ist <code>input_dir</code> gesetzt, wird <code>./skript.pdf</code> deshalb unter <code>input_dir</code> gesucht und nicht im Arbeitsordner. <code>input/skript.pdf</code> oder ein absoluter Pfad verhalten sich wie erwartet.</p>
+        </article>
+        <article class="card searchable" data-module="settings">
+          <span class="tag cfg">Randfall</span>
+          <h3>Herkunftslabels sind dateibasiert</h3>
+          <p>Für <code>extend</code>, <code>limit</code>, <code>language</code>, <code>instructions</code> und <code>chunk_size</code> meldet <code>config show</code> <code>config</code>, sobald irgendeine YAML-Datei geladen ist – auch wenn der Schlüssel darin fehlt und der Wert vom Default stammt. <code>input_file</code> erscheint als <code>config</code>, sobald <code>input_dir</code> gesetzt ist, auch bei einem absoluten CLI-Pfad.</p>
+        </article>
+        <article class="card searchable" data-module="cli settings">
+          <span class="tag">Randfall</span>
+          <h3>Deckname nur aus Leerzeichen</h3>
+          <p><code>--deck "   "</code> ist ein nicht leerer String und übersteht die Auflösung. Erst <code>_write_deck()</code> lehnt ihn ab – also nach der KI-Generierung. Ohne <code>--json</code> sind die erzeugten Karten dann verloren.</p>
+        </article>
+        <article class="card searchable" data-module="apkg">
+          <span class="tag apkg">Randfall</span>
+          <h3>Platzhalter in modernen Exporten</h3>
+          <p>Moderne Anki-Exporte enthalten <code>collection.anki2</code> (Platzhalter für alte Versionen) und <code>collection.anki21b</code>. <code>_replace_collection()</code> verwirft alle <code>collection.*</code>-Einträge und schreibt nur den bearbeiteten zurück. Nach dem Erweitern fehlt der Platzhalter; aktuelle Anki-Versionen lesen <code>anki21b</code> unverändert.</p>
+        </article>
+        <article class="card searchable" data-module="native_pdf">
+          <span class="tag ext">Abhängigkeit</span>
+          <h3><code>openai</code> ist nicht direkt deklariert</h3>
+          <p><code>native_pdf.py</code> importiert das <code>openai</code>-SDK, <code>pyproject.toml</code> nennt es aber nicht. Es wird transitiv über <code>litellm</code> installiert (aktuell 3.52.0). Ein Wechsel der LiteLLM-Version kann das SDK unbemerkt ändern.</p>
+        </article>
+      </div>
+    </section>
+
+    <!-- ============================================================ GLOSSAR -->
+    <section id="glossar">
+      <div class="section-heading">
+        <p class="eyebrow">Begriffe</p>
+        <h2>Glossar für Entwickler</h2>
+      </div>
+      <div class="grid three">
+        <article class="card searchable" data-module="ai"><h3>LiteLLM</h3><p>Bibliothek mit einer OpenAI-ähnlichen <code>completion()</code>-Schnittstelle für viele Provider. Modelle heißen <code>provider/modell</code>.</p></article>
+        <article class="card searchable" data-module="models config"><h3>Pydantic</h3><p>Validierung über typisierte Klassen. Hier für Karten, KI-Antworten und das YAML-Schema.</p></article>
+        <article class="card searchable" data-module="cli"><h3>Typer · Rich</h3><p>Typer erzeugt die CLI aus Funktionssignaturen (auf Basis von Click). Rich zeichnet Spinner, Tabellen und farbige Meldungen.</p></article>
+        <article class="card searchable" data-module="apkg"><h3>genanki · anki</h3><p><code>genanki</code> erzeugt neue Pakete ohne Anki. <code>anki</code> ist die offizielle Python-Bibliothek von Anki selbst und öffnet vorhandene Sammlungen.</p></article>
+        <article class="card searchable" data-module="apkg"><h3>Sammlung (Collection)</h3><p>Die SQLite-Datenbank im APKG mit Notizen, Karten, Decks, Notiztypen und Lernständen.</p></article>
+        <article class="card searchable" data-module="apkg"><h3>GUID</h3><p>Global eindeutige Kennung einer Notiz. Anki erkennt daran beim Import dieselbe Notiz wieder.</p></article>
+        <article class="card searchable" data-module="apkg"><h3>WAL</h3><p>Write-Ahead-Log von SQLite. Änderungen können dort liegen, bis ein Checkpoint sie in die Hauptdatei übernimmt.</p></article>
+        <article class="card searchable" data-module="apkg"><h3>zstd</h3><p>Kompressionsverfahren Zstandard. Aktuelle Anki-Pakete speichern die Sammlung damit als <code>collection.anki21b</code>.</p></article>
+        <article class="card searchable" data-module="native_pdf"><h3>Protocol</h3><p>Strukturelle Schnittstelle aus <code>typing</code>: Jede Klasse mit passender Methode erfüllt sie, ohne zu erben.</p></article>
+        <article class="card searchable" data-module="documents ai"><h3>Chunk</h3><p>Ein Abschnitt des normalisierten Textes, der in einer einzelnen Modellanfrage verarbeitet wird.</p></article>
+        <article class="card searchable" data-module="ai"><h3>Kontingent</h3><p>Die Höchstzahl an Karten, die der Prompt für einen Chunk verlangt.</p></article>
+        <article class="card searchable" data-module="settings"><h3>Herkunft (source)</h3><p>Die Schicht, aus der ein effektiver Wert stammt: <code>built-in</code>, <code>config</code> oder <code>cli</code>.</p></article>
+      </div>
+    </section>
+
+    <section class="empty-state hidden" id="no-results">
+      <div class="card">
+        <h2>Keine passenden Bereiche gefunden</h2>
+        <p>Versuche einen anderen Suchbegriff oder lösche die Suche.</p>
+        <button class="button" id="clear-search" type="button">Suche löschen</button>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <p><strong>Anki Flashcard Generator · Entwicklerhandbuch</strong></p>
+      <p>Dieses Handbuch beschreibt die interne Funktionsweise des aktuellen Stands. Es wird angepasst, wenn sich Module, Schnittstellen, Abläufe oder Erweiterungspunkte ändern.</p>
+      <p>Benutzerhandbuch: <a href="benutzerhandbuch.html">benutzerhandbuch.html</a> · Projektübersicht: <a href="../README.md">README.md</a> · Anforderungen: <a href="../requirements.md">requirements.md</a> · Arbeitsregeln: <a href="../AGENTS.md">AGENTS.md</a></p>
+    </footer>
+  </main>
+
+  <script>
+    (() => {
+      const searchInput = document.getElementById('guide-search');
+      const blocks = [...document.querySelectorAll('.searchable')];
+      const sections = [...document.querySelectorAll('main > section:not(#no-results)')];
+      const filterButtons = [...document.querySelectorAll('[data-filter]')];
+      const status = document.getElementById('search-status');
+      const noResults = document.getElementById('no-results');
+      const expandButton = document.getElementById('expand-all');
+      const printButton = document.getElementById('print-guide');
+      const clearButton = document.getElementById('clear-search');
+      let activeFilter = '';
+      let expanded = false;
+
+      const normalize = (value) => value.toLocaleLowerCase('de').trim();
+      const modulesOf = (block) => (block.dataset.module || '').split(/\s+/).filter(Boolean);
+
+      function matches(block, query) {
+        const inFilter = !activeFilter || modulesOf(block).includes(activeFilter);
+        const inQuery = !query || normalize(block.textContent).includes(query);
+        return inFilter && inQuery;
+      }
+
+      function applyFilters() {
+        const query = normalize(searchInput.value);
+        const active = Boolean(query || activeFilter);
+        let visible = 0;
+        blocks.forEach((block) => {
+          const show = !active || matches(block, query);
+          block.classList.toggle('hidden', !show);
+          if (!show) return;
+          visible += 1;
+          if (query) block.querySelectorAll('details').forEach((detail) => { detail.open = true; });
+        });
+        sections.forEach((section) => {
+          const hasVisible = section.querySelector('.searchable:not(.hidden)') !== null;
+          section.classList.toggle('hidden', active && !hasVisible);
+        });
+        noResults.classList.toggle('hidden', !active || visible !== 0);
+        const scope = activeFilter ? ` für ${activeFilter}` : '';
+        status.textContent = active ? `${visible} Bereich(e)${scope} gefunden.` : '';
+      }
+
+      searchInput.addEventListener('input', applyFilters);
+      filterButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+          const selected = button.dataset.filter;
+          activeFilter = activeFilter === selected ? '' : selected;
+          filterButtons.forEach((item) => item.setAttribute('aria-pressed', String(item.dataset.filter === activeFilter)));
+          applyFilters();
+          if (activeFilter) document.getElementById(`mod-${activeFilter}`).scrollIntoView({ behavior: 'instant', block: 'start' });
+        });
+      });
+
+      expandButton.addEventListener('click', () => {
+        expanded = !expanded;
+        document.querySelectorAll('details').forEach((detail) => { detail.open = expanded; });
+        expandButton.textContent = expanded ? 'Alles schließen' : 'Alles öffnen';
+        expandButton.setAttribute('aria-expanded', String(expanded));
+      });
+
+      printButton.addEventListener('click', () => {
+        const detailStates = [...document.querySelectorAll('details')].map((detail) => detail.open);
+        document.querySelectorAll('details').forEach((detail) => { detail.open = true; });
+        window.print();
+        document.querySelectorAll('details').forEach((detail, index) => { detail.open = detailStates[index]; });
+      });
+
+      clearButton.addEventListener('click', () => {
+        searchInput.value = '';
+        activeFilter = '';
+        filterButtons.forEach((item) => item.setAttribute('aria-pressed', 'false'));
+        applyFilters();
+        searchInput.focus();
+      });
+
+      document.querySelectorAll('.copy-button').forEach((button) => {
+        button.addEventListener('click', async () => {
+          const code = button.parentElement.querySelector('code');
+          try {
+            await navigator.clipboard.writeText(code.textContent);
+            button.textContent = 'Kopiert';
+          } catch (error) {
+            const selection = window.getSelection();
+            const range = document.createRange();
+            range.selectNodeContents(code);
+            selection.removeAllRanges();
+            selection.addRange(range);
+            button.textContent = 'Markiert';
+          }
+          window.setTimeout(() => { button.textContent = 'Kopieren'; }, 1800);
+        });
+      });
+    })();
+  </script>
+</body>
+</html>
