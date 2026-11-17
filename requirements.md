@@ -199,9 +199,9 @@ Die Arbeit erfolgt Anforderung für Anforderung in kleinen, nachvollziehbaren Sc
 
 ## 9. Zentrale Konfiguration
 
-Der Konfigurationsservice mit versioniertem YAML-Schema, strikter Validierung, Modellprofilen, Profilauflösung und atomarer Speicherung ist implementiert und getestet. Die vollständige CLI-Integration, Pfadauflösung, Prioritäten und Diagnoseausgabe folgen in R-113 bis R-120. `.env` bleibt für Geheimnisse und die bestehende einfache Nutzung relevant; die neue Konfiguration ersetzt keine sichere Speicherung von Schlüsseln.
+Der Konfigurationsservice ist vollständig in die CLI integriert: versioniertes YAML, Profile, Prioritäten, Pfadregeln, atomare Speicherung und geschwärzte Diagnose sind implementiert und getestet. `.env` bleibt für Geheimnisse und die bestehende einfache Nutzung relevant; die Konfiguration ersetzt keine sichere Speicherung von Schlüsseln.
 
-**R-110 – Konfigurationsdatei · muss · offen**
+**R-110 – Konfigurationsdatei · muss · umgesetzt**
 Das Programm muss eine zentrale, strukturierte **YAML**-Konfiguration unterstützen. Standarddatei ist `config.yaml` im aktuellen Arbeitsverzeichnis; ein abweichender Pfad wird über `--config` oder `ANKI_CONFIG` gewählt. Eine fehlende implizite Standarddatei bedeutet eingebaute Defaults. Eine ausdrücklich angegebene, fehlende oder ungültige Datei ist ein Fehler.
 
 **R-111 – Version und Validierung · muss · umgesetzt**
@@ -220,13 +220,13 @@ Die Konfiguration muss benannte, wiederverwendbare Modellprofile unterstützen. 
 
 Vorgefertigte, auskommentierte oder aktivierbare Bausteine müssen OpenAI, Anthropic, Gemini, Moonshot und Ollama abdecken. Ein Standardprofil ist wählbar. Direkte `--model`-Angaben bleiben ohne Profil möglich.
 
-**R-113 – Eingabe- und Ausgabeordner · muss · offen**
+**R-113 – Eingabe- und Ausgabeordner · muss · umgesetzt**
 In der Konfiguration müssen Standardordner für Eingabe und Ausgabe festlegbar sein. Reine Dateinamen werden unter diesen Ordnern aufgelöst. Ausdrücklich angegebene relative CLI-Pfade bleiben relativ zum aktuellen Arbeitsverzeichnis; relative Pfade innerhalb der YAML-Datei werden relativ zum Speicherort der YAML-Datei aufgelöst. Absolute Pfade bleiben unverändert. Wenn nur ein Ausgabeordner vorgegeben ist, lautet der Standarddateiname `<eingabedateiname>.apkg`.
 
-**R-114 – Generierungsdefaults · muss · offen**
+**R-114 – Generierungsdefaults · muss · umgesetzt**
 Die Konfiguration muss die wesentlichen CLI-Parameter als Defaults speichern können: Modellprofil, Kartenlimit, Sprache, zusätzliche Anweisungen, Abschnittsgröße, Timeout, Deckname beziehungsweise Namensregel, JSON-Ausgabe, Extend-Modus und PDF-Verarbeitungsmodus. Nicht jede Konfiguration muss jeden Schlüssel setzen; fehlende Werte verwenden die eingebauten Defaults.
 
-**R-115 – Eindeutige Priorität · muss · offen**
+**R-115 – Eindeutige Priorität · muss · umgesetzt**
 Für jeden effektiven Wert gilt von niedriger zu hoher Priorität:
 
 1. eingebauter Programmdefault,
@@ -236,21 +236,21 @@ Für jeden effektiven Wert gilt von niedriger zu hoher Priorität:
 
 CLI-Werte müssen Konfigurationsdefaults daher immer überschreiben. Secrets werden ausschließlich aus der Umgebung gelesen. Für konfigurierbare boolesche Werte müssen CLI-Optionen beide Richtungen ermöglichen, beispielsweise `--extend/--no-extend`, damit auch ein konfigurierter `true`-Wert überschrieben werden kann.
 
-**R-116 – Konfiguration anzeigen · soll · offen**
+**R-116 – Konfiguration anzeigen · soll · umgesetzt**
 Ein Diagnosebefehl soll die effektiv zusammengeführte Konfiguration und deren Herkunft anzeigen können. Geheimnisse müssen dabei vollständig weggelassen oder eindeutig maskiert werden. Dies erleichtert Support und spätere Web-UI-Validierung.
 
 **R-117 – Web-Kompatibilität · muss · umgesetzt**
 Laden, Validieren und Zusammenführen der Konfiguration muss als UI-unabhängiger Dienst implementiert werden. Eine spätere Webanwendung muss dieselben Schemas und Regeln verwenden und Änderungen validiert sowie atomar speichern können. CLI-spezifische Objekte gehören nicht in das Konfigurationsschema.
 
-**R-118 – Bestehende Nutzung · muss · offen**
+**R-118 – Bestehende Nutzung · muss · umgesetzt**
 Bestehende Aufrufe ohne YAML-Datei müssen weiterhin funktionieren. Die Einführung der Konfiguration darf weder API-Schlüssel erzwingen noch bestehende `--model`- und `.env`-Workflows grundlos brechen.
 
-**R-119 – Konfigurationstests · muss · offen**
+**R-119 – Konfigurationstests · muss · umgesetzt**
 Tests müssen mindestens leere Datei, fehlende implizite und explizite Datei, ungültige YAML/Typen/Felder, Profilauflösung, Pfadauflösung, sämtliche Prioritätsebenen, boolesche CLI-Überschreibung, Secret-Nichtpersistenz und atomares Speichern abdecken.
 
 ## 10. Native PDF-Verarbeitung durch KI-Provider
 
-**R-120 – Wählbarer PDF-Modus · muss · offen**
+**R-120 – Wählbarer PDF-Modus · muss · umgesetzt; nativer Adapter folgt in R-121/R-122**
 Pro Modellprofil muss `pdf_mode` mindestens die Werte `local` und `native` unterstützen. `local` ist der Standard und verwendet die vorhandene Textextraktion. `native` überspringt diese Extraktion und übergibt die Original-PDF über eine provider-eigene Datei-/Dokumentschnittstelle. Ein entsprechender CLI-Wert überschreibt den Profilwert.
 
 **R-121 – Fähigkeiten nicht raten · muss · offen**
@@ -280,14 +280,17 @@ Die folgenden Punkte sind Ideen und keine aktuellen Implementierungsaufträge:
 
 Bis zur Umsetzung der neuen Konfigurations- und Hilfeanforderungen bestehen diese Befehle:
 
-- `generate EINGABE --output ZIEL.apkg [--deck NAME] [--model PROVIDER/MODELL] [--limit N] [--extend] [--json DATEI]`
-- `export KARTEN.json --output ZIEL.apkg --deck NAME [--extend]`
+- `generate EINGABE [--output ZIEL.apkg] [--deck NAME] [--model PROVIDER/MODELL] [--profile NAME] [--limit N] [--extend/--no-extend] [--json DATEI] [--config DATEI] [--pdf-mode local|native]`
+- `export KARTEN.json [--output ZIEL.apkg] [--deck NAME] [--extend/--no-extend] [--config DATEI]`
 - `decks PAKET.apkg`
+- `config show EINGABE [--config DATEI] [weitere Overrides]`
 
 Wichtige Ist-Eigenschaften:
 
-- `--output` ist derzeit bei `generate` und `export` erforderlich; Ausgabeordner aus YAML sind offen.
-- `--deck` ist bei `generate` optional und bei `export` erforderlich.
+- `--output` ist erforderlich, sofern kein `output_dir` in YAML konfiguriert ist; dann wird der Dateiname aus der Eingabe abgeleitet.
+- `--deck` ist bei `generate` optional; bei `export` kann stattdessen `generation.deck` aus YAML verwendet werden.
+- `--config` beziehungsweise `ANKI_CONFIG` wählt YAML; ohne Datei bleibt der bisherige Workflow erhalten.
+- `config show` gibt effektive Werte und Herkunft ohne geheime Schlüsselwerte als JSON aus.
 - Ohne `--extend` muss die Ausgabedatei neu sein; mit `--extend` muss sie bereits existieren.
 - Fehlende Elternordner der Ausgabe werden erstellt.
 - `--limit` akzeptiert nichtnegative ganze Zahlen; `0` bedeutet Unlimited.

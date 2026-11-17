@@ -3,7 +3,7 @@
 import math
 import os
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from pydantic import ValidationError
@@ -31,12 +31,14 @@ class AISettings:
             credential; provider-specific environment variables remain supported.
         api_base: Optional provider endpoint override.
         timeout: Request timeout in seconds.
+        options: Additional validated provider-specific completion options.
     """
 
     model: str
     api_key: str | None = None
     api_base: str | None = None
     timeout: int = 180
+    options: dict[str, Any] = field(default_factory=dict)
 
 
 def generate_cards(
@@ -122,6 +124,7 @@ def _request_batch(prompt: str, settings: AISettings, chunk_number: int) -> Card
             timeout=settings.timeout,
             num_retries=2,
             drop_params=True,
+            **settings.options,
             **_provider_options(settings),
         )
         return CardBatch.model_validate_json(_response_content(response))

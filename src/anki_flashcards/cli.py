@@ -1,6 +1,6 @@
 """Expose document generation, JSON export, and deck inspection as a CLI."""
 
-import os
+import json
 from pathlib import Path
 
 import typer
@@ -9,11 +9,18 @@ from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.table import Table
 
-from anki_flashcards.ai import AISettings, generate_cards
+from anki_flashcards.ai import generate_cards
 from anki_flashcards.apkg import ExportResult, append_apkg, create_apkg, inspect_apkg
+from anki_flashcards.config import PDFMode
 from anki_flashcards.documents import read_document
 from anki_flashcards.errors import FlashcardError
 from anki_flashcards.models import Card, deduplicate_cards, load_cards, save_cards
+from anki_flashcards.settings import (
+    configuration_diagnostics,
+    load_selected_config,
+    resolve_export_settings,
+    resolve_generate_settings,
+)
 
 MAIN_EPILOG = """
 Examples:
@@ -73,20 +80,20 @@ error_console = Console(stderr=True)
 def generate(
     input_file: Path = typer.Argument(
         ...,
-        exists=True,
         file_okay=True,
         dir_okay=False,
-        readable=True,
-        resolve_path=True,
-        help="Local PDF, DOCX, HTML, Markdown, or UTF-8 text file; required.",
+        help=(
+            "Local PDF, DOCX, HTML, Markdown, or UTF-8 text file. Bare names "
+            "may resolve through input_dir; direct paths are checked by the CLI."
+        ),
     ),
-    output: Path = typer.Option(
-        ...,
+    output: Path | None = typer.Option(
+        None,
         "--output",
         "-o",
         help=(
-            "Required destination .apkg. Must be new, or an existing package "
-            "with --extend. Missing parent directories are created."
+            "Destination .apkg; required unless output_dir is configured. Must "
+            "be new, or existing with --extend. Parent directories are created."
         ),
     ),
     deck: str | None = typer.Option(
@@ -95,12 +102,31 @@ def generate(
         "-d",
         help="Target deck name; use '::' for subdecks. Default: input filename stem.",
     ),
-    extend: bool = typer.Option(
-        False,
-        "--extend",
+    extend: bool | None = typer.Option(
+        None,
+        "--extend/--no-extend",
         help=(
-            "Append to an existing --output instead of creating one; preserves "
-            "cards/review states, skips duplicates, creates the deck if absent."
+            "Append to an existing output (--extend) or require a new one "
+            "(--no-extend). Overrides YAML extend in both directions."
+        ),
+    ),
+    config_file: Path | None = typer.Option(
+        None,
+        "--config",
+        envvar="ANKI_CONFIG",
+        help="YAML configuration path. Default: optional ./config.yaml; may use ANKI_CONFIG.",
+    ),
+    profile: str | None = typer.Option(
+        None,
+        "--profile",
+        help="Named YAML model profile. Overrides default_profile; direct --model still wins.",
+    ),
+    pdf_mode: PDFMode | None = typer.Option(
+        None,
+        "--pdf-mode",
+        help=(
+            "PDF handling: local or native. Overrides YAML. Native requires a "
+            "verified provider adapter and uploads the original file."
         ),
     ),
     model: str | None = typer.Option(
@@ -113,29 +139,29 @@ def generate(
             "openai/gpt-4o-mini. May also be set with ANKI_MODEL."
         ),
     ),
-    limit: int = typer.Option(
-        50,
+    limit: int | None = typer.Option(
+        None,
         "--limit",
         "-n",
         min=0,
         help="Maximum cards across all chunks, >= 0. Default: 50; 0 = unlimited.",
         show_default=False,
     ),
-    language: str = typer.Option(
-        "Deutsch",
+    language: str | None = typer.Option(
+        None,
         "--language",
         "-l",
         help="Natural language for generated questions and answers. Default: Deutsch.",
         show_default=False,
     ),
-    instructions: str = typer.Option(
-        "",
+    instructions: str | None = typer.Option(
+        None,
         "--instructions",
         help="Optional additional card guidance; default: no extra instructions.",
         show_default=False,
     ),
-    chunk_size: int = typer.Option(
-        24_000,
+    chunk_size: int | None = typer.Option(
+        None,
         "--chunk-size",
         min=1_000,
         max=100_000,
@@ -153,8 +179,8 @@ def generate(
             "LLM_API_BASE; provider defaults are used otherwise."
         ),
     ),
-    timeout: int = typer.Option(
-        180,
+    timeout: int | None = typer.Option(
+        None,
         "--timeout",
         min=1,
         max=3_600,
@@ -171,14 +197,27 @@ def generate(
     ),
 ) -> None:
     """Generate cards from PDF, DOCX, HTML, Markdown, or text."""
-    deck_name = deck or input_file.stem
-    _validate_output(output, extend)
-    document = read_document(input_file)
-    settings = AISettings(
-        model=model or os.getenv("ANKI_MODEL", ""),
+    cli_values = _explicit_values(
+        output=output,
+        deck=deck,
+        extend=extend,
+        profile=profile,
+        pdf_mode=pdf_mode,
+        model=model,
+        limit=limit,
+        language=language,
+        instructions=instructions,
+        chunk_size=chunk_size,
         api_base=api_base,
         timeout=timeout,
+        json_output=json_output,
     )
+    config, config_path = load_selected_config(config_file)
+    settings = resolve_generate_settings(
+        {"input_file": input_file, **cli_values}, config, config_path
+    )
+    _validate_output(settings.output, settings.extend)
+    document = read_document(settings.input_file)
     with Progress(SpinnerColumn(), TextColumn("{task.description}"), console=console) as progress:
         task = progress.add_task("Generating cards with AI...", total=None)
 
@@ -202,61 +241,71 @@ def generate(
 
         cards = generate_cards(
             document,
-            settings,
-            limit=limit,
-            language=language,
-            instructions=instructions,
-            chunk_size=chunk_size,
+            settings.ai,
+            limit=settings.limit,
+            language=settings.language,
+            instructions=settings.instructions,
+            chunk_size=settings.chunk_size,
             progress=update,
         )
     if not cards:
         raise FlashcardError("The AI did not return any usable cards")
 
-    if json_output:
-        save_cards(json_output, cards, deck=deck_name, source=str(input_file))
-    result = _write_deck(output, deck_name, cards, extend)
-    _print_result(result, json_output)
+    if settings.json_output:
+        save_cards(
+            settings.json_output,
+            cards,
+            deck=settings.deck,
+            source=str(settings.input_file),
+        )
+    result = _write_deck(settings.output, settings.deck, cards, settings.extend)
+    _print_result(result, settings.json_output)
 
 
 @app.command("export", epilog=EXPORT_EPILOG)
 def export_cards(
     cards_file: Path = typer.Argument(
         ...,
-        exists=True,
         file_okay=True,
         dir_okay=False,
-        readable=True,
-        resolve_path=True,
-        help="Required version-1 card JSON file; no AI provider is called.",
+        help="Version-1 card JSON file; bare names may resolve through input_dir.",
     ),
-    output: Path = typer.Option(
-        ...,
+    output: Path | None = typer.Option(
+        None,
         "--output",
         "-o",
         help=(
-            "Required destination .apkg. Must be new, or an existing package "
-            "with --extend. Missing parent directories are created."
+            "Destination .apkg; required unless output_dir is configured. Must "
+            "be new, or existing with --extend. Parent directories are created."
         ),
     ),
-    deck: str = typer.Option(
-        ...,
+    deck: str | None = typer.Option(
+        None,
         "--deck",
         "-d",
-        help="Required target deck name; use '::' for subdecks.",
+        help="Target deck; required unless generation.deck is configured.",
     ),
-    extend: bool = typer.Option(
-        False,
-        "--extend",
-        help=(
-            "Append to an existing --output instead of creating one; preserves "
-            "existing data and skips duplicate questions."
-        ),
+    extend: bool | None = typer.Option(
+        None,
+        "--extend/--no-extend",
+        help="Extend an existing output or require a new one; overrides YAML.",
+    ),
+    config_file: Path | None = typer.Option(
+        None,
+        "--config",
+        envvar="ANKI_CONFIG",
+        help="YAML configuration path. Default: optional ./config.yaml; may use ANKI_CONFIG.",
     ),
 ) -> None:
     """Export previously saved JSON without another AI request."""
-    _validate_output(output, extend)
-    cards = deduplicate_cards(load_cards(cards_file))
-    result = _write_deck(output, deck, cards, extend)
+    config, config_path = load_selected_config(config_file)
+    cli_values = _explicit_values(output=output, deck=deck, extend=extend)
+    settings = resolve_export_settings(
+        {"cards_file": cards_file, **cli_values}, config, config_path
+    )
+    _validate_output(settings.output, settings.extend)
+    cards = deduplicate_cards(load_cards(settings.cards_file))
+    result = _write_deck(settings.output, settings.deck, cards, settings.extend)
     _print_result(result, None)
 
 
@@ -281,6 +330,99 @@ def list_decks(
     for row in rows:
         table.add_row(row["name"], str(row["cards"]), str(row["id"]))
     console.print(table)
+
+
+def _explicit_values(**values: object) -> dict[str, object]:
+    """Discard unset CLI options so YAML and environment defaults can apply.
+
+    Args:
+        **values: Option names and values, with None meaning not supplied.
+
+    Returns:
+        Only explicitly supplied options; false, zero, and empty strings remain.
+    """
+    return {name: value for name, value in values.items() if value is not None}
+
+
+config_app = typer.Typer(
+    name="config",
+    help="Inspect effective YAML, environment, and CLI configuration.",
+    no_args_is_help=True,
+)
+app.add_typer(config_app)
+
+
+@config_app.command(
+    "show",
+    help="Show effective settings and origins without exposing credentials.",
+    epilog=(
+        "Example: anki-flashcards config show source.pdf --config config.yaml "
+        "--output output/deck.apkg\n"
+        "The JSON output shows each value's source and only whether an API key is set."
+    ),
+)
+def show_config(
+    input_file: Path = typer.Argument(
+        ...,
+        help="Input filename used to resolve configured directories and defaults.",
+    ),
+    output: Path | None = typer.Option(None, "--output", "-o"),
+    deck: str | None = typer.Option(None, "--deck", "-d"),
+    extend: bool | None = typer.Option(None, "--extend/--no-extend"),
+    config_file: Path | None = typer.Option(None, "--config", envvar="ANKI_CONFIG"),
+    profile: str | None = typer.Option(None, "--profile"),
+    pdf_mode: PDFMode | None = typer.Option(None, "--pdf-mode"),
+    model: str | None = typer.Option(None, "--model", "-m"),
+    limit: int | None = typer.Option(None, "--limit", "-n", min=0),
+    language: str | None = typer.Option(None, "--language", "-l"),
+    instructions: str | None = typer.Option(None, "--instructions"),
+    chunk_size: int | None = typer.Option(None, "--chunk-size", min=1_000, max=100_000),
+    api_base: str | None = typer.Option(None, "--api-base"),
+    timeout: int | None = typer.Option(None, "--timeout", min=1, max=3_600),
+    json_output: Path | None = typer.Option(None, "--json"),
+) -> None:
+    """Resolve and display non-secret effective settings as JSON.
+
+    Args:
+        input_file: Source path used for directory and deck resolution.
+        output: Optional explicit APKG output override.
+        deck: Optional explicit deck override.
+        extend: Optional extend/no-extend override.
+        config_file: Optional YAML path; ANKI_CONFIG is also supported.
+        profile: Optional named YAML profile.
+        pdf_mode: Optional local or native PDF override.
+        model: Optional direct provider/model override.
+        limit: Optional non-negative card limit.
+        language: Optional card language override.
+        instructions: Optional additional prompt instructions.
+        chunk_size: Optional local-text chunk size.
+        api_base: Optional provider endpoint override.
+        timeout: Optional request timeout in seconds.
+        json_output: Optional JSON destination override.
+
+    Returns:
+        None. A JSON-safe diagnostic view is printed to standard output.
+    """
+    cli_values = _explicit_values(
+        output=output,
+        deck=deck,
+        extend=extend,
+        profile=profile,
+        pdf_mode=pdf_mode,
+        model=model,
+        limit=limit,
+        language=language,
+        instructions=instructions,
+        chunk_size=chunk_size,
+        api_base=api_base,
+        timeout=timeout,
+        json_output=json_output,
+    )
+    config, config_path = load_selected_config(config_file)
+    settings = resolve_generate_settings(
+        {"input_file": input_file, **cli_values}, config, config_path
+    )
+    console.print_json(json.dumps(configuration_diagnostics(settings, config_path)))
 
 
 def _validate_output(output: Path, extend: bool) -> None:

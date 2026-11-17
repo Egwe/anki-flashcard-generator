@@ -8,7 +8,7 @@ Ein CLI-Werkzeug, das aus lokalen Dokumenten mit KI überprüfbare Karteikarten 
 - [AGENTS.md](./AGENTS.md) enthält die verbindlichen Regeln für Architektur, Never Nesting, Docstrings, Konfiguration, Tests und kleine Commits.
 - Diese README beschreibt die **aktuell implementierte** Bedienung.
 
-Der erste MVP ist funktionsfähig. Never Nesting, kleine fachliche Einheiten und vollständige Funktions-/Klassendokumentation sind im Bestand umgesetzt und durch Ruff abgesichert. Der UI-unabhängige YAML-Konfigurationsservice mit validierten Profilen und atomarer Speicherung ist implementiert; seine vollständige CLI-Integration und die modellabhängige native PDF-Verarbeitung sind noch offen. Web-UI und Proxmox-/Container-Deployment sind weiterhin spätere Ausbaustufen.
+Der erste MVP ist funktionsfähig. Never Nesting, kleine fachliche Einheiten und vollständige Funktions-/Klassendokumentation sind im Bestand umgesetzt und durch Ruff abgesichert. Die zentrale YAML-Konfiguration ist einschließlich Modellprofilen, Prioritäten, Pfaden und Diagnose vollständig in die CLI integriert. Die modellabhängige native PDF-Verarbeitung ist noch offen. Web-UI und Proxmox-/Container-Deployment sind weiterhin spätere Ausbaustufen.
 
 ## Warum Python?
 
@@ -138,7 +138,22 @@ Die Hilfe funktioniert auch mit `-h` und enthält Beispiele, Pflicht- und option
 
 [config.example.yaml](./config.example.yaml) enthält sichere, direkt aktivierbare Modellbausteine für Ollama, OpenAI, Anthropic, Gemini und Moonshot. Der Service in `config.py` lädt versionierte YAML-Dateien, validiert unbekannte Felder und Werte strikt, löst Modellprofile auf und speichert Änderungen atomar. API-Schlüssel werden nicht gespeichert; `api_key_env` enthält ausschließlich den Namen der zugehörigen Umgebungsvariablen.
 
-Die CLI-Option `--config`, die Zusammenführung der Defaults und Pfadregeln werden im nächsten Integrationspaket ergänzt. Die Beispieldatei ist deshalb bereits validiert, aber noch kein Ersatz für die unten beschriebenen aktuellen CLI- und `.env`-Workflows.
+Die Konfiguration wird mit `--config PFAD` oder `ANKI_CONFIG=PFAD` ausgewählt. Ohne Angabe wird eine optionale `config.yaml` im aktuellen Arbeitsverzeichnis gelesen; ohne diese Datei gelten die bisherigen Defaults und Workflows unverändert. Eine ausdrücklich angegebene fehlende Datei ist ein Fehler.
+
+Die Priorität ist **eingebauter Default → YAML/Profil → Umgebung/`.env` → ausdrücklicher CLI-Wert**. `--model` und `ANKI_MODEL` überschreiben das Profilmodell; `--extend/--no-extend` überschreibt YAML in beiden Richtungen. Auch `--limit 0` und eine leere `--instructions ''` gelten als explizite CLI-Werte.
+
+Relative `input_dir`- und `output_dir`-Pfade werden relativ zur YAML-Datei aufgelöst. Ein reiner Eingabedateiname wird unter `input_dir` gesucht; ausdrückliche relative CLI-Pfade bleiben relativ zum aktuellen Arbeitsverzeichnis. Ohne `--output` wird `<eingabedateiname>.apkg` unter `output_dir` angelegt. `generation.deck` kann auch für `export` den Decknamen vorgeben.
+
+Beispiel mit Konfiguration:
+
+```bash
+cp config.example.yaml config.yaml
+anki-flashcards generate skript.pdf --config config.yaml --limit 25 --no-extend
+anki-flashcards export biologie.cards.json --config config.yaml
+anki-flashcards config show skript.pdf --config config.yaml --output output/deck.apkg
+```
+
+`config show` gibt die effektiven Werte und ihre Herkunft (`built-in`, `config`, `environment`, `cli`) als JSON aus. API-Schlüssel werden ausschließlich als `set (hidden)` beziehungsweise `not set` dargestellt, niemals mit ihrem Wert. `--profile NAME` wählt ein bestimmtes YAML-Profil.
 
 ## KI-Provider konfigurieren
 
@@ -183,6 +198,7 @@ Dokument → Textextraktion → Chunks → LiteLLM → validierte Karten
 
 - Kartentext wird HTML-escaped, damit Zeichen wie `<`, `>` und `&` als Text erscheinen.
 - `config.py`: UI-unabhängiges YAML-Schema, Modellprofile und atomare Speicherung
+- `settings.py`: Prioritäten, Profil-/Umgebungsauflösung, Pfadregeln und Diagnosedaten
 - `documents.py`: Dateiformate, Normalisierung und überlappende Textabschnitte
 - `ai.py`: Provider-Anbindung, Prompting und Antwortvalidierung
 - `models.py`: Karten- und JSON-Schema sowie Deduplizierung
