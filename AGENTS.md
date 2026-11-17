@@ -19,23 +19,29 @@ Bei Konflikten zwischen bereits implementiertem Verhalten und den Anforderungen 
 4. **Keine Funktionsbehauptungen ohne Beleg:** Dokumentation, Tests oder ausgeführte Befehle müssen den gemeldeten Stand stützen.
 5. **Keine ungefragten Zusatzänderungen:** Keine unverbundenen Refactorings, Dependency-Upgrades oder Formatänderungen. Eng mit der Änderung verbundene Fehler werden behoben und begründet.
 
-## 3. Arbeitsablauf und Commits
+## 3. Arbeitsablauf, Branches und Commits
 
-### Für jedes Anforderungspaket
+### Verbindlicher Branch-Workflow
 
-1. Betroffene Requirement-IDs in [requirements.md](./requirements.md) bestimmen.
-2. Bestehenden Code, Tests, Dokumentation und tatsächliches Verhalten lesen beziehungsweise prüfen.
+Alle offenen **Muss- und Soll-Anforderungen** werden schrittweise abgearbeitet. **Kann-Anforderungen** sind keine impliziten Implementierungsaufträge.
+
+Für jede Gruppe inhaltlich zusammengehöriger Requirements gilt dieser vollständige Zyklus:
+
+1. Auf aktuellem, sauberem `main` einen beschreibenden Feature-Branch erstellen, beispielsweise `feature/cli-help`, `feature/config-services` oder `feature/native-pdf-openai`.
+2. Betroffene Requirement-IDs bestimmen und bestehenden Code, Tests, Dokumentation sowie tatsächliches Verhalten prüfen.
 3. Ein kleines, abgegrenztes Paket bearbeiten, beispielsweise:
    - CLI-Hilfe,
    - Docstring-/Never-Nesting-Refactoring eines Moduls,
    - YAML-Schema und Laden,
    - Konfigurationszusammenführung,
    - ein geprüfter Native-PDF-Adapter.
-4. Zuerst fokussierte Tests ausführen; danach relevante Gesamtprüfungen.
+4. Zuerst fokussierte Tests ausführen und danach alle relevanten Qualitätsprüfungen.
 5. Direkt betroffene Dokumentation und Requirement-Status im selben Paket aktualisieren.
-6. Änderungen und Git-Diff prüfen, anschließend **einen eigenen kleinen Commit** erstellen.
+6. Änderungen und Git-Diff prüfen und **einen eigenen kleinen Commit** erstellen. Größere Pakete dürfen mehrere fachlich geschlossene Zwischencommits erhalten.
+7. Erst wenn alle vorgesehenen Prüfungen erfolgreich sind, auf `main` wechseln und den Feature-Branch mit einem nachvollziehbaren Merge-Commit integrieren. Kein Merge bei roten Tests.
+8. Den gemergten Stand auf `main` prüfen. Erst danach mit dem nächsten inhaltlich zusammengehörigen Anforderungspaket und einem neuen Branch beginnen.
 
-Nicht mehrere unabhängige Requirements bis zu einem großen Schluss-Commit aufstauen. Ein Commit enthält nur zusammengehörige, getestete Änderungen. Ein späteres Paket darf auf einem validierten vorherigen Paket aufbauen.
+Nicht mehrere unabhängige Requirements bis zu einem großen Schluss-Commit aufstauen. Ein Commit enthält nur zusammengehörige, getestete Änderungen. Ein späteres Paket darf auf einem validierten vorherigen Paket aufbauen. Nach erfolgreichem Merge kann der lokale Feature-Branch gelöscht werden; der Merge-Verlauf bleibt im Repository nachvollziehbar. Vor einem Branchwechsel muss das Arbeitsverzeichnis sauber sein oder die aktuelle Arbeit anderweitig ausdrücklich gesichert werden.
 
 ### Git-Regeln
 
