@@ -199,15 +199,15 @@ Die Arbeit erfolgt Anforderung für Anforderung in kleinen, nachvollziehbaren Sc
 
 ## 9. Zentrale Konfiguration
 
-Diese Anforderungen sind neu und noch nicht implementiert. `.env` bleibt für Geheimnisse und die bestehende einfache Nutzung relevant; die neue Konfiguration ersetzt keine sichere Speicherung von Schlüsseln.
+Der Konfigurationsservice mit versioniertem YAML-Schema, strikter Validierung, Modellprofilen, Profilauflösung und atomarer Speicherung ist implementiert und getestet. Die vollständige CLI-Integration, Pfadauflösung, Prioritäten und Diagnoseausgabe folgen in R-113 bis R-120. `.env` bleibt für Geheimnisse und die bestehende einfache Nutzung relevant; die neue Konfiguration ersetzt keine sichere Speicherung von Schlüsseln.
 
 **R-110 – Konfigurationsdatei · muss · offen**
 Das Programm muss eine zentrale, strukturierte **YAML**-Konfiguration unterstützen. Standarddatei ist `config.yaml` im aktuellen Arbeitsverzeichnis; ein abweichender Pfad wird über `--config` oder `ANKI_CONFIG` gewählt. Eine fehlende implizite Standarddatei bedeutet eingebaute Defaults. Eine ausdrücklich angegebene, fehlende oder ungültige Datei ist ein Fehler.
 
-**R-111 – Version und Validierung · muss · offen**
+**R-111 – Version und Validierung · muss · umgesetzt**
 Die Datei besitzt eine `schema_version` und wird beim Start mit einem typisierten Schema validiert. Unbekannte Versionen, ungültige Typen und unbekannte Felder müssen mit Angabe des betroffenen Konfigurationsschlüssels abgelehnt werden. Eine kommentierte `config.example.yaml` wird versioniert; die persönliche `config.yaml` wird ignoriert, damit keine lokalen Pfade oder versehentlichen Geheimnisse committet werden.
 
-**R-112 – Modellprofile und Bausteine · muss · offen**
+**R-112 – Modellprofile und Bausteine · muss · umgesetzt**
 Die Konfiguration muss benannte, wiederverwendbare Modellprofile unterstützen. Ein Profil enthält mindestens:
 
 - eindeutigen Profilnamen,
@@ -239,7 +239,7 @@ CLI-Werte müssen Konfigurationsdefaults daher immer überschreiben. Secrets wer
 **R-116 – Konfiguration anzeigen · soll · offen**
 Ein Diagnosebefehl soll die effektiv zusammengeführte Konfiguration und deren Herkunft anzeigen können. Geheimnisse müssen dabei vollständig weggelassen oder eindeutig maskiert werden. Dies erleichtert Support und spätere Web-UI-Validierung.
 
-**R-117 – Web-Kompatibilität · muss · offen**
+**R-117 – Web-Kompatibilität · muss · umgesetzt**
 Laden, Validieren und Zusammenführen der Konfiguration muss als UI-unabhängiger Dienst implementiert werden. Eine spätere Webanwendung muss dieselben Schemas und Regeln verwenden und Änderungen validiert sowie atomar speichern können. CLI-spezifische Objekte gehören nicht in das Konfigurationsschema.
 
 **R-118 – Bestehende Nutzung · muss · offen**
