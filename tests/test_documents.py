@@ -1,3 +1,5 @@
+"""Test local document extraction, failure handling, and text chunking."""
+
 from pathlib import Path
 
 import pytest
@@ -8,6 +10,14 @@ from anki_flashcards.errors import FlashcardError
 
 
 def test_reads_html_without_script_content(tmp_path: Path) -> None:
+    """Verify visible HTML text is retained and script content is removed.
+
+    Args:
+        tmp_path: Pytest-provided isolated directory.
+
+    Returns:
+        None. Assertions compare the normalized extracted text.
+    """
     source = tmp_path / "source.html"
     source.write_text(
         "<html><script>ignore this</script><main><h1>Titel</h1><p>Ein Fakt.</p></main></html>",
@@ -21,6 +31,14 @@ def test_reads_html_without_script_content(tmp_path: Path) -> None:
 
 
 def test_reads_docx_paragraphs_and_tables(tmp_path: Path) -> None:
+    """Verify DOCX extraction includes paragraphs and pipe-separated table cells.
+
+    Args:
+        tmp_path: Pytest-provided isolated directory.
+
+    Returns:
+        None. The assertion checks the complete extracted text.
+    """
     source = tmp_path / "source.docx"
     document = Document()
     document.add_paragraph("Absatz")
@@ -34,6 +52,14 @@ def test_reads_docx_paragraphs_and_tables(tmp_path: Path) -> None:
 
 
 def test_rejects_empty_and_unsupported_documents(tmp_path: Path) -> None:
+    """Verify empty content and unsupported extensions have clear failures.
+
+    Args:
+        tmp_path: Pytest-provided isolated directory.
+
+    Returns:
+        None. Assertions require FlashcardError for both invalid inputs.
+    """
     empty = tmp_path / "empty.txt"
     empty.write_text(" \n", encoding="utf-8")
     with pytest.raises(FlashcardError, match="No extractable text"):
@@ -46,6 +72,14 @@ def test_rejects_empty_and_unsupported_documents(tmp_path: Path) -> None:
 
 
 def test_corrupt_pdf_is_a_user_facing_error(tmp_path: Path) -> None:
+    """Verify parser failures are translated into FlashcardError.
+
+    Args:
+        tmp_path: Pytest-provided isolated directory.
+
+    Returns:
+        None. The assertion requires a readable application error.
+    """
     source = tmp_path / "broken.pdf"
     source.write_bytes(b"not a PDF")
 
@@ -54,6 +88,11 @@ def test_corrupt_pdf_is_a_user_facing_error(tmp_path: Path) -> None:
 
 
 def test_chunks_long_text_with_overlap() -> None:
+    """Verify long text is split within limits without losing its ending.
+
+    Returns:
+        None. Assertions cover chunk count, maximum length, and final content.
+    """
     text = "\n\n".join(f"Absatz {index} " + "x" * 100 for index in range(50))
 
     chunks = chunk_text(text, max_chars=1_000, overlap=100)
