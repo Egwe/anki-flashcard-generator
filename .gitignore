@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+
+# Test and lint caches
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Local configuration and generated output
+.env
+*.apkg
+*.cards.json
+
+# Editors and operating systems
+.vscode/
+.idea/
+.DS_Store
