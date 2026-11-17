@@ -52,10 +52,10 @@ class GenerationConfig(StrictModel):
         language: Natural language requested from the model.
         instructions: Additional prompt guidance.
         chunk_size: Source characters per local-text model request.
-        timeout: Default provider request timeout in seconds.
+        timeout: Optional generation timeout overriding the profile timeout.
         json_output: Optional card JSON destination path.
         extend: Whether generation should extend an existing APKG by default.
-        pdf_mode: Local extraction or native PDF provider processing.
+        pdf_mode: Optional generation override for the profile PDF mode.
     """
 
     profile: str | None = Field(default=None, min_length=1)
@@ -64,10 +64,10 @@ class GenerationConfig(StrictModel):
     language: str = Field(default=DEFAULT_LANGUAGE, min_length=1)
     instructions: str = ""
     chunk_size: int = Field(default=DEFAULT_CHUNK_SIZE, ge=1_000, le=100_000)
-    timeout: int = Field(default=DEFAULT_TIMEOUT, ge=1, le=3_600)
+    timeout: int | None = Field(default=None, ge=1, le=3_600)
     json_output: Path | None = None
     extend: bool = False
-    pdf_mode: PDFMode = PDFMode.LOCAL
+    pdf_mode: PDFMode | None = None
 
     @field_validator("profile")
     @classmethod

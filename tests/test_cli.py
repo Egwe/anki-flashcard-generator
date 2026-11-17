@@ -12,7 +12,7 @@ from anki_flashcards.errors import FlashcardError
 runner = CliRunner()
 
 
-@pytest.mark.parametrize("command", [[], ["generate"], ["export"], ["decks"]])
+@pytest.mark.parametrize("command", [[], ["generate"], ["export"], ["decks"], ["config", "show"]])
 def test_help_documents_usage_defaults_files_and_examples(command: list[str]) -> None:
     """Verify every CLI help page includes its operational contract.
 
@@ -46,12 +46,15 @@ def test_help_documents_usage_defaults_files_and_examples(command: list[str]) ->
         assert "With --extend, it must already exist" in normalized
     if command == ["export"]:
         assert "--deck" in normalized and "-d" in normalized
-        assert "Required target deck name" in normalized
+        assert "required unless generation.deck is configured" in normalized
         assert "No AI request is made" in normalized
         assert "must be a new .apkg file" in normalized
     if command == ["decks"]:
         assert "never modified" in normalized
         assert "zstd-compressed" in normalized
+    if command == ["config", "show"]:
+        assert "JSON output shows each value's source" in normalized
+        assert "API key is set" in normalized
 
 
 def test_short_help_and_invalid_usage_exit_codes() -> None:
@@ -154,6 +157,135 @@ def test_generate_command_uses_document_and_writes_json(tmp_path: Path, monkeypa
     assert captured["settings"].model == "ollama/test"
     assert output.is_file()
     assert cards_file.is_file()
+
+
+def test_generate_uses_yaml_profile_paths_and_cli_overrides(tmp_path: Path, monkeypatch) -> None:
+    """Verify the command resolves YAML defaults and explicit CLI precedence.
+
+    Args:
+        tmp_path: Pytest-provided isolated directory.
+        monkeypatch: Pytest fixture used to replace AI generation.
+
+    Returns:
+        None. Assertions inspect effective settings and generated output paths.
+    """
+    import yaml
+
+    from anki_flashcards.models import Card
+
+    source = tmp_path / "input" / "source.txt"
+    source.parent.mkdir()
+    source.write_text("Ein Fakt aus YAML.", encoding="utf-8")
+    config_file = tmp_path / "config.yaml"
+    config_file.write_text(
+        yaml.safe_dump(
+            {
+                "schema_version": 1,
+                "default_profile": "local",
+                "input_dir": "input",
+                "output_dir": "output",
+                "generation": {
+                    "deck": "YAML Deck",
+                    "limit": 1,
+                    "extend": True,
+                },
+                "models": {"local": {"model": "ollama/yaml-model"}},
+            }
+        ),
+        encoding="utf-8",
+    )
+    captured = {}
+
+    def fake_generate(document, settings, **kwargs):
+        """Capture resolved generation values and return one card.
+
+        Args:
+            document: Resolved local document.
+            settings: Resolved provider settings.
+            **kwargs: Effective generation options.
+
+        Returns:
+            A deterministic one-card list.
+        """
+        captured["document"] = document
+        captured["settings"] = settings
+        captured["options"] = kwargs
+        return [Card(front="Frage?", back="Antwort")]
+
+    monkeypatch.setattr("anki_flashcards.cli.generate_cards", fake_generate)
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "source.txt",
+            "--config",
+            str(config_file),
+            "--model",
+            "ollama/cli-model",
+            "--limit",
+            "0",
+            "--no-extend",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert captured["document"].path == source
+    assert captured["settings"].model == "ollama/cli-model"
+    assert captured["options"]["limit"] == 0
+    assert (tmp_path / "output" / "source.apkg").is_file()
+
+
+def test_config_show_is_json_and_hides_credentials(tmp_path: Path, monkeypatch) -> None:
+    """Verify config show emits non-secret effective settings and origins.
+
+    Args:
+        tmp_path: Pytest-provided isolated directory.
+        monkeypatch: Pytest fixture used to supply a test credential.
+
+    Returns:
+        None. Assertions parse JSON and reject any exposed secret value.
+    """
+    import yaml
+
+    config_file = tmp_path / "config.yaml"
+    config_file.write_text(
+        yaml.safe_dump(
+            {
+                "default_profile": "test",
+                "generation": {"limit": 7},
+                "models": {
+                    "test": {
+                        "model": "openai/test",
+                        "api_key_env": "CLI_TEST_SECRET",
+                    }
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("CLI_TEST_SECRET", "do-not-print-this")
+
+    result = runner.invoke(
+        app,
+        [
+            "config",
+            "show",
+            "source.pdf",
+            "--config",
+            str(config_file),
+            "--output",
+            str(tmp_path / "out.apkg"),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    diagnostics = json.loads(result.output)
+    assert diagnostics["model"] == "openai/test"
+    assert diagnostics["limit"] == 7
+    assert diagnostics["sources"]["limit"] == "config"
+    assert diagnostics["sources"]["output"] == "cli"
+    assert diagnostics["api_key"] == "set (hidden)"
+    assert "do-not-print-this" not in result.output
 
 
 def test_extend_requires_existing_output(tmp_path: Path) -> None:

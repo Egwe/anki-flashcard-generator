@@ -45,7 +45,8 @@ def test_missing_implicit_file_uses_defaults(tmp_path: Path, monkeypatch) -> Non
 
     assert config == AppConfig()
     assert config.generation.limit == 50
-    assert config.generation.pdf_mode == PDFMode.LOCAL
+    assert config.generation.pdf_mode is None
+    assert config.generation.timeout is None
     assert config.selected_profile() is None
 
 
