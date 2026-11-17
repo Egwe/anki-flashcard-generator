@@ -288,6 +288,149 @@ def test_config_show_is_json_and_hides_credentials(tmp_path: Path, monkeypatch) 
     assert "do-not-print-this" not in result.output
 
 
+def test_generate_native_pdf_skips_local_extraction_and_exports(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """Verify CLI native mode uploads directly and still creates a normal APKG.
+
+    Args:
+        tmp_path: Pytest-provided isolated directory.
+        monkeypatch: Pytest fixture replacing native and local processing.
+
+    Returns:
+        None. Assertions verify native invocation, no local read, and APKG output.
+    """
+    from anki_flashcards.models import Card
+
+    source = tmp_path / "source.pdf"
+    source.write_bytes(b"%PDF-test")
+    output = tmp_path / "native.apkg"
+    captured = {}
+
+    def fail_read_document(path):
+        """Fail when native mode incorrectly reads local PDF text.
+
+        Args:
+            path: PDF path that must be uploaded rather than extracted.
+
+        Returns:
+            Never returns normally.
+
+        Raises:
+            AssertionError: Always, to expose the wrong processing branch.
+        """
+        raise AssertionError("Native CLI mode must not call read_document")
+
+    def fake_native(path, settings, **kwargs):
+        """Capture native settings and return one validated card.
+
+        Args:
+            path: Original PDF path.
+            settings: Resolved OpenAI settings.
+            **kwargs: Effective generation parameters.
+
+        Returns:
+            A deterministic one-card list.
+        """
+        captured["path"] = path
+        captured["settings"] = settings
+        captured["options"] = kwargs
+        return [Card(front="Native?", back="Antwort")]
+
+    monkeypatch.setattr("anki_flashcards.cli.read_document", fail_read_document)
+    monkeypatch.setattr("anki_flashcards.cli.generate_native_cards", fake_native)
+
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            str(source),
+            "--output",
+            str(output),
+            "--model",
+            "openai/gpt-4o",
+            "--pdf-mode",
+            "native",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert captured["path"] == source
+    assert captured["settings"].model == "openai/gpt-4o"
+    assert captured["options"]["limit"] == 50
+    assert output.is_file()
+    assert "uploading the original document" in result.output
+
+
+def test_generate_local_mode_never_calls_native_adapter(tmp_path: Path, monkeypatch) -> None:
+    """Verify default local PDF processing never invokes native upload.
+
+    Args:
+        tmp_path: Pytest-provided isolated directory.
+        monkeypatch: Pytest fixture replacing native and local processing.
+
+    Returns:
+        None. Assertions verify the local branch and generated APKG.
+    """
+    from anki_flashcards.documents import SourceDocument
+    from anki_flashcards.models import Card
+
+    source = tmp_path / "source.pdf"
+    source.write_bytes(b"%PDF-test")
+    output = tmp_path / "local.apkg"
+
+    def fake_read(path):
+        """Return extracted local text for the local-mode command.
+
+        Args:
+            path: Local PDF path.
+
+        Returns:
+            A source document containing one fact.
+        """
+        return SourceDocument(path=path, text="Lokaler Fakt")
+
+    def fake_generate(document, settings, **kwargs):
+        """Return one card for local generation without a real provider.
+
+        Args:
+            document: Locally extracted source document.
+            settings: Resolved provider settings.
+            **kwargs: Effective generation options.
+
+        Returns:
+            A deterministic one-card list.
+        """
+        return [Card(front="Lokal?", back="Antwort")]
+
+    def fail_native(*args, **kwargs):
+        """Fail if local mode invokes the native upload path.
+
+        Args:
+            *args: Unused positional arguments.
+            **kwargs: Unused keyword arguments.
+
+        Returns:
+            Never returns normally.
+
+        Raises:
+            AssertionError: Always, to expose unintended upload behavior.
+        """
+        raise AssertionError("Local mode must not call native adapter")
+
+    monkeypatch.setattr("anki_flashcards.cli.read_document", fake_read)
+    monkeypatch.setattr("anki_flashcards.cli.generate_cards", fake_generate)
+    monkeypatch.setattr("anki_flashcards.cli.generate_native_cards", fail_native)
+
+    result = runner.invoke(
+        app,
+        ["generate", str(source), "--output", str(output), "--model", "openai/gpt-4o"],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert output.is_file()
+
+
 def test_extend_requires_existing_output(tmp_path: Path) -> None:
     """Verify extend mode rejects a missing APKG before writing cards.
 

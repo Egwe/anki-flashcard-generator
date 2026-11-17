@@ -8,7 +8,7 @@ Ein CLI-Werkzeug, das aus lokalen Dokumenten mit KI überprüfbare Karteikarten 
 - [AGENTS.md](./AGENTS.md) enthält die verbindlichen Regeln für Architektur, Never Nesting, Docstrings, Konfiguration, Tests und kleine Commits.
 - Diese README beschreibt die **aktuell implementierte** Bedienung.
 
-Der erste MVP ist funktionsfähig. Never Nesting, kleine fachliche Einheiten und vollständige Funktions-/Klassendokumentation sind im Bestand umgesetzt und durch Ruff abgesichert. Die zentrale YAML-Konfiguration ist einschließlich Modellprofilen, Prioritäten, Pfaden und Diagnose vollständig in die CLI integriert. Die modellabhängige native PDF-Verarbeitung ist noch offen. Web-UI und Proxmox-/Container-Deployment sind weiterhin spätere Ausbaustufen.
+Der erste MVP ist funktionsfähig. Never Nesting, kleine fachliche Einheiten und vollständige Funktions-/Klassendokumentation sind im Bestand umgesetzt und durch Ruff abgesichert. Die zentrale YAML-Konfiguration ist einschließlich Modellprofilen, Prioritäten, Pfaden und Diagnose vollständig in die CLI integriert. Native PDF-Verarbeitung ist für ausdrücklich freigegebene OpenAI-Modelle implementiert; lokale Extraktion bleibt Standard. Web-UI und Proxmox-/Container-Deployment sind weiterhin spätere Ausbaustufen.
 
 ## Warum Python?
 
@@ -184,6 +184,45 @@ LLM_API_KEY=optionaler-schluessel
 
 Alternativ ist `--api-base` verfügbar. Anfragen verwenden strukturierte JSON-Ausgaben, zwei Wiederholversuche und einen konfigurierbaren Timeout. Die Antwort wird mit Pydantic validiert.
 
+## Native PDF-Verarbeitung
+
+`--pdf-mode native` beziehungsweise `pdf_mode: native` überspringt die lokale PDF-Textextraktion und lädt die **vollständige Originaldatei** ausdrücklich zum konfigurierten Provider hoch. Standard ist weiterhin `local`. Nicht unterstützte Provider oder Modelle werden vor jeder Übertragung abgelehnt; es gibt keinen stillen Fallback auf lokale Extraktion oder ein anderes Modell.
+
+### Geprüfte Fähigkeitenmatrix
+
+Stand der Dokumentationsprüfung: **2026-11-17**.
+
+| Provider | Freigegebene Modelle und Snapshots | PDF-Fähigkeit | Strukturierte Ausgabe | Grenzen/Status |
+| --- | --- | --- | --- | --- |
+| OpenAI | `gpt-4o-mini`, `gpt-4o`, `gpt-4.1`; nur datierte Snapshots derselben Basismodelle | Responses API `input_file` mit Datei-ID; Text und Seitenbilder | `responses.parse` mit Pydantic `CardBatch` | Datei kleiner als 50 MiB; Modellkontextfenster zusätzlich beachten; Modelle derzeit von OpenAI als Deprecated markiert |
+
+Keine pauschale Freigabe für andere OpenAI-Modelle oder Audio-/Realtime-Varianten: Diese benötigen eine neue Prüfung und einen eigenen Eintrag. Anthropic, Gemini, Moonshot und Ollama verwenden bis zu ihrer eigenen belegten Implementierung weiterhin `local`.
+
+Quellen:
+
+- [OpenAI File Inputs](https://developers.openai.com/api/docs/guides/file-inputs) – Datei-ID, Vision-Modelle, 50-MiB-Grenze und Tokenverbrauch
+- [OpenAI Structured Outputs](https://developers.openai.com/api/docs/guides/structured-outputs) – `responses.parse` und Pydantic-Schema
+- [OpenAI Python SDK Helpers](https://github.com/openai/openai-python/blob/main/helpers.md) – `output_parsed`
+- [OpenAI Data Controls](https://developers.openai.com/api/docs/guides/your-data) – Dateien bleiben bis zur Löschung gespeichert; Abuse-Monitoring kann separate Aufbewahrung haben
+- [OpenAI Files Delete](https://developers.openai.com/api/reference/resources/files/methods/delete) – Löschung hochgeladener Dateien
+- [LiteLLM PDF Input](https://docs.litellm.ai/docs/completion/document_understanding) – Providerübergreifender Hintergrund; der native Adapter verwendet direkt das offizielle OpenAI-SDK
+
+### Datenschutz und Ablauf
+
+Der Adapter lädt mit `purpose=user_data`, fordert dieselbe validierte `CardBatch`-Struktur an und setzt `store=false` bei der Responses-Anfrage. Anschließend wird die hochgeladene Datei über die Files-API gelöscht – auch nach einem Anfragefehler. Schlägt die Löschung fehl, erscheint eine Warnung mit Datei-ID zur manuellen Bereinigung.
+
+Die Dateiübertragung kann Token- und Uploadkosten verursachen; Text und Seitenbilder erhöhen den Kontextverbrauch. `store=false` und Löschung beseitigen nicht automatisch providerseitige Abuse-Monitoring-Aufbewahrung. Für vertrauliche Dokumente bleibt lokale Extraktion mit einem lokalen Modell vorzuziehen.
+
+Beispiel:
+
+```bash
+anki-flashcards generate dokument.pdf \
+  --output output/native.apkg \
+  --profile openai-native-pdf \
+  --config config.yaml \
+  --limit 50
+```
+
 ## Architektur
 
 ```text
@@ -201,6 +240,7 @@ Dokument → Textextraktion → Chunks → LiteLLM → validierte Karten
 - `settings.py`: Prioritäten, Profil-/Umgebungsauflösung, Pfadregeln und Diagnosedaten
 - `documents.py`: Dateiformate, Normalisierung und überlappende Textabschnitte
 - `ai.py`: Provider-Anbindung, Prompting und Antwortvalidierung
+- `native_pdf.py`: konservative Modellfreigabe sowie OpenAI-Upload, Responses-Parsing und Löschung
 - `models.py`: Karten- und JSON-Schema sowie Deduplizierung
 - `apkg.py`: Erstellung, Erweiterung und Inspektion von Anki-Paketen
 - `cli.py`: ausschließlich Kommandozeilen-Workflow und Darstellung

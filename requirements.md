@@ -54,7 +54,7 @@ Langer extrahierter Text muss für Modellaufrufe in überlappende Abschnitte auf
 **R-013 – OCR · kann · später**
 Gescannte PDFs ohne Textebene benötigen derzeit eine externe OCR. Eine eingebaute OCR kann später ergänzt werden.
 
-**R-014 – Native Dokumentverarbeitung · muss · offen, siehe R-120 bis R-123**
+**R-014 – Native Dokumentverarbeitung · muss · umgesetzt für geprüfte OpenAI-Modelle**
 Die lokale Extraktion muss für geeignete Modelle optional durch die native Verarbeitung der Originaldatei beim Provider ersetzt werden können.
 
 ## 4. KI-Modelle und Karteikartengenerierung
@@ -62,7 +62,7 @@ Die lokale Extraktion muss für geeignete Modelle optional durch die native Vera
 **R-020 – Provider-Unabhängigkeit · muss · umgesetzt**
 Gängige KI-Anbieter müssen über eine gemeinsame Schnittstelle ansprechbar sein. LiteLLM bildet diese Schnittstelle; Modelle werden in der Form `provider/modell` angegeben. Vorgesehen und dokumentiert sind insbesondere OpenAI, Anthropic, Google Gemini, Moonshot/Kimi und Ollama. Weitere von LiteLLM unterstützte Provider sollen ohne eigene CLI-Befehle nutzbar sein.
 
-**R-021 – Provider-Parameter · muss · umgesetzt, Konfiguration offen**
+**R-021 – Provider-Parameter · muss · umgesetzt**
 Modell, API-Endpunkt, Timeout und API-Schlüssel müssen konfigurierbar sein. Aktuell erfolgt dies über CLI-Optionen, `.env` beziehungsweise Umgebungsvariablen. Eine zentrale Modellkonfiguration wird zusätzlich gemäß R-110 bis R-119 eingeführt.
 
 **R-022 – Geheimnisse · muss · umgesetzt und dauerhaft einzuhalten**
@@ -90,7 +90,7 @@ Das Standardlimit beträgt 50 Karten. Das Programm darf nicht mehr als das angef
 **R-027 – Provider-Fehler · muss · umgesetzt**
 Anfragen verwenden einen Timeout von standardmäßig 180 Sekunden und bis zu zwei Wiederholversuche durch LiteLLM. Fehler müssen mit dem betroffenen Dokumentabschnitt gemeldet werden. Nicht jedes Modell unterstützt jede strukturierte Ausgabe gleichermaßen; solche Einschränkungen dürfen nicht als erfolgreiche Generierung ausgegeben werden.
 
-**R-028 – Datenschutz · muss · umgesetzt, für Direkt-Upload zu erweitern**
+**R-028 – Datenschutz · muss · umgesetzt**
 Bei Cloud-Providern werden verarbeitete Dokumentauszüge an den Anbieter übertragen. Dies muss dokumentiert sein. Für vertrauliche Dokumente soll ein lokales Modell verwendet werden. Ein späterer Datei-Upload muss noch deutlicher und erst nach ausdrücklicher Aktivierung erfolgen.
 
 **R-029 – Prüfung der Ergebnisse · muss · umgesetzt**
@@ -250,19 +250,19 @@ Tests müssen mindestens leere Datei, fehlende implizite und explizite Datei, un
 
 ## 10. Native PDF-Verarbeitung durch KI-Provider
 
-**R-120 – Wählbarer PDF-Modus · muss · umgesetzt; nativer Adapter folgt in R-121/R-122**
+**R-120 – Wählbarer PDF-Modus · muss · umgesetzt**
 Pro Modellprofil muss `pdf_mode` mindestens die Werte `local` und `native` unterstützen. `local` ist der Standard und verwendet die vorhandene Textextraktion. `native` überspringt diese Extraktion und übergibt die Original-PDF über eine provider-eigene Datei-/Dokumentschnittstelle. Ein entsprechender CLI-Wert überschreibt den Profilwert.
 
-**R-121 – Fähigkeiten nicht raten · muss · offen**
+**R-121 – Fähigkeiten nicht raten · muss · umgesetzt**
 Native Verarbeitung darf nur für tatsächlich unterstützte Provider-/Modellkombinationen freigeschaltet werden. Vor Implementierung eines Adapters müssen die aktuellen offiziellen Provider- und LiteLLM-Dokumente geprüft werden. Die technische Fähigkeitenmatrix muss Provider, Modell einschließlich Einschränkungen, Dateigröße/Seitenlimit, unterstützte Antwortstruktur, Dokumentationslink und Prüfdatum enthalten. Es ist nicht erforderlich, jeden Provider zu unterstützen; eine klare Fehlermeldung ist besser als ein ungeprüfter Upload.
 
-**R-122 – Adapter und gleiches Ergebnis · muss · offen**
+**R-122 – Adapter und gleiches Ergebnis · muss · umgesetzt**
 Native Dokumentverarbeitung wird über einen provider-spezifischen Adapter hinter der gemeinsamen Generierungsschnittstelle implementiert. Upload, Verweis auf die hochgeladene Datei und Antwortabruf folgen der offiziellen API des jeweiligen Anbieters. Die Antwort muss trotzdem demselben Karten-JSON-Schema entsprechen und dieselbe Validierung, Deduplizierung und APKG-Ausgabe durchlaufen. Andere Dateiformate bleiben auf lokaler Extraktion, bis ein eigener geprüfter Adapter vorhanden ist.
 
-**R-123 – Datenschutz, Kosten und Fallback · muss · offen**
+**R-123 – Datenschutz, Kosten und Fallback · muss · umgesetzt**
 `native` bedeutet bei Cloud-Providern die Übertragung der vollständigen Originaldatei und muss in Hilfe, Profil und Dokumentation ausdrücklich gekennzeichnet sein. Dateigröße und bekannte Providergrenzen werden vor dem Upload geprüft. Bei fehlender Unterstützung oder einem Uploadfehler darf nicht stillschweigend lokal extrahiert oder ein anderes Modell gewählt werden; ein Fallback erfordert eine eigene ausdrückliche Option. Informationen zu Speicherung beziehungsweise Löschung hochgeladener Dateien müssen entsprechend der Provider-API berücksichtigt und dokumentiert werden.
 
-**R-124 – Native-Verarbeitung testen · muss · offen**
+**R-124 – Native-Verarbeitung testen · muss · umgesetzt**
 Unit-Tests müssen Auswahl und Vorrang des PDF-Modus, fehlende Provider-Fähigkeit, lokale Extraktion ohne Upload, native Übergabe ohne lokale Extraktion, Upload-/Antwortfehler und ungültige native Antworten prüfen. Ein regulärer Testlauf darf keine Originaldatei an einen externen Dienst übertragen.
 
 ## 11. Spätere Erweiterungen
@@ -291,6 +291,7 @@ Wichtige Ist-Eigenschaften:
 - `--deck` ist bei `generate` optional; bei `export` kann stattdessen `generation.deck` aus YAML verwendet werden.
 - `--config` beziehungsweise `ANKI_CONFIG` wählt YAML; ohne Datei bleibt der bisherige Workflow erhalten.
 - `config show` gibt effektive Werte und Herkunft ohne geheime Schlüsselwerte als JSON aus.
+- `--pdf-mode native` beziehungsweise ein natives Profil lädt Original-PDFs nur für ausdrücklich freigegebene OpenAI-Modelle hoch; `local` bleibt Standard.
 - Ohne `--extend` muss die Ausgabedatei neu sein; mit `--extend` muss sie bereits existieren.
 - Fehlende Elternordner der Ausgabe werden erstellt.
 - `--limit` akzeptiert nichtnegative ganze Zahlen; `0` bedeutet Unlimited.

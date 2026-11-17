@@ -230,4 +230,6 @@ def test_example_configuration_is_valid_and_covers_required_providers() -> None:
     assert config.default_profile == "ollama-local"
     providers = {profile.model.split("/", 1)[0] for profile in config.models.values()}
     assert {"ollama", "openai", "anthropic", "gemini", "moonshot"} <= providers
-    assert all(profile.pdf_mode == PDFMode.LOCAL for profile in config.models.values())
+    assert config.models["ollama-local"].pdf_mode == PDFMode.LOCAL
+    assert config.models["openai-native-pdf"].pdf_mode == PDFMode.NATIVE
+    assert config.generation.pdf_mode == PDFMode.LOCAL

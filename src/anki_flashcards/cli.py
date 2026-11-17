@@ -2,6 +2,7 @@
 
 import json
 from pathlib import Path
+from typing import Any
 
 import typer
 from dotenv import load_dotenv
@@ -15,6 +16,7 @@ from anki_flashcards.config import PDFMode
 from anki_flashcards.documents import read_document
 from anki_flashcards.errors import FlashcardError
 from anki_flashcards.models import Card, deduplicate_cards, load_cards, save_cards
+from anki_flashcards.native_pdf import generate_native_cards
 from anki_flashcards.settings import (
     configuration_diagnostics,
     load_selected_config,
@@ -217,6 +219,41 @@ def generate(
         {"input_file": input_file, **cli_values}, config, config_path
     )
     _validate_output(settings.output, settings.extend)
+    if settings.pdf_mode == PDFMode.NATIVE:
+        console.print("Native PDF mode: uploading the original document to the selected provider.")
+        cards = generate_native_cards(
+            settings.input_file,
+            settings.ai,
+            limit=settings.limit,
+            language=settings.language,
+            instructions=settings.instructions,
+        )
+    else:
+        cards = _generate_local_cards(settings)
+    if not cards:
+        raise FlashcardError("The AI did not return any usable cards")
+
+    if settings.json_output:
+        save_cards(
+            settings.json_output,
+            cards,
+            deck=settings.deck,
+            source=str(settings.input_file),
+        )
+    result = _write_deck(settings.output, settings.deck, cards, settings.extend)
+    _print_result(result, settings.json_output)
+
+
+def _generate_local_cards(settings: Any) -> list[Card]:
+    """Extract document text and generate cards with progress reporting.
+
+    Args:
+        settings: Fully resolved generation settings using local PDF mode.
+
+    Returns:
+        Validated cards from LiteLLM, possibly empty when the provider returns
+        no usable cards.
+    """
     document = read_document(settings.input_file)
     with Progress(SpinnerColumn(), TextColumn("{task.description}"), console=console) as progress:
         task = progress.add_task("Generating cards with AI...", total=None)
@@ -239,7 +276,7 @@ def generate(
                 description=f"Chunk {completed}/{total}: {count} unique cards",
             )
 
-        cards = generate_cards(
+        return generate_cards(
             document,
             settings.ai,
             limit=settings.limit,
@@ -248,18 +285,6 @@ def generate(
             chunk_size=settings.chunk_size,
             progress=update,
         )
-    if not cards:
-        raise FlashcardError("The AI did not return any usable cards")
-
-    if settings.json_output:
-        save_cards(
-            settings.json_output,
-            cards,
-            deck=settings.deck,
-            source=str(settings.input_file),
-        )
-    result = _write_deck(settings.output, settings.deck, cards, settings.extend)
-    _print_result(result, settings.json_output)
 
 
 @app.command("export", epilog=EXPORT_EPILOG)
