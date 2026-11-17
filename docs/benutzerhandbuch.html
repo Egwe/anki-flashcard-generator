@@ -1,0 +1,1047 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Benutzerhandbuch für den Anki Flashcard Generator. Alle Befehle, Argumente und Optionen mit einfachen Beispielen.">
+  <title>Anki Flashcard Generator – Benutzerhandbuch</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #172a3a;
+      --muted: #536778;
+      --paper: #f4f7f9;
+      --card: #ffffff;
+      --line: #d9e3e9;
+      --brand: #116b68;
+      --brand-dark: #0b4848;
+      --brand-soft: #e4f4ef;
+      --accent: #e2a63d;
+      --code: #152e3c;
+      --code-ink: #eaf4f5;
+      --warning: #fff5d9;
+      --warning-line: #c48213;
+      --danger: #a23b34;
+      --shadow: 0 10px 30px rgb(25 57 70 / 8%);
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; scroll-padding-top: 1rem; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--paper);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 17px;
+      line-height: 1.65;
+    }
+    a { color: var(--brand-dark); text-underline-offset: .2em; }
+    a:hover { color: var(--brand); }
+    button, input, select { font: inherit; }
+    button { cursor: pointer; }
+    button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, summary:focus-visible {
+      outline: 3px solid var(--accent);
+      outline-offset: 3px;
+    }
+    .skip-link {
+      position: absolute;
+      top: -5rem;
+      left: 1rem;
+      padding: .7rem 1rem;
+      background: var(--card);
+      z-index: 10;
+    }
+    .skip-link:focus { top: 1rem; }
+    .hero {
+      color: #fff;
+      background: linear-gradient(125deg, #123645 0%, #116b68 68%, #16877a 100%);
+      padding: 4.5rem 1.25rem 3.5rem;
+    }
+    .hero-inner, .page { max-width: 1180px; margin: 0 auto; }
+    .eyebrow {
+      margin: 0 0 .75rem;
+      color: #bce5d8;
+      font-size: .78rem;
+      font-weight: 750;
+      letter-spacing: .13em;
+      text-transform: uppercase;
+    }
+    h1 { max-width: 780px; margin: 0; font-size: clamp(2.1rem, 5vw, 3.6rem); line-height: 1.1; letter-spacing: -.035em; }
+    .hero-intro { max-width: 700px; margin: 1.5rem 0 0; color: #e4f2f0; font-size: 1.14rem; }
+    .hero-actions { display: flex; flex-wrap: wrap; gap: .75rem; margin-top: 2rem; }
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 44px;
+      padding: .65rem 1rem;
+      border: 1px solid var(--brand);
+      border-radius: .55rem;
+      color: #fff;
+      background: var(--brand);
+      font-weight: 650;
+      text-decoration: none;
+    }
+    .button:hover { background: var(--brand-dark); color: #fff; }
+    .button.secondary { color: var(--brand-dark); background: transparent; border-color: var(--line); }
+    .button.secondary:hover { background: var(--brand-soft); color: var(--brand-dark); }
+    .hero .button { color: var(--brand-dark); background: #fff; border-color: #fff; }
+    .hero .button.secondary { color: #fff; background: transparent; border-color: #a8d6ce; }
+    .meta { margin: 1.5rem 0 0; color: #c9e2de; font-size: .9rem; }
+    .page { padding: 0 1.25rem 5rem; }
+    .toolbar {
+      position: relative;
+      z-index: 2;
+      display: grid;
+      grid-template-columns: 1fr auto auto;
+      gap: .75rem;
+      margin-top: -1.5rem;
+      padding: 1rem;
+      border: 1px solid var(--line);
+      border-radius: .85rem;
+      background: var(--card);
+      box-shadow: var(--shadow);
+    }
+    .search-label { display: block; margin-bottom: .25rem; font-size: .8rem; font-weight: 700; }
+    .search-input {
+      width: 100%;
+      min-height: 46px;
+      padding: .65rem .85rem;
+      border: 1px solid #a9bac5;
+      border-radius: .45rem;
+      color: var(--ink);
+      background: #fff;
+    }
+    .toolbar .button { align-self: end; min-height: 46px; }
+    .filter-row { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin: 1rem 0 0; }
+    .filter-button {
+      min-height: 38px;
+      padding: .35rem .75rem;
+      border: 1px solid var(--line);
+      border-radius: 99px;
+      color: var(--brand-dark);
+      background: var(--card);
+    }
+    .filter-button[aria-pressed="true"] { color: #fff; background: var(--brand); border-color: var(--brand); }
+    .search-status { margin: .75rem 0 0; color: var(--muted); font-size: .9rem; }
+    section { margin-top: 3.5rem; }
+    .section-heading { max-width: 780px; margin-bottom: 1.25rem; }
+    h2 { margin: 0 0 .6rem; font-size: clamp(1.65rem, 3vw, 2.2rem); line-height: 1.2; letter-spacing: -.02em; }
+    h3 { margin: 0 0 .5rem; font-size: 1.18rem; line-height: 1.3; }
+    h4 { margin: 0 0 .4rem; font-size: 1rem; }
+    p { margin: .5rem 0 1rem; }
+    .muted { color: var(--muted); }
+    .small { font-size: .9rem; }
+    .card {
+      min-width: 0;
+      padding: 1.35rem;
+      border: 1px solid var(--line);
+      border-radius: .75rem;
+      background: var(--card);
+    }
+    .grid { display: grid; gap: 1rem; }
+    .grid.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .grid.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .step-number {
+      display: inline-grid;
+      place-items: center;
+      width: 2rem;
+      height: 2rem;
+      margin-bottom: .7rem;
+      border-radius: 50%;
+      color: #fff;
+      background: var(--brand);
+      font-weight: 750;
+    }
+    .card h3 a { text-decoration: none; }
+    .command-section { margin-top: 1.25rem; }
+    .command-header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .75rem; margin-bottom: .7rem; }
+    .command-title { margin: 0; font-size: 1.5rem; }
+    .tag {
+      display: inline-block;
+      padding: .15rem .55rem;
+      border-radius: 99px;
+      color: var(--brand-dark);
+      background: var(--brand-soft);
+      font-size: .78rem;
+      font-weight: 700;
+    }
+    details {
+      margin-top: .75rem;
+      border: 1px solid var(--line);
+      border-radius: .65rem;
+      background: var(--card);
+      overflow: clip;
+    }
+    summary {
+      padding: .85rem 1rem;
+      color: var(--brand-dark);
+      font-weight: 700;
+      cursor: pointer;
+    }
+    summary:hover { background: #f0f8f5; }
+    .details-body { min-width: 0; padding: 0 1rem 1rem; }
+    .option {
+      padding: 1rem 0;
+      border-top: 1px solid var(--line);
+    }
+    .option:first-child { border-top: 0; }
+    .option-heading { display: flex; flex-wrap: wrap; align-items: baseline; gap: .5rem; }
+    .option-name { color: var(--brand-dark); font-size: 1.02rem; font-weight: 750; }
+    .option-meta { color: var(--muted); font-size: .84rem; }
+    .option p { margin: .35rem 0; }
+    code {
+      padding: .12em .32em;
+      border-radius: .25rem;
+      color: #0a5555;
+      background: #e8f2f2;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      font-size: .9em;
+      overflow-wrap: anywhere;
+    }
+    pre {
+      position: relative;
+      margin: .8rem 0 0;
+      padding: 1rem 3rem 1rem 1rem;
+      border-radius: .55rem;
+      color: var(--code-ink);
+      background: var(--code);
+      overflow-x: auto;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      font-size: .86rem;
+      line-height: 1.55;
+    }
+    pre code { padding: 0; color: inherit; background: transparent; font-size: inherit; }
+    .copy-button {
+      position: absolute;
+      top: .55rem;
+      right: .55rem;
+      min-width: 2.3rem;
+      min-height: 2rem;
+      padding: .25rem .5rem;
+      border: 1px solid #64818d;
+      border-radius: .35rem;
+      color: #fff;
+      background: #284756;
+      font-size: .75rem;
+    }
+    .copy-button:hover { background: #3c6373; }
+    .note, .warning {
+      margin: 1rem 0;
+      padding: 1rem 1.15rem;
+      border-left: 4px solid var(--brand);
+      border-radius: .25rem .55rem .55rem .25rem;
+      background: var(--brand-soft);
+    }
+    .warning { border-left-color: var(--warning-line); background: var(--warning); }
+    .note strong, .warning strong { display: block; margin-bottom: .25rem; }
+    .note p:last-child, .warning p:last-child { margin-bottom: 0; }
+    .table-wrap { min-width: 0; max-width: 100%; overflow-x: auto; border: 1px solid var(--line); border-radius: .65rem; background: var(--card); }
+    table { width: 100%; border-collapse: collapse; min-width: 650px; }
+    caption { padding: .8rem 1rem; text-align: left; font-weight: 700; }
+    th, td { padding: .75rem .9rem; border-top: 1px solid var(--line); text-align: left; vertical-align: top; }
+    th { color: var(--brand-dark); background: #edf5f3; font-size: .9rem; }
+    td:first-child { font-weight: 650; }
+    .checklist { margin: .5rem 0; padding-left: 1.4rem; }
+    .checklist li { margin: .45rem 0; }
+    .kbd {
+      padding: .1rem .35rem;
+      border: 1px solid #bac7cf;
+      border-bottom-width: 2px;
+      border-radius: .25rem;
+      background: #fff;
+      font-family: inherit;
+      font-size: .85rem;
+    }
+    .toc { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .55rem 1rem; margin: 0; padding: 0; list-style: none; }
+    .toc a { display: block; padding: .6rem .75rem; border: 1px solid var(--line); border-radius: .45rem; background: var(--card); text-decoration: none; }
+    .toc a:hover { border-color: var(--brand); background: var(--brand-soft); }
+    .footer { margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid var(--line); color: var(--muted); font-size: .9rem; }
+    .hidden { display: none !important; }
+    .empty-state { margin-top: 2rem; text-align: center; }
+    .back-top { margin-top: 1.25rem; font-size: .9rem; }
+    @media (max-width: 850px) {
+      .grid.three { grid-template-columns: 1fr 1fr; }
+      .toolbar { grid-template-columns: 1fr 1fr; }
+      .toolbar .search-block { grid-column: 1 / -1; }
+    }
+    @media (max-width: 600px) {
+      body { font-size: 16px; }
+      .hero { padding-top: 3rem; }
+      .grid.two, .grid.three, .toc { grid-template-columns: 1fr; }
+      .toolbar { grid-template-columns: 1fr; }
+      .toolbar .button { width: 100%; }
+      .card { padding: 1rem; }
+      .page { padding-inline: .85rem; }
+    }
+    @media print {
+      :root { --paper: #fff; --card: #fff; }
+      body { font-size: 11pt; }
+      .hero { padding: 1.5rem; color: #000; background: none; border-bottom: 2px solid #000; }
+      .hero-intro, .meta, .eyebrow { color: #222; }
+      .hero-actions, .toolbar, .filter-row, .copy-button, .back-top, .skip-link { display: none !important; }
+      .page { padding: 0; }
+      section { margin-top: 1.5rem; break-inside: auto; }
+      .card, details, .table-wrap { box-shadow: none; break-inside: avoid; }
+      details > .details-body { display: block !important; }
+      details:not([open]) > .details-body { display: block !important; }
+      summary { list-style: none; }
+      summary::-webkit-details-marker { display: none; }
+      pre { white-space: pre-wrap; }
+      a { color: #000; }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#inhalt">Zum Inhalt springen</a>
+  <header class="hero">
+    <div class="hero-inner">
+      <p class="eyebrow">Benutzerhandbuch · Version 0.1.0 · Stand 17. November 2026</p>
+      <h1>Anki Flashcard Generator</h1>
+      <p class="hero-intro">Erstelle Karteikarten aus deinen Dokumenten. Das Programm liest eine lokale Datei, erzeugt Karten mit einem KI-Modell und speichert ein Anki-Paket.</p>
+      <div class="hero-actions">
+        <a class="button" href="#start">In fünf Schritten starten</a>
+        <a class="button secondary" href="#befehle">Alle Befehle ansehen</a>
+      </div>
+      <p class="meta">Für die Befehlszeile · Offline lesbar · Keine externen Ressourcen nötig</p>
+    </div>
+  </header>
+
+  <main class="page" id="inhalt">
+    <div class="toolbar" role="search">
+      <div class="search-block">
+        <label class="search-label" for="guide-search">Befehl, Option oder Thema suchen</label>
+        <input class="search-input" id="guide-search" type="search" placeholder="Zum Beispiel: --extend, PDF, Deck oder Limit" autocomplete="off">
+      </div>
+      <button class="button secondary" id="expand-all" type="button">Alles öffnen</button>
+      <button class="button secondary" id="print-guide" type="button">Drucken</button>
+    </div>
+    <div class="filter-row" aria-label="Befehle filtern">
+      <span class="small muted">Direkt zu:</span>
+      <button class="filter-button" type="button" data-filter="generate" aria-pressed="false">generate</button>
+      <button class="filter-button" type="button" data-filter="export" aria-pressed="false">export</button>
+      <button class="filter-button" type="button" data-filter="decks" aria-pressed="false">decks</button>
+      <button class="filter-button" type="button" data-filter="config" aria-pressed="false">config show</button>
+    </div>
+    <p class="search-status" id="search-status" role="status" aria-live="polite"></p>
+
+    <section id="uebersicht">
+      <div class="section-heading">
+        <p class="eyebrow">Der Zweck</p>
+        <h2>Was macht das Programm?</h2>
+        <p>Du gibst ein Dokument und ein KI-Modell an. Das Programm erstellt daraus Fragen und Antworten. Du erhältst eine Datei mit der Endung <code>.apkg</code>. Diese Datei öffnest du in Anki.</p>
+      </div>
+      <div class="grid three">
+        <article class="card">
+          <span class="step-number">1</span>
+          <h3>Dokument wählen</h3>
+          <p>Nutze eine Datei auf deinem Computer. Möglich sind PDF, DOCX, HTML, Markdown und Text.</p>
+        </article>
+        <article class="card">
+          <span class="step-number">2</span>
+          <h3>Karten erstellen</h3>
+          <p>Wähle ein KI-Modell. Bestimme die Anzahl und die Sprache der Karten. Prüfe die Karten bei Bedarf als JSON-Datei.</p>
+        </article>
+        <article class="card">
+          <span class="step-number">3</span>
+          <h3>In Anki lernen</h3>
+          <p>Erstelle ein neues Deck oder ergänze ein vorhandenes Paket. Importiere die <code>.apkg</code>-Datei in Anki.</p>
+        </article>
+      </div>
+      <div class="note">
+        <strong>Wichtig: Prüfe die Karten.</strong>
+        <p>Ein KI-Modell kann Fehler machen. Kontrolliere den Inhalt vor dem Lernen. Nutze dafür die Option <code>--json</code>.</p>
+      </div>
+      <details open>
+        <summary>Was das Programm nicht macht</summary>
+        <div class="details-body">
+          <ul class="checklist">
+            <li>Das Programm ändert nicht direkt deine persönliche Anki-Sammlung. Es bearbeitet nur die angegebene <code>.apkg</code>-Datei.</li>
+            <li>Das Programm lädt keine Internetadressen als Quelle. Nutze eine lokale Datei.</li>
+            <li>Das Programm liest keine gescannten PDFs ohne Text. Führe vorher eine Texterkennung (OCR) aus oder nutze eine geeignete native PDF-Verarbeitung.</li>
+            <li>Eine Web-Oberfläche und ein Container für Proxmox sind noch nicht vorhanden.</li>
+          </ul>
+        </div>
+      </details>
+    </section>
+
+    <section id="navigation">
+      <div class="section-heading">
+        <p class="eyebrow">Schnell finden</p>
+        <h2>Inhalt</h2>
+      </div>
+      <ul class="toc">
+        <li><a href="#start">Start in fünf Schritten</a></li>
+        <li><a href="#grundregeln">Dateien, Decks und Prioritäten</a></li>
+        <li><a href="#befehle">Alle Befehle und Optionen</a></li>
+        <li><a href="#konfiguration">YAML-Konfiguration</a></li>
+        <li><a href="#pdf-modi">Lokale und native PDF-Verarbeitung</a></li>
+        <li><a href="#beispiele">Beispiele für die Praxis</a></li>
+        <li><a href="#fehler">Fehler und Exit-Codes</a></li>
+        <li><a href="#glossar">Begriffe einfach erklärt</a></li>
+      </ul>
+    </section>
+
+    <section id="start">
+      <div class="section-heading">
+        <p class="eyebrow">Der erste Durchlauf</p>
+        <h2>In fünf Schritten zum ersten Deck</h2>
+        <p>Dieses Beispiel nutzt Ollama auf deinem Computer. Deine Dokumente bleiben dabei lokal.</p>
+      </div>
+      <div class="grid two">
+        <article class="card">
+          <span class="step-number">1</span>
+          <h3>Python vorbereiten</h3>
+          <p>Installiere Python 3.11 oder neuer. Öffne ein Terminal im Projektordner.</p>
+          <pre><button class="copy-button" type="button" aria-label="Befehl kopieren">Kopieren</button><code>python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -e .</code></pre>
+        </article>
+        <article class="card">
+          <span class="step-number">2</span>
+          <h3>Ollama vorbereiten</h3>
+          <p>Installiere und starte Ollama. Lade ein Modell. Dieses Beispiel verwendet <code>llama3.2</code>.</p>
+          <pre><button class="copy-button" type="button" aria-label="Befehl kopieren">Kopieren</button><code>ollama pull llama3.2</code></pre>
+        </article>
+        <article class="card">
+          <span class="step-number">3</span>
+          <h3>Dokument bereitstellen</h3>
+          <p>Lege zum Beispiel die Datei <code>skript.pdf</code> im Projektordner ab. Die Datei muss lesbaren Text enthalten.</p>
+        </article>
+        <article class="card">
+          <span class="step-number">4</span>
+          <h3>Karten erzeugen</h3>
+          <p>Führe diesen Befehl aus. Das Programm erstellt höchstens 50 Karten.</p>
+          <pre><button class="copy-button" type="button" aria-label="Befehl kopieren">Kopieren</button><code>anki-flashcards generate skript.pdf \
+  --output output/biologie.apkg \
+  --deck "Biologie::Grundlagen" \
+  --model ollama/llama3.2 \
+  --limit 50 \
+  --json output/biologie.cards.json</code></pre>
+        </article>
+      </div>
+      <article class="card" style="margin-top:1rem">
+        <span class="step-number">5</span>
+        <h3>Prüfen und importieren</h3>
+        <ol class="checklist">
+          <li>Öffne <code>output/biologie.cards.json</code> in einem Texteditor.</li>
+          <li>Korrigiere falsche oder unklare Karten.</li>
+          <li>Exportiere die geprüften Karten mit <code>export</code> erneut, falls nötig.</li>
+          <li>Öffne Anki und importiere <code>output/biologie.apkg</code>.</li>
+        </ol>
+      </article>
+    </section>
+
+    <section id="grundregeln">
+      <div class="section-heading">
+        <p class="eyebrow">Vor dem ersten Befehl</p>
+        <h2>Vier Regeln, die du kennen musst</h2>
+      </div>
+      <div class="grid two">
+        <article class="card">
+          <h3>Neue Datei oder Erweiterung?</h3>
+          <p><strong>Ohne <code>--extend</code>:</strong> Die Zieldatei darf noch nicht existieren. Das Programm schützt sie vor dem Überschreiben.</p>
+          <p><strong>Mit <code>--extend</code>:</strong> Die <code>.apkg</code>-Datei muss existieren. Das Programm ergänzt das angegebene Deck. Vorhandene Karten und Lernstände bleiben erhalten.</p>
+          <p><code>--no-extend</code> verlangt ausdrücklich eine neue Datei. Das ist vor allem bei einer YAML-Konfiguration nützlich.</p>
+        </article>
+        <article class="card">
+          <h3>Welche Werte gewinnen?</h3>
+          <p>Das Programm liest Werte in dieser Reihenfolge. Ein späterer Wert ersetzt den vorherigen Wert:</p>
+          <ol class="checklist">
+            <li>Standardwert des Programms</li>
+            <li>YAML-Konfiguration oder Modellprofil</li>
+            <li>Umgebungsvariable oder <code>.env</code></li>
+            <li>Option in deinem Befehl</li>
+          </ol>
+          <p>Eine Option im Befehl hat immer Vorrang.</p>
+        </article>
+        <article class="card">
+          <h3>Wo sucht das Programm Dateien?</h3>
+          <p>Ein relativer Pfad in deinem Befehl gilt ab dem aktuellen Ordner. Beispiel: <code>input/skript.pdf</code>.</p>
+          <p>Ein reiner Dateiname kann auch aus <code>input_dir</code> in der YAML-Datei kommen. Beispiel: <code>skript.pdf</code>.</p>
+          <p>Relative Pfade innerhalb der YAML-Datei gelten ab dem Ordner dieser YAML-Datei.</p>
+        </article>
+        <article class="card">
+          <h3>Wie heißt das Ziel?</h3>
+          <p>Ohne <code>--output</code> brauchst du <code>output_dir</code> in der YAML-Datei. Das Programm verwendet dann den Namen der Eingabedatei mit der Endung <code>.apkg</code>.</p>
+          <p>Ohne <code>--deck</code> verwendet <code>generate</code> den Dateinamen ohne Endung. Mit <code>--deck "Biologie::Zellen"</code> entsteht ein Unterdeck.</p>
+          <p>Fehlende Zielordner erstellt das Programm automatisch.</p>
+        </article>
+      </div>
+      <div class="warning">
+        <strong>Sichere deine Daten.</strong>
+        <p>Lege eine Sicherung deiner Anki-Sammlung an, bevor du ein erweitertes Paket importierst. Das Programm arbeitet nur an der angegebenen Paketdatei.</p>
+      </div>
+    </section>
+
+    <section id="befehle">
+      <div class="section-heading">
+        <p class="eyebrow">Die vollständige Referenz</p>
+        <h2>Alle Befehle und Optionen</h2>
+        <p>Die Schreibweise ist immer <code>anki-flashcards</code>, danach der Befehl und seine Optionen. Öffne die Bereiche für jede Einzelheit.</p>
+      </div>
+
+      <article class="card command-section searchable" data-command="generate" id="generate">
+        <div class="command-header">
+          <h3 class="command-title"><code>generate</code></h3>
+          <span class="tag">Dokument → Karten → APKG</span>
+        </div>
+        <p>Erstellt Karten aus einem lokalen Dokument. Ein KI-Modell ist erforderlich. Der Befehl kann ein neues Paket erstellen oder ein Paket erweitern.</p>
+        <pre><button class="copy-button" type="button" aria-label="Befehl kopieren">Kopieren</button><code>anki-flashcards generate EINGABE [OPTIONEN]</code></pre>
+        <details open>
+          <summary>Argument: input_file</summary>
+          <div class="details-body">
+            <div class="option">
+              <div class="option-heading"><span class="option-name"><code>input_file</code></span><span class="option-meta">Pflicht · Datei</span></div>
+              <p>Gib den Pfad zur Quelldatei an. Erlaubt sind <code>.pdf</code>, <code>.docx</code>, <code>.html</code>, <code>.htm</code>, <code>.md</code>, <code>.markdown</code> und <code>.txt</code>.</p>
+              <p>Die Datei darf höchstens 100 MiB groß sein. Eine Textdatei muss UTF-8 verwenden. Ein reiner Dateiname kann durch <code>input_dir</code> aufgelöst werden.</p>
+            </div>
+          </div>
+        </details>
+        <details open>
+          <summary>Optionen für Ziel und Deck</summary>
+          <div class="details-body">
+            <div class="option">
+              <div class="option-heading"><span class="option-name"><code>--output</code>, <code>-o</code></span><span class="option-meta">Pfad · bedingt erforderlich</span></div>
+              <p>Gib die Zieldatei mit der Endung <code>.apkg</code> an. Diese Option ist erforderlich, wenn kein <code>output_dir</code> konfiguriert ist.</p>
+              <p>Ohne <code>--extend</code> muss die Datei neu sein. Mit <code>--extend</code> muss sie bereits existieren. Fehlende Ordner werden erstellt.</p>
+            </div>
+            <div class="option">
+              <div class="option-heading"><span class="option-name"><code>--deck</code>, <code>-d</code></span><span class="option-meta">Text · optional</span></div>
+              <p>Gib den Namen des Zieldecks an. Ohne diese Option gilt der Name aus <code>generation.deck</code> oder der Eingabedateiname ohne Endung.</p>
+              <p>Mit <code>::</code> erstellst du ein Unterdeck, zum Beispiel <code>Biologie::Genetik</code>. Beim Erweitern muss dieser Name zum gewünschten Deck passen.</p>
+            </div>
+            <div class="option">
+              <div class="option-heading"><span class="option-name"><code>--extend</code> / <code>--no-extend</code></span><span class="option-meta">Schalter · Standard: neue Datei</span></div>
+              <p><code>--extend</code> ergänzt ein vorhandenes Paket. Doppelte Fragen werden übersprungen. Fehlt das Deck, wird es im Paket angelegt.</p>
+              <p><code>--no-extend</code> verlangt eine neue Zieldatei. Beide Formen überschreiben den YAML-Wert <code>extend</code>.</p>
+            </div>
+            <div class="option">
+              <div class="option-heading"><span class="option-name"><code>--json</code></span><span class="option-meta">Pfad · optional</span></div>
+              <p>Speichert die Karten zusätzlich als UTF-8-JSON-Datei. Nutze diese Datei zur Prüfung und zum erneuten Export ohne KI.</p>
+              <p>Ein relativer Pfad gilt ab dem aktuellen Ordner. Fehlende Ordner werden erstellt. Eine vorhandene JSON-Datei wird ersetzt.</p>
+            </div>
+          </div>
+        </details>
+        <details open>
+          <summary>Optionen für Modell und Provider</summary>
+          <div class="details-body">
+            <div class="option">
+              <div class="option-heading"><span class="option-name"><code>--model</code>, <code>-m</code></span><span class="option-meta">Text · erforderlich ohne Profil</span></div>
+              <p>Gib das Modell als <code>provider/modell</code> an. Beispiele: <code>ollama/llama3.2</code> oder <code>openai/gpt-4o-mini</code>.</p>
+              <p>Alternativ nutze ein YAML-Profil oder die Umgebungsvariable <code>ANKI_MODEL</code>. Ein direkter Modellname hat Vorrang vor dem Profilmodell.</p>
+            </div>
+            <div class="option">
+              <div class="option-heading"><span class="option-name"><code>--profile</code></span><span class="option-meta">Text · optional</span></div>
+              <p>Wählt ein benanntes Profil aus der YAML-Datei. Das Profil kann Modell, Endpunkt, Timeout, PDF-Modus und den Namen der Schlüsselvariable enthalten.</p>
+            </div>
+            <div class="option">
+              <div class="option-heading"><span class="option-name"><code>--api-base</code></span><span class="option-meta">URL · optional</span></div>
+              <p>Ändert den Endpunkt des Providers. Nutze dies für einen kompatiblen eigenen Server oder eine abweichende Provider-Adresse.</p>
+              <p>Alternativ gilt <code>LLM_API_BASE</code>. Ohne Angabe verwendet das Programm den Standard des Providers.</p>
+            </div>
+            <div class="option">
+              <div class="option-heading"><span class="option-name"><code>--timeout</code></span><span class="option-meta">Sekunden · 1 bis 3600 · Standard: 180</span></div>
+              <p>Begrenzt die Wartezeit für eine Provider-Anfrage. Nach Ablauf bricht das Programm die Anfrage mit einem Fehler ab.</p>
+            </div>
+          </div>
+        </details>
+        <details open>
+          <summary>Optionen für Inhalt und Umfang</summary>
+          <div class="details-body">
+            <div class="option">
+              <div class="option-heading"><span class="option-name"><code>--limit</code>, <code>-n</code></span><span class="option-meta">Ganzzahl ≥ 0 · Standard: 50</span></div>
+              <p>Begrenzt die Gesamtzahl der Karten über alle Textabschnitte. Mit <code>--limit 25</code> entstehen höchstens 25 Karten.</p>
+              <p><code>--limit 0</code> entfernt die zahlenmäßige Grenze. Jeder Textabschnitt wird einmal verarbeitet. Nutze diesen Modus mit Bedacht. Kosten und unbrauchbare Karten können steigen.</p>
+            </div>
+            <div class="option">
+              <div class="option-heading"><span class="option-name"><code>--language</code>, <code>-l</code></span><span class="option-meta">Text · Standard: Deutsch</span></div>
+              <p>Bestimmt die Sprache der Fragen und Antworten. Beispiel: <code>--language Englisch</code>. Das Quelldokument darf eine andere Sprache enthalten.</p>
+            </div>
+            <div class="option">
+              <div class="option-heading"><span class="option-name"><code>--instructions</code></span><span class="option-meta">Text · optional</span></div>
+              <p>Gibt zusätzliche Anweisungen an das Modell. Setze den Text in Anführungszeichen.</p>
+              <p>Beispiel: <code>--instructions "Stelle kurze Verständnisfragen."</code>. Eine leere Angabe überschreibt eine YAML-Anweisung.</p>
+            </div>
+            <div class="option">
+              <div class="option-heading"><span class="option-name"><code>--chunk-size</code></span><span class="option-meta">Zeichen · 1000 bis 100000 · Standard: 24000</span></div>
+              <p>Begrenzt die Menge des lokal extrahierten Textes pro KI-Anfrage. Große Dokumente werden auf mehrere Anfragen verteilt.</p>
+              <p>Benachbarte Abschnitte teilen 500 Zeichen. Dadurch geht weniger Zusammenhang an den Grenzen verloren. Der Wert beeinflusst nicht die native PDF-Verarbeitung.</p>
+            </div>
+          </div>
+        </details>
+        <details open>
+          <summary>Optionen für Konfiguration und PDF</summary>
+          <div class="details-body">
+            <div class="option">
+              <div class="option-heading"><span class="option-name"><code>--config</code></span><span class="option-meta">Pfad · optional</span></div>
+              <p>Wählt eine YAML-Konfigurationsdatei. Alternativ gilt <code>ANKI_CONFIG</code>. Ohne Angabe sucht das Programm nach <code>config.yaml</code> im aktuellen Ordner.</p>
+              <p>Eine fehlende Standarddatei ist kein Fehler. Eine ausdrücklich angegebene fehlende Datei ist ein Fehler.</p>
+            </div>
+            <div class="option">
+              <div class="option-heading"><span class="option-name"><code>--pdf-mode local</code></span><span class="option-meta">Standard</span></div>
+              <p>Liest den Text der PDF auf deinem Computer. Nur dieser Text wird an das Modell gesendet. Diese Option ist die sichere Standardwahl für lokale Modelle.</p>
+            </div>
+            <div class="option">
+              <div class="option-heading"><span class="option-name"><code>--pdf-mode native</code></span><span class="option-meta">Ausdrückliche Aktivierung</span></div>
+              <p>Lädt die vollständige Original-PDF zu einem freigegebenen OpenAI-Modell hoch. Die lokale PDF-Textextraktion wird übersprungen.</p>
+              <p>Andere Dateiformate und nicht freigegebene Modelle werden abgelehnt. Es gibt keinen automatischen Wechsel zurück zur lokalen Verarbeitung.</p>
+            </div>
+            <div class="option">
+              <div class="option-heading"><span class="option-name"><code>--help</code>, <code>-h</code></span><span class="option-meta">Schalter</span></div>
+              <p>Zeigt die Hilfe für <code>generate</code> an. Das Programm erzeugt keine Karten.</p>
+            </div>
+          </div>
+        </details>
+        <pre><button class="copy-button" type="button" aria-label="Beispiel kopieren">Kopieren</button><code>anki-flashcards generate skript.pdf \
+  --output output/deck.apkg \
+  --deck "Biologie" \
+  --model ollama/llama3.2 \
+  --limit 50</code></pre>
+        <p class="back-top"><a href="#befehle">↑ Zur Befehlsübersicht</a></p>
+      </article>
+
+      <article class="card command-section searchable" data-command="export" id="export">
+        <div class="command-header">
+          <h3 class="command-title"><code>export</code></h3>
+          <span class="tag">Geprüftes JSON → APKG</span>
+        </div>
+        <p>Wandelt eine vorhandene Karten-JSON-Datei in ein Anki-Paket um. Das Programm ruft dabei kein KI-Modell auf. Es entstehen keine neuen KI-Kosten.</p>
+        <pre><button class="copy-button" type="button" aria-label="Befehl kopieren">Kopieren</button><code>anki-flashcards export KARTEN.json [OPTIONEN]</code></pre>
+        <details open>
+          <summary>Argument und alle Optionen</summary>
+          <div class="details-body">
+            <div class="option">
+              <div class="option-heading"><span class="option-name"><code>cards_file</code></span><span class="option-meta">Pflicht · JSON-Datei</span></div>
+              <p>Gib eine Karten-JSON-Datei mit <code>schema_version: 1</code> an. Diese Datei stammt normalerweise aus <code>generate --json</code>. Ein reiner Dateiname kann durch <code>input_dir</code> aufgelöst werden.</p>
+            </div>
+            <div class="option">
+              <div class="option-heading"><span class="option-name"><code>--output</code>, <code>-o</code></span><span class="option-meta">Pfad · bedingt erforderlich</span></div>
+              <p>Gib die Zieldatei mit der Endung <code>.apkg</code> an. Erforderlich, wenn <code>output_dir</code> fehlt. Die Regeln für neue und erweiterte Dateien entsprechen <code>generate</code>.</p>
+            </div>
+            <div class="option">
+              <div class="option-heading"><span class="option-name"><code>--deck</code>, <code>-d</code></span><span class="option-meta">Text · bedingt erforderlich</span></div>
+              <p>Gib das Zieldeck an. Diese Option ist erforderlich, wenn <code>generation.deck</code> in der YAML-Datei fehlt. Der gespeicherte Deckname in der JSON-Datei ersetzt diese Angabe nicht.</p>
+            </div>
+            <div class="option">
+              <div class="option-heading"><span class="option-name"><code>--extend</code> / <code>--no-extend</code></span><span class="option-meta">Schalter · Standard: neue Datei</span></div>
+              <p>Erweitert ein vorhandenes Paket oder verlangt eine neue Datei. Die Option überschreibt den YAML-Wert <code>extend</code>.</p>
+            </div>
+            <div class="option">
+              <div class="option-heading"><span class="option-name"><code>--config</code></span><span class="option-meta">Pfad · optional</span></div>
+              <p>Wählt die YAML-Konfiguration für Ausgabeordner, Deck und Extend-Standard. Alternativ gilt <code>ANKI_CONFIG</code>.</p>
+            </div>
+            <div class="option">
+              <div class="option-heading"><span class="option-name"><code>--help</code>, <code>-h</code></span><span class="option-meta">Schalter</span></div>
+              <p>Zeigt die Hilfe für <code>export</code> an. Es wird keine Datei erzeugt.</p>
+            </div>
+          </div>
+        </details>
+        <pre><button class="copy-button" type="button" aria-label="Beispiel kopieren">Kopieren</button><code>anki-flashcards export output/biologie.cards.json \
+  --output output/biologie.apkg \
+  --deck "Biologie"</code></pre>
+        <p class="back-top"><a href="#befehle">↑ Zur Befehlsübersicht</a></p>
+      </article>
+
+      <article class="card command-section searchable" data-command="decks" id="decks">
+        <div class="command-header">
+          <h3 class="command-title"><code>decks</code></h3>
+          <span class="tag">Paket ansehen</span>
+        </div>
+        <p>Zeigt die normalen Decks einer <code>.apkg</code>-Datei mit Namen, direkter Kartenanzahl und Deck-ID. Das Paket wird nur gelesen.</p>
+        <pre><button class="copy-button" type="button" aria-label="Befehl kopieren">Kopieren</button><code>anki-flashcards decks PAKET.apkg</code></pre>
+        <details open>
+          <summary>Argument und Hilfe</summary>
+          <div class="details-body">
+            <div class="option">
+              <div class="option-heading"><span class="option-name"><code>package</code></span><span class="option-meta">Pflicht · APKG-Datei</span></div>
+              <p>Gib eine lesbare <code>.apkg</code>-Datei an. Klassische und zstd-komprimierte Anki-Pakete werden unterstützt. Gefilterte Decks werden nicht angezeigt.</p>
+            </div>
+            <div class="option">
+              <div class="option-heading"><span class="option-name"><code>--help</code>, <code>-h</code></span><span class="option-meta">Schalter</span></div>
+              <p>Zeigt die Hilfe für <code>decks</code> an.</p>
+            </div>
+          </div>
+        </details>
+        <pre><button class="copy-button" type="button" aria-label="Beispiel kopieren">Kopieren</button><code>anki-flashcards decks output/biologie.apkg</code></pre>
+        <p class="back-top"><a href="#befehle">↑ Zur Befehlsübersicht</a></p>
+      </article>
+
+      <article class="card command-section searchable" data-command="config" id="config-show">
+        <div class="command-header">
+          <h3 class="command-title"><code>config show</code></h3>
+          <span class="tag">Einstellungen prüfen</span>
+        </div>
+        <p>Zeigt die tatsächlich verwendeten Einstellungen als JSON. Du siehst auch, ob ein Wert aus dem Programm, der YAML-Datei, der Umgebung oder deinem Befehl stammt.</p>
+        <p>API-Schlüssel werden nicht angezeigt. Die Ausgabe enthält nur <code>set (hidden)</code> oder <code>not set</code>. Das Programm erstellt keine Karten und ruft kein Modell auf.</p>
+        <pre><button class="copy-button" type="button" aria-label="Befehl kopieren">Kopieren</button><code>anki-flashcards config show EINGABE [OPTIONEN]</code></pre>
+        <details open>
+          <summary>Argument und Ausgabe</summary>
+          <div class="details-body">
+            <div class="option">
+              <div class="option-heading"><span class="option-name"><code>input_file</code></span><span class="option-meta">Pflicht · Pfad oder Dateiname</span></div>
+              <p>Gib die geplante Eingabedatei an. Das Programm benötigt diesen Namen, um Eingabeordner, Ausgabedatei und Standarddeck zu berechnen. Die Datei muss für diese Vorschau nicht verarbeitet werden.</p>
+            </div>
+            <div class="option">
+              <div class="option-heading"><span class="option-name">Herkunft <code>sources</code></span><span class="option-meta">JSON-Feld</span></div>
+              <p><code>built-in</code> bedeutet Programmstandard. <code>config</code> bedeutet YAML oder Profil. <code>environment</code> bedeutet Umgebungsvariable. <code>cli</code> bedeutet dein Befehl.</p>
+            </div>
+          </div>
+        </details>
+        <details open>
+          <summary>Alle Optionen für die Vorschau</summary>
+          <div class="details-body">
+            <p>Die Optionen verändern nur die Vorschau. Sie entsprechen den gleichnamigen Optionen von <code>generate</code>. Sie speichern keine YAML-Datei.</p>
+            <div class="table-wrap">
+              <table>
+                <caption>Optionen von config show</caption>
+                <thead><tr><th>Option</th><th>Bedeutung</th></tr></thead>
+                <tbody>
+                  <tr><td><code>--output</code>, <code>-o</code></td><td>Zeigt den gewählten APKG-Zielpfad.</td></tr>
+                  <tr><td><code>--deck</code>, <code>-d</code></td><td>Zeigt den gewählten Decknamen.</td></tr>
+                  <tr><td><code>--extend</code> / <code>--no-extend</code></td><td>Zeigt, ob eine Datei erweitert oder neu erstellt wird.</td></tr>
+                  <tr><td><code>--config</code></td><td>Wählt die YAML-Datei. Alternativ gilt <code>ANKI_CONFIG</code>.</td></tr>
+                  <tr><td><code>--profile</code></td><td>Wählt das YAML-Modellprofil.</td></tr>
+                  <tr><td><code>--pdf-mode</code></td><td>Wählt <code>local</code> oder <code>native</code>.</td></tr>
+                  <tr><td><code>--model</code>, <code>-m</code></td><td>Setzt das Modell für die Vorschau.</td></tr>
+                  <tr><td><code>--limit</code>, <code>-n</code></td><td>Setzt das Kartenlimit. Null bedeutet unbegrenzt.</td></tr>
+                  <tr><td><code>--language</code>, <code>-l</code></td><td>Setzt die Sprache der Karten.</td></tr>
+                  <tr><td><code>--instructions</code></td><td>Setzt zusätzliche Anweisungen.</td></tr>
+                  <tr><td><code>--chunk-size</code></td><td>Setzt 1000 bis 100000 Zeichen pro lokaler Anfrage.</td></tr>
+                  <tr><td><code>--api-base</code></td><td>Setzt den Provider-Endpunkt.</td></tr>
+                  <tr><td><code>--timeout</code></td><td>Setzt 1 bis 3600 Sekunden Wartezeit.</td></tr>
+                  <tr><td><code>--json</code></td><td>Setzt den Pfad der Karten-JSON-Datei.</td></tr>
+                  <tr><td><code>--help</code>, <code>-h</code></td><td>Zeigt die Hilfe für <code>config show</code>.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </details>
+        <pre><button class="copy-button" type="button" aria-label="Beispiel kopieren">Kopieren</button><code>anki-flashcards config show skript.pdf \
+  --config config.yaml \
+  --output output/deck.apkg</code></pre>
+        <p class="back-top"><a href="#befehle">↑ Zur Befehlsübersicht</a></p>
+      </article>
+
+      <article class="card command-section" id="globale-optionen">
+        <div class="command-header"><h3 class="command-title">Globale Optionen</h3><span class="tag">Für das Hauptprogramm</span></div>
+        <p>Diese Optionen stehen direkt nach <code>anki-flashcards</code>, vor einem Befehl.</p>
+        <div class="table-wrap">
+          <table>
+            <caption>Hilfe und Shell-Vervollständigung</caption>
+            <thead><tr><th>Option</th><th>Verwendung</th></tr></thead>
+            <tbody>
+              <tr><td><code>--help</code>, <code>-h</code></td><td>Zeigt alle Befehle und globalen Optionen. Nutze <code>anki-flashcards --help</code>.</td></tr>
+              <tr><td><code>--install-completion</code></td><td>Richtet die automatische Vervollständigung für deine aktuelle Shell ein. Drücke danach <span class="kbd">Tab</span>, um Befehle und Optionen zu vervollständigen.</td></tr>
+              <tr><td><code>--show-completion</code></td><td>Zeigt den Text der Shell-Vervollständigung an. Du kannst diesen Text kopieren und selbst in deine Shell-Konfiguration einfügen.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </article>
+    </section>
+
+    <section id="konfiguration">
+      <div class="section-heading">
+        <p class="eyebrow">Weniger tippen</p>
+        <h2>YAML-Konfiguration verwenden</h2>
+        <p>Speichere wiederkehrende Einstellungen in einer Datei. Kopiere dafür die mitgelieferte Beispieldatei.</p>
+        <pre><button class="copy-button" type="button" aria-label="Befehl kopieren">Kopieren</button><code>cp config.example.yaml config.yaml</code></pre>
+      </div>
+      <div class="grid two">
+        <article class="card">
+          <h3>Grundbereiche</h3>
+          <div class="table-wrap"><table>
+            <thead><tr><th>Schlüssel</th><th>Aufgabe</th></tr></thead>
+            <tbody>
+              <tr><td><code>schema_version</code></td><td>Muss <code>1</code> sein. Andere Versionen werden abgelehnt.</td></tr>
+              <tr><td><code>input_dir</code></td><td>Ordner für reine Eingabedateinamen.</td></tr>
+              <tr><td><code>output_dir</code></td><td>Ordner für erzeugte Dateien.</td></tr>
+              <tr><td><code>default_profile</code></td><td>Name des Standard-Modellprofils.</td></tr>
+              <tr><td><code>generation</code></td><td>Standardwerte für Karten und Ausgabe.</td></tr>
+              <tr><td><code>models</code></td><td>Benannte Modellprofile.</td></tr>
+            </tbody>
+          </table></div>
+        </article>
+        <article class="card">
+          <h3>Werte in generation</h3>
+          <div class="table-wrap"><table>
+            <thead><tr><th>Schlüssel</th><th>Entsprechende Option</th></tr></thead>
+            <tbody>
+              <tr><td><code>profile</code></td><td><code>--profile</code>; alternativ zu <code>default_profile</code></td></tr>
+              <tr><td><code>deck</code></td><td><code>--deck</code></td></tr>
+              <tr><td><code>limit</code></td><td><code>--limit</code></td></tr>
+              <tr><td><code>language</code></td><td><code>--language</code></td></tr>
+              <tr><td><code>instructions</code></td><td><code>--instructions</code></td></tr>
+              <tr><td><code>chunk_size</code></td><td><code>--chunk-size</code></td></tr>
+              <tr><td><code>timeout</code></td><td><code>--timeout</code>; ersetzt das Profil-Timeout</td></tr>
+              <tr><td><code>json_output</code></td><td><code>--json</code></td></tr>
+              <tr><td><code>extend</code></td><td><code>--extend/--no-extend</code></td></tr>
+              <tr><td><code>pdf_mode</code></td><td><code>--pdf-mode</code>; ersetzt den Profilmodus</td></tr>
+            </tbody>
+          </table></div>
+        </article>
+      </div>
+      <details open>
+        <summary>Felder eines Modellprofils</summary>
+        <div class="details-body">
+          <div class="table-wrap"><table>
+            <thead><tr><th>Feld</th><th>Bedeutung und Beispiel</th></tr></thead>
+            <tbody>
+              <tr><td><code>model</code></td><td>Modell als <code>provider/modell</code>, zum Beispiel <code>ollama/llama3.2</code>.</td></tr>
+              <tr><td><code>api_base</code></td><td>Optionaler Endpunkt. Er kann weggelassen werden.</td></tr>
+              <tr><td><code>api_key_env</code></td><td>Name der Umgebungsvariablen mit dem Schlüssel, zum Beispiel <code>OPENAI_API_KEY</code>. Nicht den Schlüssel selbst eintragen.</td></tr>
+              <tr><td><code>timeout</code></td><td>Wartezeit in Sekunden, 1 bis 3600.</td></tr>
+              <tr><td><code>pdf_mode</code></td><td><code>local</code> oder <code>native</code>.</td></tr>
+              <tr><td><code>options</code></td><td>Zusätzliche erlaubte Provider-Einstellungen. Keine Schlüssel oder geheimen Werte eintragen.</td></tr>
+            </tbody>
+          </table></div>
+        </div>
+      </details>
+      <div class="warning">
+        <strong>Speichere keine API-Schlüssel in YAML.</strong>
+        <p>Lege Schlüssel in einer <code>.env</code>-Datei oder als Umgebungsvariable ab. Die Datei <code>config.yaml</code> ist von Git ausgeschlossen. Die Beispieldatei enthält keine echten Schlüssel.</p>
+      </div>
+      <h3>Provider und Umgebungsvariablen</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Provider</th><th>Beispiel für --model</th><th>Schlüsselvariable</th></tr></thead>
+        <tbody>
+          <tr><td>Ollama</td><td><code>ollama/llama3.2</code></td><td>Normalerweise kein Schlüssel nötig.</td></tr>
+          <tr><td>OpenAI</td><td><code>openai/gpt-4o-mini</code></td><td><code>OPENAI_API_KEY</code></td></tr>
+          <tr><td>Anthropic</td><td><code>anthropic/claude-sonnet-4-5</code></td><td><code>ANTHROPIC_API_KEY</code></td></tr>
+          <tr><td>Google Gemini</td><td><code>gemini/gemini-2.5-flash</code></td><td><code>GEMINI_API_KEY</code></td></tr>
+          <tr><td>Moonshot</td><td><code>moonshot/moonshot-v1-8k</code></td><td><code>MOONSHOT_API_KEY</code></td></tr>
+          <tr><td>Eigener kompatibler Endpunkt</td><td>Abhängig vom Server</td><td><code>LLM_API_BASE</code> und optional <code>LLM_API_KEY</code></td></tr>
+        </tbody>
+      </table></div>
+      <p class="small muted">Die verfügbaren Modellnamen können sich ändern. Prüfe die Liste deines Providers und die LiteLLM-Dokumentation.</p>
+    </section>
+
+    <section id="pdf-modi">
+      <div class="section-heading">
+        <p class="eyebrow">Wichtig für deine Daten</p>
+        <h2>Lokal oder native PDF-Verarbeitung?</h2>
+      </div>
+      <div class="grid two">
+        <article class="card">
+          <h3><code>local</code> – Standard</h3>
+          <p>Das Programm liest den PDF-Text auf deinem Computer. Es sendet Textabschnitte an das gewählte Modell.</p>
+          <p>Bei Ollama bleibt die Verarbeitung auf deinem Computer. Bei einem Cloud-Provider verlassen die Textabschnitte deinen Computer.</p>
+          <p>Eine gescannte PDF ohne Text benötigt vorher OCR.</p>
+        </article>
+        <article class="card">
+          <h3><code>native</code> – ausdrücklich wählen</h3>
+          <p>Das Programm lädt die vollständige Original-PDF zu OpenAI hoch. Es findet keine lokale Textextraktion statt.</p>
+          <p>Freigegeben sind derzeit <code>gpt-4o-mini</code>, <code>gpt-4o</code>, <code>gpt-4.1</code> und datierte Snapshots dieser Modelle.</p>
+          <p>Die Datei muss kleiner als 50 MiB sein. Andere Provider und Dateiformate werden abgelehnt.</p>
+        </article>
+      </div>
+      <div class="warning">
+        <strong>Native Verarbeitung überträgt deine Originaldatei.</strong>
+        <p>Nutze sie nur, wenn du diesen Upload ausdrücklich möchtest. Text und Seitenbilder können Token- und Uploadkosten verursachen. Die Modelle können zusätzliche Kontextgrenzen haben.</p>
+        <p>Das Programm setzt <code>store=false</code> und löscht die hochgeladene Datei anschließend. Bei einem Löschfehler erhältst du eine Warnung mit der Datei-ID. Eine separate Aufbewahrung durch den Provider kann trotzdem gelten.</p>
+      </div>
+      <pre><button class="copy-button" type="button" aria-label="Beispiel kopieren">Kopieren</button><code>anki-flashcards generate dokument.pdf \
+  --config config.yaml \
+  --profile openai-native-pdf</code></pre>
+    </section>
+
+    <section id="beispiele">
+      <div class="section-heading">
+        <p class="eyebrow">Direkt verwenden</p>
+        <h2>Beispiele für typische Aufgaben</h2>
+      </div>
+      <div class="grid two">
+        <article class="card">
+          <h3>Neues Deck mit Ollama</h3>
+          <pre><button class="copy-button" type="button" aria-label="Beispiel kopieren">Kopieren</button><code>anki-flashcards generate skript.pdf \
+  -o output/biologie.apkg \
+  -m ollama/llama3.2 \
+  -n 50</code></pre>
+        </article>
+        <article class="card">
+          <h3>Vorhandenes Paket erweitern</h3>
+          <pre><button class="copy-button" type="button" aria-label="Beispiel kopieren">Kopieren</button><code>anki-flashcards generate kapitel-2.docx \
+  -o output/biologie.apkg \
+  -d "Biologie" \
+  -m ollama/llama3.2 \
+  --extend</code></pre>
+        </article>
+        <article class="card">
+          <h3>Karten zur Prüfung speichern</h3>
+          <pre><button class="copy-button" type="button" aria-label="Beispiel kopieren">Kopieren</button><code>anki-flashcards generate notizen.md \
+  -o output/notizen.apkg \
+  -m ollama/llama3.2 \
+  --json output/notizen.cards.json</code></pre>
+        </article>
+        <article class="card">
+          <h3>Geprüfte Karten ohne KI exportieren</h3>
+          <pre><button class="copy-button" type="button" aria-label="Beispiel kopieren">Kopieren</button><code>anki-flashcards export output/notizen.cards.json \
+  -o output/notizen-neu.apkg \
+  -d "Notizen"</code></pre>
+        </article>
+        <article class="card">
+          <h3>Verständnisfragen auf Englisch</h3>
+          <pre><button class="copy-button" type="button" aria-label="Beispiel kopieren">Kopieren</button><code>anki-flashcards generate chapter.html \
+  -o output/english.apkg \
+  -m ollama/llama3.2 \
+  --language Englisch \
+  --instructions "Ask short comprehension questions."</code></pre>
+        </article>
+        <article class="card">
+          <h3>Decks vor dem Erweitern ansehen</h3>
+          <pre><button class="copy-button" type="button" aria-label="Beispiel kopieren">Kopieren</button><code>anki-flashcards decks output/biologie.apkg</code></pre>
+        </article>
+      </div>
+    </section>
+
+    <section id="fehler">
+      <div class="section-heading">
+        <p class="eyebrow">Wenn etwas nicht funktioniert</p>
+        <h2>Fehler verstehen und beheben</h2>
+      </div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Meldung oder Situation</th><th>Ursache und Lösung</th></tr></thead>
+        <tbody>
+          <tr><td>Output already exists</td><td>Die Zieldatei existiert. Wähle einen neuen Namen oder nutze <code>--extend</code>, wenn du sie ergänzen möchtest.</td></tr>
+          <tr><td>Cannot extend missing APKG</td><td><code>--extend</code> benötigt eine vorhandene Datei. Prüfe den Pfad oder entferne diese Option.</td></tr>
+          <tr><td>No AI model configured</td><td>Setze <code>--model</code>, <code>ANKI_MODEL</code> oder ein YAML-Profil.</td></tr>
+          <tr><td>Unsupported file type</td><td>Nutze eine unterstützte Endung. Bei Textdateien verwende UTF-8.</td></tr>
+          <tr><td>No extractable text found</td><td>Die PDF enthält möglicherweise nur Bilder. Führe OCR aus oder nutze ein freigegebenes natives OpenAI-Modell.</td></tr>
+          <tr><td>Unknown model profile</td><td>Prüfe den Namen nach <code>--profile</code> und den Schlüssel unter <code>models</code> in der YAML-Datei.</td></tr>
+          <tr><td>Invalid configuration</td><td>Prüfe YAML-Einrückung, Datentypen und Schlüsselnamen. Unbekannte Felder sind nicht erlaubt. Die Fehlermeldung nennt die Stelle.</td></tr>
+          <tr><td>Native OpenAI PDF … requires OPENAI_API_KEY</td><td>Setze den OpenAI-Schlüssel in der Umgebung oder in <code>.env</code>. Schreibe ihn nicht in YAML.</td></tr>
+          <tr><td>No verified native PDF adapter</td><td>Das Modell ist nicht freigegeben. Nutze ein dokumentiertes OpenAI-Modell oder <code>--pdf-mode local</code>.</td></tr>
+          <tr><td>Upload konnte nicht gelöscht werden</td><td>Notiere die Datei-ID aus der Warnung. Lösche die Datei im OpenAI-Dashboard oder über die Files-API.</td></tr>
+        </tbody>
+      </table></div>
+      <h3>Exit-Codes für Skripte</h3>
+      <div class="grid three">
+        <article class="card"><h3><code>0</code></h3><p>Der Befehl war erfolgreich.</p></article>
+        <article class="card"><h3><code>1</code></h3><p>Ein Anwendungs- oder Providerfehler ist aufgetreten. Lies die Meldung auf <code>stderr</code>.</p></article>
+        <article class="card"><h3><code>2</code></h3><p>Die Befehlszeile ist ungültig. Prüfe Befehl, Optionen und Pflichtargumente mit <code>--help</code>.</p></article>
+      </div>
+      <p>Erwartete Fehler erscheinen ohne Python-Traceback. Hilfe und normale Ergebnisse erscheinen auf <code>stdout</code>.</p>
+    </section>
+
+    <section id="glossar">
+      <div class="section-heading">
+        <p class="eyebrow">Feste Begriffe</p>
+        <h2>Kurzes Glossar</h2>
+      </div>
+      <div class="grid two">
+        <article class="card"><h3>APKG</h3><p>Eine Paketdatei für Anki. Sie enthält Decks, Karten und zugehörige Daten. Du importierst sie in Anki.</p></article>
+        <article class="card"><h3>Deck</h3><p>Eine Sammlung von Karteikarten in Anki. Ein Unterdeck wird mit <code>::</code> benannt.</p></article>
+        <article class="card"><h3>JSON</h3><p>Eine Textdatei mit strukturierten Daten. Hier enthält sie die Karten zur Prüfung und zum erneuten Export.</p></article>
+        <article class="card"><h3>YAML</h3><p>Eine lesbare Konfigurationsdatei. Sie speichert Standardwerte und Modellprofile, aber keine API-Schlüssel.</p></article>
+        <article class="card"><h3>Profil</h3><p>Ein benannter Satz von Modelleinstellungen in der YAML-Datei. Du wählst ihn mit <code>--profile</code>.</p></article>
+        <article class="card"><h3>Provider</h3><p>Der Dienst, der das KI-Modell bereitstellt. Beispiele sind Ollama, OpenAI, Anthropic, Gemini und Moonshot.</p></article>
+        <article class="card"><h3>Chunk</h3><p>Ein Abschnitt des extrahierten Textes. Große Dokumente werden in mehrere solcher Abschnitte aufgeteilt.</p></article>
+        <article class="card"><h3>Native PDF-Verarbeitung</h3><p>Der Upload der Original-PDF an ein geeignetes OpenAI-Modell. Die lokale Textextraktion entfällt.</p></article>
+      </div>
+      <div class="note">
+        <strong>Zum Sprachstil dieses Handbuchs</strong>
+        <p>Der Text orientiert sich an Grundregeln von ASD-STE100: kurze Sätze, aktive Formulierungen, eindeutige Begriffe und eine Anweisung pro Satz. Technische Namen und Programmoptionen bleiben unverändert.</p>
+      </div>
+    </section>
+
+    <section class="empty-state hidden" id="no-results">
+      <div class="card">
+        <h2>Keine passenden Bereiche gefunden</h2>
+        <p>Versuche einen anderen Suchbegriff oder lösche die Suche.</p>
+        <button class="button" id="clear-search" type="button">Suche löschen</button>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <p><strong>Anki Flashcard Generator · Benutzerhandbuch</strong></p>
+      <p>Dieses Handbuch beschreibt den aktuellen CLI-Stand. Es wird bei neuen Befehlen, Optionen, einer GUI oder neuen Programmfähigkeiten aktualisiert.</p>
+      <p>Projektübersicht: <a href="../README.md">README.md</a> · Anforderungen: <a href="../requirements.md">requirements.md</a></p>
+    </footer>
+  </main>
+
+  <script>
+    (() => {
+      const searchInput = document.getElementById('guide-search');
+      const commandCards = [...document.querySelectorAll('.searchable')];
+      const filterButtons = [...document.querySelectorAll('[data-filter]')];
+      const status = document.getElementById('search-status');
+      const noResults = document.getElementById('no-results');
+      const expandButton = document.getElementById('expand-all');
+      const printButton = document.getElementById('print-guide');
+      const clearButton = document.getElementById('clear-search');
+      let activeFilter = '';
+      let expanded = false;
+
+      const normalize = (value) => value.toLocaleLowerCase('de').trim();
+
+      function applyFilters() {
+        const query = normalize(searchInput.value);
+        let visible = 0;
+        commandCards.forEach((card) => {
+          const matchesFilter = !activeFilter || card.dataset.command === activeFilter;
+          const matchesQuery = !query || normalize(card.textContent).includes(query);
+          const show = matchesFilter && matchesQuery;
+          card.classList.toggle('hidden', !show);
+          if (show) visible += 1;
+          if (show && query) card.querySelectorAll('details').forEach((detail) => { detail.open = true; });
+        });
+        noResults.classList.toggle('hidden', visible !== 0);
+        const scope = activeFilter ? ` für ${activeFilter}` : '';
+        status.textContent = query || activeFilter ? `${visible} Befehlsbereich(e)${scope} gefunden.` : '';
+      }
+
+      searchInput.addEventListener('input', applyFilters);
+      filterButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+          const selected = button.dataset.filter;
+          activeFilter = activeFilter === selected ? '' : selected;
+          filterButtons.forEach((item) => item.setAttribute('aria-pressed', String(item.dataset.filter === activeFilter)));
+          applyFilters();
+          if (activeFilter) document.getElementById(activeFilter === 'config' ? 'config-show' : activeFilter).scrollIntoView({ behavior: 'instant', block: 'start' });
+        });
+      });
+
+      expandButton.addEventListener('click', () => {
+        expanded = !expanded;
+        document.querySelectorAll('details').forEach((detail) => { detail.open = expanded; });
+        expandButton.textContent = expanded ? 'Alles schließen' : 'Alles öffnen';
+        expandButton.setAttribute('aria-expanded', String(expanded));
+      });
+
+      printButton.addEventListener('click', () => {
+        const detailStates = [...document.querySelectorAll('details')].map((detail) => detail.open);
+        document.querySelectorAll('details').forEach((detail) => { detail.open = true; });
+        window.print();
+        document.querySelectorAll('details').forEach((detail, index) => { detail.open = detailStates[index]; });
+      });
+
+      clearButton.addEventListener('click', () => {
+        searchInput.value = '';
+        activeFilter = '';
+        filterButtons.forEach((item) => item.setAttribute('aria-pressed', 'false'));
+        applyFilters();
+        searchInput.focus();
+      });
+
+      document.querySelectorAll('.copy-button').forEach((button) => {
+        button.addEventListener('click', async () => {
+          const code = button.parentElement.querySelector('code').textContent;
+          try {
+            await navigator.clipboard.writeText(code);
+            button.textContent = 'Kopiert';
+          } catch (error) {
+            const selection = window.getSelection();
+            const range = document.createRange();
+            range.selectNodeContents(button.parentElement.querySelector('code'));
+            selection.removeAllRanges();
+            selection.addRange(range);
+            button.textContent = 'Markiert';
+          }
+          window.setTimeout(() => { button.textContent = 'Kopieren'; }, 1800);
+        });
+      });
+    })();
+  </script>
+</body>
+</html>

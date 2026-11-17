@@ -170,7 +170,10 @@ Reine Markdown-Änderungen benötigen keine Python-Tests. Git-Diff und Dokumenta
 ## 8. Dokumentation und Abschluss
 
 - Neue Funktionen werden erst nach Implementierung und Validierung als „umgesetzt“ markiert.
-- README enthält Bedienung, Installation, Defaults, Beispiele und bekannte Grenzen des aktuellen Stands.
+- README enthält eine kompakte Übersicht über Installation, Bedienung, Defaults, Beispiele und bekannte Grenzen des aktuellen Stands. Die README ist nicht das ausführliche Benutzerhandbuch.
+- [docs/benutzerhandbuch.html](./docs/benutzerhandbuch.html) ist das ausführliche, benutzerfreundliche Referenzhandbuch für alle Befehle, Argumente, Optionen und typischen Anwendungsfälle. Es bleibt ohne Build-Schritt direkt im Browser nutzbar.
+- **Bei jeder Änderung des Benutzerverhaltens müssen README und docs/benutzerhandbuch.html im selben Anforderungspaket angepasst werden.** Das gilt insbesondere für neue oder geänderte Befehle, Argumente, Optionen, Defaults, Pfade, Provider-Fähigkeiten, Konfiguration, Fehlerverhalten und künftige GUI-Funktionen. Neue GUI-Bereiche benötigen dort eine eigene verständliche Bedienungsanleitung.
+- Vor dem Abschluss einer solchen Änderung muss das HTML-Handbuch gegen die tatsächliche CLI-Hilfe beziehungsweise die tatsächliche GUI geprüft werden. Suchfunktion, Links, aufklappbare Bereiche und Kopierfunktionen müssen weiterhin funktionieren; das Handbuch darf keine externen Ressourcen voraussetzen.
 - CLI-Hilfe wird aus den echten Optionen erzeugt und erklärt Pflichtparameter, Kurz-/Langformen, Defaults, Wertebereiche, Beispiele und Dateibehandlung.
 - requirements.md erhält stabile Requirement-IDs und einen ehrlichen Status; Originalanforderungen werden nicht überschrieben.
 - Keine zusätzlichen Planungs- oder Notizdateien anlegen, wenn die Information in requirements.md, README.md oder dieser Datei gehört.
