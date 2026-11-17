@@ -114,7 +114,8 @@ Triviale anonyme Ein-Zeilen-Schlüssel sind zulässig. Fachliche Logik gehört i
 - Zentrales Format gemäß Anforderung ist YAML mit `schema_version` und strenger Validierung.
 - Die Beispieldatei enthält erklärte Modellbausteine, aber keine echten Zugangsdaten.
 - API-Schlüssel werden ausschließlich aus der Umgebung gelesen; YAML darf nur den Variablennamen enthalten.
-- Die Priorität ist zwingend: eingebauter Default → YAML/Profil → Umgebung/`.env` → ausdrücklicher CLI-Wert.
+- Die Priorität ist zwingend: eingebauter Default → YAML/Profil → ausdrücklicher CLI-Wert. `.env` und Umgebungsvariablen liefern ausschließlich Zugangsdaten für `api_key_env`; sie dürfen Modelle, Endpunkte oder Generierungsparameter nicht überschreiben. `ANKI_CONFIG` wählt nur den YAML-Dateipfad. Die Altvariablen `ANKI_MODEL` und `LLM_API_BASE` werden nicht unterstützt.
+- config.example.yaml muss jedes Profilfeld und die offiziellen Standardendpunkte der unterstützten Beispielprovider dokumentieren. .env.example enthält nur Credential-Platzhalter und die optionale YAML-Pfadwahl, keine Modelle oder Endpunkte.
 - Boolesche CLI-Optionen benötigen positive und negative Form, damit YAML-Werte in beiden Richtungen überschrieben werden können.
 - CLI-Pfade und YAML-Pfade werden nach [requirements.md](./requirements.md) unterschiedlich aufgelöst.
 - Laden, Validieren, Zusammenführen und atomares Speichern müssen ohne CLI beziehungsweise Web-UI nutzbar sein.

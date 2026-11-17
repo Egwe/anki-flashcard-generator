@@ -85,21 +85,23 @@ def test_yaml_values_and_paths_apply(tmp_path: Path, monkeypatch) -> None:
     assert settings.pdf_mode == PDFMode.LOCAL
 
 
-def test_environment_overrides_yaml_and_cli_overrides_all(tmp_path: Path, monkeypatch) -> None:
-    """Verify environment beats YAML and explicit CLI values beat both.
+def test_nonsecret_environment_values_do_not_override_yaml_and_cli_wins(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """Verify model/endpoint environment values cannot override YAML or CLI.
 
     Args:
         tmp_path: Isolated directory containing configuration paths.
-        monkeypatch: Pytest fixture used to set provider environment values.
+        monkeypatch: Pytest fixture used to set legacy non-secret variables.
 
     Returns:
-        None. Assertions check model, endpoint, and all overridden CLI values.
+        None. Assertions prove YAML remains primary and explicit CLI values win.
     """
-    monkeypatch.setenv("ANKI_MODEL", "openai/environment-model")
+    monkeypatch.setenv("ANKI_MODEL", "ollama/llama3.2")
     monkeypatch.setenv("LLM_API_BASE", "http://environment.invalid/v1")
     config = configured(tmp_path)
 
-    environment_settings = resolve_generate_settings(
+    yaml_settings = resolve_generate_settings(
         {"input_file": Path("source.pdf")}, config, tmp_path / "config.yaml"
     )
     cli_settings = resolve_generate_settings(
@@ -122,8 +124,10 @@ def test_environment_overrides_yaml_and_cli_overrides_all(tmp_path: Path, monkey
         tmp_path / "config.yaml",
     )
 
-    assert environment_settings.ai.model == "openai/environment-model"
-    assert environment_settings.ai.api_base == "http://environment.invalid/v1"
+    assert yaml_settings.ai.model == "openai/yaml-model"
+    assert yaml_settings.ai.api_base == "http://yaml.invalid/v1"
+    assert yaml_settings.origins["model"] == "config"
+    assert yaml_settings.origins["api_base"] == "config"
     assert cli_settings.input_file == Path.cwd() / "cli/source.pdf"
     assert cli_settings.output == Path.cwd() / "cli-output.apkg"
     assert cli_settings.deck == "CLI Deck"

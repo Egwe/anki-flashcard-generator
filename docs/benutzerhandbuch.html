@@ -451,10 +451,9 @@ python -m pip install -e .</code></pre>
           <ol class="checklist">
             <li>Standardwert des Programms</li>
             <li>YAML-Konfiguration oder Modellprofil</li>
-            <li>Umgebungsvariable oder <code>.env</code></li>
-            <li>Option in deinem Befehl</li>
+            <li>Ausdrücklich gesetzte Option in deinem Befehl</li>
           </ol>
-          <p>Eine Option im Befehl hat immer Vorrang.</p>
+          <p>Eine Option im Befehl hat immer Vorrang. Die Datei <code>.env</code> liefert nur Zugangsdaten. Sie überschreibt keine Modelle oder Endpunkte.</p>
         </article>
         <article class="card">
           <h3>Wo sucht das Programm Dateien?</h3>
@@ -530,7 +529,7 @@ python -m pip install -e .</code></pre>
             <div class="option">
               <div class="option-heading"><span class="option-name"><code>--model</code>, <code>-m</code></span><span class="option-meta">Text · erforderlich ohne Profil</span></div>
               <p>Gib das Modell als <code>provider/modell</code> an. Beispiele: <code>ollama/llama3.2</code> oder <code>openai/gpt-4o-mini</code>.</p>
-              <p>Alternativ nutze ein YAML-Profil oder die Umgebungsvariable <code>ANKI_MODEL</code>. Ein direkter Modellname hat Vorrang vor dem Profilmodell.</p>
+              <p>Nutze normalerweise das Modell aus deinem YAML-Profil. Ein direkter Modellname hat Vorrang vor dem Profilmodell. Die alte Variable <code>ANKI_MODEL</code> wird nicht ausgewertet.</p>
             </div>
             <div class="option">
               <div class="option-heading"><span class="option-name"><code>--profile</code></span><span class="option-meta">Text · optional</span></div>
@@ -539,7 +538,7 @@ python -m pip install -e .</code></pre>
             <div class="option">
               <div class="option-heading"><span class="option-name"><code>--api-base</code></span><span class="option-meta">URL · optional</span></div>
               <p>Ändert den Endpunkt des Providers. Nutze dies für einen kompatiblen eigenen Server oder eine abweichende Provider-Adresse.</p>
-              <p>Alternativ gilt <code>LLM_API_BASE</code>. Ohne Angabe verwendet das Programm den Standard des Providers.</p>
+              <p>Setze den Endpunkt normalerweise als <code>api_base</code> im YAML-Profil. Ohne Angabe verwendet das Programm den Standard des Providers. Die alte Variable <code>LLM_API_BASE</code> wird nicht ausgewertet.</p>
             </div>
             <div class="option">
               <div class="option-heading"><span class="option-name"><code>--timeout</code></span><span class="option-meta">Sekunden · 1 bis 3600 · Standard: 180</span></div>
@@ -685,7 +684,7 @@ python -m pip install -e .</code></pre>
             </div>
             <div class="option">
               <div class="option-heading"><span class="option-name">Herkunft <code>sources</code></span><span class="option-meta">JSON-Feld</span></div>
-              <p><code>built-in</code> bedeutet Programmstandard. <code>config</code> bedeutet YAML oder Profil. <code>environment</code> bedeutet Umgebungsvariable. <code>cli</code> bedeutet dein Befehl.</p>
+              <p><code>built-in</code> bedeutet Programmstandard. <code>config</code> bedeutet YAML oder Profil. <code>cli</code> bedeutet dein Befehl. Zugangsdaten haben keine eigene Herkunftsschicht in dieser Anzeige.</p>
             </div>
           </div>
         </details>
@@ -745,8 +744,20 @@ python -m pip install -e .</code></pre>
       <div class="section-heading">
         <p class="eyebrow">Weniger tippen</p>
         <h2>YAML-Konfiguration verwenden</h2>
-        <p>Speichere wiederkehrende Einstellungen in einer Datei. Kopiere dafür die mitgelieferte Beispieldatei.</p>
-        <pre><button class="copy-button" type="button" aria-label="Befehl kopieren">Kopieren</button><code>cp config.example.yaml config.yaml</code></pre>
+        <p>Die YAML-Datei ist die Hauptkonfiguration. Speichere dort Modelle, Endpunkte, Ordner und Optionen. Die Datei <code>.env</code> enthält nur Zugangsdaten.</p>
+        <pre><button class="copy-button" type="button" aria-label="Befehl kopieren">Kopieren</button><code>cp config.example.yaml config.yaml
+cp .env.example .env</code></pre>
+      </div>
+      <div class="note">
+        <strong>Vor dem ersten Lauf vorbereiten</strong>
+        <ol class="checklist">
+          <li>Wähle in <code>config.yaml</code> ein Profil mit <code>default_profile</code>.</li>
+          <li>Prüfe Modellname und <code>api_base</code> in diesem Profil.</li>
+          <li>Installiere ein Ollama-Modell vorher auf deinem Server oder erstelle einen API-Token beim Cloud-Anbieter.</li>
+          <li>Trage den benötigten Token in <code>.env</code> ein. Lösche oder ersetze dafür den Platzhalter.</li>
+          <li>Prüfe alles mit <code>anki-flashcards config show dokument.pdf --config config.yaml</code>.</li>
+        </ol>
+        <p>Die alten Variablen <code>ANKI_MODEL</code> und <code>LLM_API_BASE</code> gehören nicht in <code>.env</code>. Sie werden nicht ausgewertet. <code>ANKI_CONFIG</code> wählt nur den Pfad der YAML-Datei.</p>
       </div>
       <div class="grid two">
         <article class="card">
@@ -811,10 +822,29 @@ python -m pip install -e .</code></pre>
           <tr><td>Anthropic</td><td><code>anthropic/claude-sonnet-4-5</code></td><td><code>ANTHROPIC_API_KEY</code></td></tr>
           <tr><td>Google Gemini</td><td><code>gemini/gemini-2.5-flash</code></td><td><code>GEMINI_API_KEY</code></td></tr>
           <tr><td>Moonshot</td><td><code>moonshot/moonshot-v1-8k</code></td><td><code>MOONSHOT_API_KEY</code></td></tr>
-          <tr><td>Eigener kompatibler Endpunkt</td><td>Abhängig vom Server</td><td><code>LLM_API_BASE</code> und optional <code>LLM_API_KEY</code></td></tr>
+          <tr><td>Eigener kompatibler Endpunkt</td><td>Abhängig vom Server</td><td><code>api_base</code> in YAML und optional <code>CUSTOM_LLM_API_KEY</code> in <code>.env</code></td></tr>
         </tbody>
       </table></div>
       <p class="small muted">Die verfügbaren Modellnamen können sich ändern. Prüfe die Liste deines Providers und die LiteLLM-Dokumentation.</p>
+      <details>
+        <summary>Standardendpunkte und Optionen der Beispielprofile</summary>
+        <div class="details-body">
+          <p>Die Datei <code>config.example.yaml</code> enthält alle Felder mit kommentierten Beispielwerten. Diese Tabelle zeigt die wichtigsten Optionen. Nicht jedes Modell unterstützt jede Option.</p>
+          <div class="table-wrap"><table>
+            <thead><tr><th>Profil</th><th>Standardendpunkt</th><th>Wichtige options-Werte</th></tr></thead>
+            <tbody>
+              <tr><td><code>ollama-local</code></td><td><code>http://localhost:11434</code></td><td><code>think</code>, <code>temperature</code>, <code>top_p</code>, <code>top_k</code>, <code>num_ctx</code>, <code>num_predict</code>, <code>seed</code>, <code>repeat_penalty</code></td></tr>
+              <tr><td><code>openai-default</code></td><td><code>https://api.openai.com/v1</code></td><td><code>temperature</code>, <code>top_p</code>, <code>max_tokens</code>, <code>max_completion_tokens</code>, <code>seed</code>, <code>presence_penalty</code>, <code>frequency_penalty</code>, <code>stop</code>, <code>logit_bias</code>, <code>user</code></td></tr>
+              <tr><td><code>openai-native-pdf</code></td><td><code>https://api.openai.com/v1</code></td><td>Wie OpenAI, aber mit Upload der Original-PDF. Nur freigegebene Modelle.</td></tr>
+              <tr><td><code>anthropic-default</code></td><td><code>https://api.anthropic.com</code></td><td><code>temperature</code>, <code>top_p</code>, <code>max_tokens</code>, <code>stop_sequences</code>, <code>top_k</code>, <code>reasoning_effort</code></td></tr>
+              <tr><td><code>gemini-default</code></td><td><code>https://generativelanguage.googleapis.com</code></td><td><code>temperature</code>, <code>top_p</code>, <code>max_tokens</code>, <code>max_completion_tokens</code>, <code>stop</code>, <code>reasoning_effort</code></td></tr>
+              <tr><td><code>moonshot-default</code></td><td><code>https://api.moonshot.ai/v1</code>; China: <code>https://api.moonshot.cn/v1</code></td><td><code>temperature</code> von 0 bis 1, <code>top_p</code>, <code>max_tokens</code>, <code>presence_penalty</code>, <code>frequency_penalty</code>, <code>stop</code>, <code>n</code></td></tr>
+              <tr><td><code>custom-openai-compatible</code></td><td>Beispiel: <code>http://localhost:8000/v1</code></td><td><code>temperature</code>, <code>top_p</code>, <code>max_tokens</code>; weitere Werte abhängig vom Server.</td></tr>
+            </tbody>
+          </table></div>
+          <p><code>temperature</code> und <code>top_p</code> steuern die Variation. <code>max_tokens</code> und <code>num_predict</code> begrenzen die Ausgabe. Das Programm setzt das Antwortformat selbst. Ein API-Schlüssel gehört niemals in <code>options</code>.</p>
+        </div>
+      </details>
     </section>
 
     <section id="pdf-modi">
@@ -905,7 +935,7 @@ python -m pip install -e .</code></pre>
         <tbody>
           <tr><td>Output already exists</td><td>Die Zieldatei existiert. Wähle einen neuen Namen oder nutze <code>--extend</code>, wenn du sie ergänzen möchtest.</td></tr>
           <tr><td>Cannot extend missing APKG</td><td><code>--extend</code> benötigt eine vorhandene Datei. Prüfe den Pfad oder entferne diese Option.</td></tr>
-          <tr><td>No AI model configured</td><td>Setze <code>--model</code>, <code>ANKI_MODEL</code> oder ein YAML-Profil.</td></tr>
+          <tr><td>No AI model configured</td><td>Setze <code>--model</code> oder wähle ein YAML-Profil. Ein alter Eintrag <code>ANKI_MODEL</code> in <code>.env</code> wird nicht verwendet.</td></tr>
           <tr><td>Unsupported file type</td><td>Nutze eine unterstützte Endung. Bei Textdateien verwende UTF-8.</td></tr>
           <tr><td>No extractable text found</td><td>Die PDF enthält möglicherweise nur Bilder. Führe OCR aus oder nutze ein freigegebenes natives OpenAI-Modell.</td></tr>
           <tr><td>Unknown model profile</td><td>Prüfe den Namen nach <code>--profile</code> und den Schlüssel unter <code>models</code> in der YAML-Datei.</td></tr>

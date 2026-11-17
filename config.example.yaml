@@ -1,73 +1,186 @@
-# Versioned configuration for anki-flashcards. Copy to config.yaml and adjust.
-# API keys are NEVER stored here: api_key_env names an environment variable.
+# =============================================================================
+# ANKI FLASHCARD GENERATOR - HAUPTKONFIGURATION
+# =============================================================================
+# 1. Kopiere diese Datei: cp config.example.yaml config.yaml
+# 2. Waehle default_profile und passe Modelle/Endpunkte hier an.
+# 3. Kopiere .env.example nach .env und trage dort NUR API-Schluessel ein.
+#
+# WICHTIGE PRIORITAET:
+# Programmstandard < diese YAML-Datei < ausdruecklich gesetzte CLI-Optionen.
+# .env enthaelt nur Zugangsdaten. ANKI_MODEL und LLM_API_BASE werden nicht
+# ausgewertet. ANKI_CONFIG waehlt nur den Pfad dieser YAML-Datei aus.
+#
+# Jeder Profilblock unterstuetzt alle folgenden Felder:
+#   model:       Erforderlich. LiteLLM-Kennung provider/modell.
+#   api_base:    Optional. Provider-Endpunkt einschliesslich API-Version.
+#   api_key_env: Optional. NAME der Schluesselvariable aus .env, nie der Wert.
+#   timeout:     Wartezeit pro Anfrage in Sekunden, 1..3600.
+#   pdf_mode:    local = Text lokal extrahieren; native = PDF zum Provider.
+#   options:     Provider-/modellabhaengige Parameter. Siehe Kommentare unten.
+#                temperature/top_p steuern Variation; max_tokens/max_predict
+#                begrenzen Ausgabe. response_format wird vom Programm gesetzt.
+#                Nicht jedes Modell unterstuetzt jede Option. Ungueltige Werte
+#                koennen Providerfehler erzeugen. Keine Secrets hier ablegen.
 schema_version: 1
 
-# Relative input/output directories are resolved relative to this YAML file.
+# Relative Ordner gelten ab dem Speicherort dieser YAML-Datei.
+# Reine Eingabedateinamen werden unter input_dir gesucht.
+# Ohne CLI --output wird output/<eingabedateiname>.apkg erzeugt.
 input_dir: ./input
 output_dir: ./output
 
-# Select a reusable profile; direct CLI --model remains possible without one.
+# Waehle das Standardprofil aus models. --profile NAME ueberschreibt es.
+# --model provider/modell ueberschreibt das Modell des gewaehlten Profils.
 default_profile: ollama-local
 
-# Values here override built-in defaults. Explicit CLI values override YAML.
+# Standardwerte fuer die Karteikartenerzeugung. CLI hat immer Vorrang.
 generation:
-  deck: null                 # null = derive deck name from input filename
-  limit: 50                  # 0 = unlimited, use deliberately
-  language: Deutsch
+  # Alternative Profilwahl; nicht zusammen mit default_profile verwenden.
+  # profile: ollama-local
+  deck: null                 # null = Eingabedateiname ohne Endung
+  limit: 50                  # >=0; 0 = ohne Zahlenlimit, mit Bedacht nutzen
+  language: Deutsch          # Sprache der Fragen und Antworten
   instructions: "Bevorzuge kurze, eindeutige Verständnisfragen."
-  chunk_size: 24000          # 1000..100000 characters for local extraction
-  timeout: 180               # seconds, 1..3600; overrides profile timeout
-  json_output: null          # optional path to reviewable card JSON
-  extend: false              # --extend/--no-extend overrides this value
-  pdf_mode: local            # local = extract text; native = verified provider upload
+  chunk_size: 24000          # lokale Extraktion: 1000..100000 Zeichen/Anfrage
+  timeout: 180               # optional; ersetzt timeout des Profils, 1..3600 s
+  json_output: null          # optionaler Pfad fuer pruefbares Karten-JSON
+  extend: false              # true = bestehendes APKG erweitern
+  pdf_mode: local            # optional; ersetzt pdf_mode des Profils
 
 models:
+  # ---------------------------------------------------------------------------
+  # OLLAMA - lokal oder auf eigenem Server, normalerweise ohne API-Schluessel
+  # ---------------------------------------------------------------------------
+  # ollama/       nutzt die Generate-API.
+  # ollama_chat/  nutzt die Chat-API und wird von LiteLLM empfohlen.
+  # Das Modell muss auf dem Server bereits vorhanden sein: ollama list
+  # Optionen (Ollama/LiteLLM):
+  #   think: false schaltet unterstuetztes Reasoning aus und spart Zeit.
+  #   temperature: Zufall/Variation, z.B. 0.0..2.0 (modellabhaengig).
+  #   top_p/top_k: Auswahl der naechsten Tokens; 0.9/40 sind uebliche Werte.
+  #   num_ctx: Kontextfenster in Tokens; grosser Wert braucht mehr VRAM.
+  #   num_predict: maximale Ausgabetokens; -1 = Modellgrenze.
+  #   seed: ganzzahliger Startwert fuer reproduzierbarere Ausgaben.
+  #   repeat_penalty: Wiederholungen daempfen, z.B. 1.1.
   ollama-local:
-    model: ollama/llama3.2
-    # Ollama usually needs no API key. Optional for a remote/custom endpoint:
-    # api_base: http://localhost:11434
-    timeout: 180
+    model: ollama_chat/qwen3.6:27b
+    api_base: http://localhost:11434
+    # Fuer einen entfernten Server z.B.: http://10.10.20.55:11434
+    # api_key_env: OLLAMA_API_KEY  # nur falls dein Server einen Key verlangt
+    timeout: 300
     pdf_mode: local
-    options: {}
+    options:
+      think: false
+      temperature: 0.2
+      top_p: 0.9
+      top_k: 40
+      num_ctx: 16384
+      num_predict: 8192
+      seed: 42
+      repeat_penalty: 1.1
 
+  # ---------------------------------------------------------------------------
+  # OPENAI - Standard: https://api.openai.com/v1
+  # ---------------------------------------------------------------------------
+  # Benoetigt OPENAI_API_KEY in .env.
+  # Optionen: temperature, top_p, max_tokens, max_completion_tokens, seed,
+  # presence_penalty, frequency_penalty, stop, logit_bias, user.
+  # Neuere Reasoning-Modelle koennen temperature/andere Parameter einschraenken.
   openai-default:
     model: openai/gpt-4o-mini
+    api_base: https://api.openai.com/v1
     api_key_env: OPENAI_API_KEY
     timeout: 180
     pdf_mode: local
-    options: {}
+    options:
+      temperature: 0.2
+      top_p: 1.0
+      max_tokens: 8192
+      seed: 42
 
+  # Native PDF-Verarbeitung: Originaldatei wird an OpenAI hochgeladen.
+  # Nur freigegebene Modelle/Snapshots; <50 MiB. Siehe Benutzerhandbuch.
   openai-native-pdf:
-    # Explicit opt-in: uploads the complete original PDF to OpenAI.
-    # Verified model capability as of 2026-11-17; see README capability matrix.
     model: openai/gpt-4o-mini
+    api_base: https://api.openai.com/v1
     api_key_env: OPENAI_API_KEY
     timeout: 180
     pdf_mode: native
-    options: {}
+    options:
+      temperature: 0.2
+      max_tokens: 8192
 
+  # ---------------------------------------------------------------------------
+  # ANTHROPIC - Standard: https://api.anthropic.com
+  # ---------------------------------------------------------------------------
+  # Benoetigt ANTHROPIC_API_KEY in .env.
+  # Optionen: temperature, top_p, max_tokens, stop_sequences, top_k,
+  # reasoning_effort (nur unterstuetzte Modelle).
+  # max_tokens ist erforderlich; LiteLLM nutzt sonst 4096 als Standard.
   anthropic-default:
     model: anthropic/claude-sonnet-4-5
+    api_base: https://api.anthropic.com
     api_key_env: ANTHROPIC_API_KEY
     timeout: 180
     pdf_mode: local
-    options: {}
+    options:
+      temperature: 0.2
+      top_p: 1.0
+      max_tokens: 8192
+      top_k: 40
 
+  # ---------------------------------------------------------------------------
+  # GOOGLE GEMINI - Standard: https://generativelanguage.googleapis.com
+  # ---------------------------------------------------------------------------
+  # Benoetigt GEMINI_API_KEY in .env.
+  # Optionen: temperature, top_p, max_tokens, max_completion_tokens,
+  # stop, reasoning_effort (Kosten; "none" nur wenn Modell es erlaubt).
   gemini-default:
     model: gemini/gemini-2.5-flash
+    api_base: https://generativelanguage.googleapis.com
     api_key_env: GEMINI_API_KEY
     timeout: 180
     pdf_mode: local
-    options: {}
+    options:
+      temperature: 0.2
+      top_p: 1.0
+      max_tokens: 8192
+      # reasoning_effort: none
 
+  # ---------------------------------------------------------------------------
+  # MOONSHOT / KIMI - Global: https://api.moonshot.ai/v1
+  # China:          https://api.moonshot.cn/v1
+  # ---------------------------------------------------------------------------
+  # Benoetigt MOONSHOT_API_KEY in .env.
+  # Optionen: temperature (Moonshot erlaubt 0..1), top_p, max_tokens,
+  # presence_penalty, frequency_penalty, stop, n.
   moonshot-default:
     model: moonshot/moonshot-v1-8k
+    api_base: https://api.moonshot.ai/v1
     api_key_env: MOONSHOT_API_KEY
     timeout: 180
     pdf_mode: local
-    options: {}
+    options:
+      temperature: 0.3
+      top_p: 1.0
+      max_tokens: 4096
 
-# Provider-specific options may be placed in a profile's options mapping.
-# Connection/credential fields and secret-like options are rejected.
-# Only openai-native-pdf opts into native upload; every default remains local.
-# The model capability list is deliberately conservative, not an OpenAI-wide claim.
+  # ---------------------------------------------------------------------------
+  # EIGENER OPENAI-KOMPATIBLER SERVER (optional)
+  # ---------------------------------------------------------------------------
+  # API-Pfad und Modellname haengen vom Server ab. Der Token ist je nach Server
+  # optional oder erforderlich. Wenn noetig: CUSTOM_LLM_API_KEY in .env setzen.
+  custom-openai-compatible:
+    model: openai/dein-modellname
+    api_base: http://localhost:8000/v1
+    api_key_env: CUSTOM_LLM_API_KEY
+    timeout: 180
+    pdf_mode: local
+    options:
+      temperature: 0.2
+      top_p: 1.0
+      max_tokens: 8192
+
+# Die Modellnamen sind Beispiele. Pruefe Verfuegbarkeit und Parameter in der
+# aktuellen Dokumentation deines Providers und der LiteLLM-Providerliste.
+# Nur openai-native-pdf laedt Original-PDFs hoch; alle anderen nutzen lokalen Text.

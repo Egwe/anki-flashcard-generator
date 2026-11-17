@@ -140,10 +140,14 @@ class ModelProfile(StrictModel):
             ValueError: If a key contains credentials or managed settings.
         """
         forbidden = {"api_key", "api_base", "model", "messages", "response_format"}
-        sensitive_markers = ("secret", "password", "token", "credential", "apikey")
+        sensitive_markers = ("secret", "password", "credential", "apikey")
         for key, value in options.items():
             normalized = key.casefold().replace("-", "_")
-            if normalized in forbidden or any(marker in normalized for marker in sensitive_markers):
+            if (
+                normalized in forbidden
+                or any(marker in normalized for marker in sensitive_markers)
+                or _is_sensitive_token_key(normalized)
+            ):
                 raise ValueError(f"Option '{key}' is reserved or may expose a secret")
             if _contains_sensitive_key(value):
                 raise ValueError(f"Option '{key}' must not contain secret-like nested keys")
@@ -216,6 +220,19 @@ class AppConfig(StrictModel):
         return profile
 
 
+def _is_sensitive_token_key(key: str) -> bool:
+    """Distinguish credential token keys from legitimate token-count options.
+
+    Args:
+        key: Normalized option key to inspect.
+
+    Returns:
+        True for credentials such as access_token or auth_token, but False for
+        token-count parameters such as max_tokens and max_completion_tokens.
+    """
+    return key == "token" or key.endswith("_token") or key.startswith("token_")
+
+
 def _contains_sensitive_key(value: Any) -> bool:
     """Detect secret-like keys recursively inside provider option structures.
 
@@ -228,7 +245,9 @@ def _contains_sensitive_key(value: Any) -> bool:
     if isinstance(value, dict):
         for key, nested_value in value.items():
             normalized = str(key).casefold().replace("-", "_")
-            if any(marker in normalized for marker in ("secret", "password", "token", "apikey")):
+            if any(marker in normalized for marker in ("secret", "password", "apikey")):
+                return True
+            if _is_sensitive_token_key(normalized):
                 return True
             if _contains_sensitive_key(nested_value):
                 return True
