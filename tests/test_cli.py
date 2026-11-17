@@ -12,6 +12,64 @@ from anki_flashcards.errors import FlashcardError
 runner = CliRunner()
 
 
+@pytest.mark.parametrize("command", [[], ["generate"], ["export"], ["decks"]])
+def test_help_documents_usage_defaults_files_and_examples(command: list[str]) -> None:
+    """Verify every CLI help page includes its operational contract.
+
+    Args:
+        command: Command path supplied by pytest, without ``--help``.
+
+    Returns:
+        None. Assertions inspect exit status and rendered Rich help text.
+    """
+    result = runner.invoke(app, [*command, "--help"], env={"COLUMNS": "200"})
+
+    assert result.exit_code == 0, result.output
+    normalized = " ".join(result.output.split())
+    assert "Example" in normalized
+    assert "Usage:" in normalized
+    if not command:
+        assert "generate" in normalized
+        assert "export" in normalized
+        assert "decks" in normalized
+        assert "0 on success" in normalized
+        assert "2 for invalid CLI usage" in normalized
+    if command == ["generate"]:
+        assert "--output" in normalized and "-o" in normalized
+        assert "--model" in normalized and "-m" in normalized
+        assert "--limit" in normalized and "-n" in normalized
+        assert "Default: 50" in normalized
+        assert "0 = unlimited" in normalized
+        assert "1000..100000" in normalized
+        assert "Default: 180" in normalized
+        assert "PDF, DOCX, HTML, Markdown, or UTF-8" in normalized
+        assert "With --extend, it must already exist" in normalized
+    if command == ["export"]:
+        assert "--deck" in normalized and "-d" in normalized
+        assert "Required target deck name" in normalized
+        assert "No AI request is made" in normalized
+        assert "must be a new .apkg file" in normalized
+    if command == ["decks"]:
+        assert "never modified" in normalized
+        assert "zstd-compressed" in normalized
+
+
+def test_short_help_and_invalid_usage_exit_codes() -> None:
+    """Verify -h succeeds and missing required input uses usage exit code 2.
+
+    Returns:
+        None. Assertions inspect both exit codes and the usage error stream.
+    """
+    help_result = runner.invoke(app, ["-h"])
+    invalid_result = runner.invoke(app, ["generate"])
+
+    assert help_result.exit_code == 0
+    assert "Usage:" in help_result.output
+    assert invalid_result.exit_code == 2
+    assert "Usage" in invalid_result.stderr
+    assert "Missing argument" in invalid_result.stderr
+
+
 def test_export_command_creates_apkg_without_ai(tmp_path: Path) -> None:
     """Verify JSON export creates an APKG without invoking an AI provider.
 
@@ -162,5 +220,6 @@ def test_run_prints_expected_errors_without_a_traceback(monkeypatch, capsys) -> 
         run()
 
     captured = capsys.readouterr()
+    assert captured.out == ""
     assert "Ungültiges Paket" in captured.err
     assert "Traceback" not in captured.err
