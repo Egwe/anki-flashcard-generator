@@ -37,6 +37,15 @@ models:
     pdf_mode: local
     options: {}
 
+  openai-native-pdf:
+    # Explicit opt-in: uploads the complete original PDF to OpenAI.
+    # Verified model capability as of 2026-11-17; see README capability matrix.
+    model: openai/gpt-4o-mini
+    api_key_env: OPENAI_API_KEY
+    timeout: 180
+    pdf_mode: native
+    options: {}
+
   anthropic-default:
     model: anthropic/claude-sonnet-4-5
     api_key_env: ANTHROPIC_API_KEY
@@ -60,5 +69,5 @@ models:
 
 # Provider-specific options may be placed in a profile's options mapping.
 # Connection/credential fields and secret-like options are rejected.
-# A native PDF profile must use a documented supported provider/model adapter;
-# native is not enabled by any of these defaults.
+# Only openai-native-pdf opts into native upload; every default remains local.
+# The model capability list is deliberately conservative, not an OpenAI-wide claim.
