@@ -579,7 +579,7 @@
               <text class="t-title" x="584" y="786">generate_native_cards()</text><text class="t-sub" x="584" y="807">nur .pdf · keine lokale Extraktion</text></g></a>
             <path class="edge" d="M745 820 V846" marker-end="url(#arr-flow)"/>
             <a href="#native"><g class="n-ai"><rect class="box" x="530" y="850" width="430" height="60" rx="10"/>
-              <text class="t-head" x="550" y="876">Vor dem Upload prüfen</text><text class="t-sub" x="550" y="897">Modell-Allowlist · Datei &lt; 50 MiB · OPENAI_API_KEY</text></g></a>
+              <text class="t-head" x="550" y="876">Vor dem Upload prüfen</text><text class="t-sub" x="550" y="897">Allowlist · Datei &lt; 50 MiB · API-Key · Optionen</text></g></a>
             <path class="edge" d="M745 910 V936" marker-end="url(#arr-flow)"/>
             <rect class="frame ext" x="530" y="940" width="430" height="214" rx="12"/>
             <text class="t-label" x="546" y="962">OpenAI-API · offizielles SDK</text>
@@ -667,7 +667,7 @@
           <span class="step-number">7</span>
           <h3>Karten erzeugen: lokal oder nativ</h3>
           <p><strong>7a · lokal (Standard, alle Formate):</strong> <code>read_document()</code> prüft Größe und Endung, extrahiert Text je Format und normalisiert Leerraum. Ein Rich-Spinner startet; <code>ai.generate_cards()</code> teilt den Text mit <code>chunk_text()</code> auf und sendet je Chunk eine Anfrage über LiteLLM. Jede Antwort wird gegen <code>CardBatch</code> validiert und mit <code>deduplicate_cards(cards, limit)</code> bereinigt. Ist das Limit erreicht, werden restliche Chunks nicht mehr angefragt. → <a href="#ki-generierung">KI-Generierung</a></p>
-          <p><strong>7b · nativ:</strong> Die CLI meldet den Upload. <code>generate_native_cards()</code> akzeptiert nur <code>.pdf</code> und ruft <code>read_document()</code> nie auf. Allowlist, Größe und API-Schlüssel werden vor dem Upload geprüft. Es gibt genau eine Modellanfrage; <code>chunk_size</code> wirkt hier nicht. → <a href="#native">Native PDF</a></p>
+          <p><strong>7b · nativ:</strong> Die CLI meldet den Upload. <code>generate_native_cards()</code> akzeptiert nur <code>.pdf</code> und ruft <code>read_document()</code> nie auf. Allowlist, Größe, API-Schlüssel und Profiloptionen werden vor dem Upload geprüft. Es gibt genau eine Modellanfrage; <code>chunk_size</code> wirkt hier nicht. → <a href="#native">Native PDF</a></p>
         </article>
         <article class="card searchable" data-module="cli models" id="schritt-8">
           <span class="step-number">8</span>
@@ -936,7 +936,7 @@
         <dl class="facts">
           <dt>Importiert</dt><dd><code>ai</code>, <code>errors</code>, <code>models</code> · <code>openai</code> (verzögert)</dd>
           <dt>Verwendet von</dt><dd><code>cli</code> (<code>generate_native_cards</code>)</dd>
-          <dt>Tests</dt><dd><code>tests/test_native_pdf.py</code> (9 Tests, Fake-Client und lokaler HTTP-Server)</dd>
+          <dt>Tests</dt><dd><code>tests/test_native_pdf.py</code> (16 Tests, Fake-Clients und lokaler HTTP-Server)</dd>
         </dl>
         <details open>
           <summary>Öffentliche Schnittstelle</summary>
@@ -951,7 +951,7 @@
             </div>
             <div class="option">
               <div class="option-heading"><span class="option-name"><code>native_openai_model(model) → str | None</code></span><span class="option-meta">Allowlist</span></div>
-              <p>Gibt den nackten OpenAI-Modellnamen nur für geprüfte Modelle zurück: <code>gpt-4o</code>, <code>gpt-4o-mini</code>, <code>gpt-4.1</code> (Schlüssel von <code>OPENAI_MODEL_DOCUMENTATION</code>) sowie datierte Snapshots mit den Präfixen <code>gpt-4o-</code> und <code>gpt-4.1-</code> plus exakt <code>JJJJ-MM-TT</code>. Ein Provider-Präfix muss <code>openai/</code> sein oder fehlen. Alles andere → <code>None</code>.</p>
+              <p>Gibt den nackten OpenAI-Modellnamen nur für geprüfte Modelle zurück: <code>gpt-4o</code>, <code>gpt-4o-mini</code>, <code>gpt-4.1</code> (Schlüssel von <code>OPENAI_MODEL_DOCUMENTATION</code>) sowie datierte Snapshots mit den Präfixen <code>gpt-4o-</code>, <code>gpt-4o-mini-</code> und <code>gpt-4.1-</code> plus exakt <code>JJJJ-MM-TT</code> (z. B. <code>gpt-4o-mini-2024-07-18</code>). Varianten wie <code>gpt-4o-mini-audio-preview-…</code> bleiben ausgeschlossen. Ein Provider-Präfix muss <code>openai/</code> sein oder fehlen. Alles andere → <code>None</code>.</p>
             </div>
             <div class="option">
               <div class="option-heading"><span class="option-name"><code>generate_native_cards(path, settings, *, limit=50, language="Deutsch", instructions="", adapter=None) → list[Card]</code></span><span class="option-meta">Netzwerk · Upload</span></div>
@@ -959,7 +959,7 @@
             </div>
             <div class="option">
               <div class="option-heading"><span class="option-name"><code>class OpenAINativePDFAdapter</code></span><span class="option-meta">Adapter</span></div>
-              <p><code>generate()</code> arbeitet in fester Reihenfolge: Modell prüfen → Größe prüfen → Client bauen → hochladen → <code>try</code>: strukturierte Anfrage → <code>finally</code>: Upload löschen. Die ersten drei Schritte übertragen nichts.</p>
+              <p><code>generate()</code> arbeitet in fester Reihenfolge: Modell prüfen → Größe prüfen → Client bauen → Optionen prüfen → hochladen → <code>try</code>: strukturierte Anfrage → <code>finally</code>: Upload löschen. Die ersten vier Schritte übertragen nichts.</p>
             </div>
           </div>
         </details>
@@ -968,6 +968,7 @@
           <div class="details-body">
             <div class="option"><div class="option-heading"><span class="option-name"><code>_validate_openai_pdf(path)</code></span></div><p>Datei muss <em>kleiner</em> als 50 MiB sein (<code>OPENAI_FILE_SIZE_LIMIT</code>); genau 50 MiB wird abgelehnt.</p></div>
             <div class="option"><div class="option-heading"><span class="option-name"><code>_openai_client(settings)</code></span></div><p>Schlüssel aus <code>settings.api_key</code>, sonst <code>OPENAI_API_KEY</code>; fehlt beides → Fehler vor jedem Upload. <code>api_base</code> wird zu <code>base_url</code>. Test-Nahtstelle für den Fake-Client.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>_validate_openai_options(client, options)</code></span></div><p>Prüft die Profil-<code>options</code> vor dem Upload. Vom Adapter selbst gesetzte Parameter (<code>OPENAI_MANAGED_OPTIONS</code>: <code>model</code>, <code>instructions</code>, <code>input</code>, <code>text_format</code>, <code>store</code>, <code>timeout</code>) sind verboten. Alle übrigen Namen müssen Parameter von <code>client.responses.parse</code> im installierten SDK sein – gelesen per <code>inspect.signature</code> in <code>_responses_parse_parameters()</code>. <code>_unsupported_options_message()</code> nennt bekannte Ersatznamen, etwa <code>max_output_tokens</code> statt <code>max_tokens</code>. Akzeptiert die Methode beliebige <code>**kwargs</code> (Test-Doubles), entfällt die Namensprüfung.</p></div>
             <div class="option"><div class="option-heading"><span class="option-name"><code>_upload_pdf(client, path, timeout)</code></span></div><p><code>client.files.create(file=…, purpose="user_data")</code> → Datei-ID. Jede Ausnahme wird zu „Native PDF upload failed“.</p></div>
             <div class="option"><div class="option-heading"><span class="option-name"><code>_request_openai_batch(client, file_id, model, settings, *, limit, language, instructions)</code></span></div><p><code>client.responses.parse(model, instructions=SYSTEM_PROMPT, input=[input_file, input_text], text_format=CardBatch, store=False, timeout, **settings.options)</code>. Ist <code>output_parsed</code> kein <code>CardBatch</code> (z. B. Ablehnung durch das Modell), entsteht ein Fehler.</p></div>
             <div class="option"><div class="option-heading"><span class="option-name"><code>_delete_uploaded_file(client, file_id) → bool</code></span></div><p>Best-Effort-Löschung. Scheitert sie, erscheint eine <code>RuntimeWarning</code> mit Datei-ID zur manuellen Bereinigung – der Lauf gilt trotzdem als erfolgreich.</p></div>
@@ -1365,7 +1366,7 @@ Additional user instructions: Bevorzuge kurze Verständnisfragen.
       </div>
       <figure class="diagram wide">
         <div class="diagram-scroll">
-          <svg viewBox="0 0 1000 560" aria-labelledby="native-title native-desc">
+          <svg viewBox="0 0 1000 592" aria-labelledby="native-title native-desc">
             <title id="native-title">Sequenz der nativen PDF-Verarbeitung</title>
             <desc id="native-desc">cli.generate ruft generate_native_cards auf. native_pdf prüft Endung, Modell-Allowlist, Dateigröße und API-Schlüssel. Danach Upload über files.create, Anfrage über responses.parse mit CardBatch und store=False, Löschen über files.delete im finally-Block. Zurück an die CLI geht eine deduplizierte Kartenliste.</desc>
             <defs>
@@ -1374,38 +1375,39 @@ Additional user instructions: Bevorzuge kurze Verständnisfragen.
             <a href="#mod-cli"><g class="n-cli"><rect class="box" x="30" y="16" width="240" height="44" rx="10"/><text class="t-title" x="150" y="43" text-anchor="middle">cli.generate()</text></g></a>
             <a href="#mod-native_pdf"><g class="n-ai"><rect class="box" x="380" y="16" width="240" height="44" rx="10"/><text class="t-title" x="500" y="43" text-anchor="middle">native_pdf</text></g></a>
             <g class="n-ext"><rect class="box" x="730" y="16" width="240" height="44" rx="10"/><text class="t-head" x="850" y="43" text-anchor="middle">OpenAI-API</text></g>
-            <line class="life" x1="150" y1="60" x2="150" y2="545"/>
-            <line class="life" x1="500" y1="60" x2="500" y2="545"/>
-            <line class="life" x1="850" y1="60" x2="850" y2="545"/>
+            <line class="life" x1="150" y1="60" x2="150" y2="577"/>
+            <line class="life" x1="500" y1="60" x2="500" y2="577"/>
+            <line class="life" x1="850" y1="60" x2="850" y2="577"/>
 
             <text class="t-mono" x="166" y="86">generate_native_cards(path, ai, limit, …)</text>
             <path class="edge" d="M150 94 H496" marker-end="url(#arr-nat)"/>
 
-            <rect class="frame safe" x="330" y="110" width="340" height="164" rx="10"/>
+            <rect class="frame safe" x="330" y="110" width="340" height="196" rx="10"/>
             <text class="t-label" x="346" y="129">Prüfen – noch keine Übertragung</text>
             <g class="n-ai"><rect class="box" x="360" y="140" width="280" height="28" rx="6"/><text class="t-mono" x="374" y="159">Endung .pdf?</text></g>
             <g class="n-ai"><rect class="box" x="360" y="172" width="280" height="28" rx="6"/><text class="t-mono" x="374" y="191">native_openai_model(): Allowlist</text></g>
             <g class="n-ai"><rect class="box" x="360" y="204" width="280" height="28" rx="6"/><text class="t-mono" x="374" y="223">_validate_openai_pdf(): &lt; 50 MiB</text></g>
             <g class="n-ai"><rect class="box" x="360" y="236" width="280" height="28" rx="6"/><text class="t-mono" x="374" y="255">_openai_client(): API-Schlüssel</text></g>
+            <g class="n-ai"><rect class="box" x="360" y="268" width="280" height="28" rx="6"/><text class="t-mono" x="374" y="287">_validate_openai_options()</text></g>
 
-            <text class="t-mono" x="516" y="296">files.create(file, purpose="user_data")</text>
-            <path class="edge" d="M500 304 H846" marker-end="url(#arr-nat)"/>
-            <text class="t-mono" x="770" y="328">file_id</text>
-            <path class="edge ret" d="M850 336 H504" marker-end="url(#arr-nat)"/>
+            <text class="t-mono" x="516" y="328">files.create(file, purpose="user_data")</text>
+            <path class="edge" d="M500 336 H846" marker-end="url(#arr-nat)"/>
+            <text class="t-mono" x="770" y="360">file_id</text>
+            <path class="edge ret" d="M850 368 H504" marker-end="url(#arr-nat)"/>
 
-            <text class="t-mono" x="516" y="364">responses.parse(input_file, input_text,</text>
-            <text class="t-mono" x="516" y="381">text_format=CardBatch, store=False)</text>
-            <path class="edge" d="M500 390 H846" marker-end="url(#arr-nat)"/>
-            <text class="t-mono" x="620" y="414">output_parsed: CardBatch</text>
-            <path class="edge ret" d="M850 422 H504" marker-end="url(#arr-nat)"/>
+            <text class="t-mono" x="516" y="396">responses.parse(input_file, input_text,</text>
+            <text class="t-mono" x="516" y="413">text_format=CardBatch, store=False)</text>
+            <path class="edge" d="M500 422 H846" marker-end="url(#arr-nat)"/>
+            <text class="t-mono" x="620" y="446">output_parsed: CardBatch</text>
+            <path class="edge ret" d="M850 454 H504" marker-end="url(#arr-nat)"/>
 
-            <text class="t-mono" x="516" y="452">finally: files.delete(file_id)</text>
-            <path class="edge" d="M500 460 H846" marker-end="url(#arr-nat)"/>
-            <text class="t-sub" x="520" y="484">ok · sonst RuntimeWarning mit Datei-ID</text>
-            <path class="edge ret" d="M850 492 H504" marker-end="url(#arr-nat)"/>
+            <text class="t-mono" x="516" y="484">finally: files.delete(file_id)</text>
+            <path class="edge" d="M500 492 H846" marker-end="url(#arr-nat)"/>
+            <text class="t-sub" x="520" y="516">ok · sonst RuntimeWarning mit Datei-ID</text>
+            <path class="edge ret" d="M850 524 H504" marker-end="url(#arr-nat)"/>
 
-            <text class="t-mono" x="166" y="522">list[Card] (dedupliziert, Limit)</text>
-            <path class="edge ret" d="M500 530 H154" marker-end="url(#arr-nat)"/>
+            <text class="t-mono" x="166" y="554">list[Card] (dedupliziert, Limit)</text>
+            <path class="edge ret" d="M500 562 H154" marker-end="url(#arr-nat)"/>
           </svg>
         </div>
         <figcaption>Durchgezogene Pfeile sind Aufrufe, gestrichelte Pfeile Rückgaben. Der grüne Bereich läuft vollständig lokal; scheitert dort eine Prüfung, findet kein Upload statt und es gibt keinen stillen Wechsel zur lokalen Extraktion.</figcaption>
@@ -1422,7 +1424,7 @@ Additional user instructions: Bevorzuge kurze Verständnisfragen.
         </article>
         <article class="card searchable" data-module="native_pdf models">
           <h3>Gleiches Ergebnis wie lokal</h3>
-          <p>Das SDK parst die Antwort direkt in <code>CardBatch</code>. Danach laufen dieselbe Deduplizierung, dieselbe JSON-Ausgabe und dieselbe APKG-Erzeugung wie im lokalen Weg (R-122). Profil-<code>options</code> werden 1:1 an <code>responses.parse()</code> weitergereicht.</p>
+          <p>Das SDK parst die Antwort direkt in <code>CardBatch</code>. Danach laufen dieselbe Deduplizierung, dieselbe JSON-Ausgabe und dieselbe APKG-Erzeugung wie im lokalen Weg (R-122). Profil-<code>options</code> gehen an <code>responses.parse()</code>, nicht an LiteLLM. Deshalb gilt hier <code>max_output_tokens</code> statt <code>max_tokens</code>; unbekannte oder vom Adapter verwaltete Optionen werden vor dem Upload abgelehnt.</p>
         </article>
       </div>
     </section>
@@ -1506,6 +1508,7 @@ Additional user instructions: Bevorzuge kurze Verständnisfragen.
             <tr><td><code>documents._extract_text</code></td><td><code>OSError</code>, <code>UnicodeError</code>, <code>ValueError</code>, <code>PyPdfError</code>, <code>PackageNotFoundError</code>, <code>BadZipFile</code></td><td>Could not read</td></tr>
             <tr><td><code>documents._read_pdf</code></td><td><code>NotImplementedError</code></td><td>Encrypted PDF is not supported</td></tr>
             <tr><td><code>ai._request_batch</code></td><td><code>ValidationError</code>, <code>ValueError</code>, <code>TypeError</code> · alle übrigen</td><td>AI returned invalid card data … chunk N · AI request failed … chunk N</td></tr>
+            <tr><td><code>native_pdf._validate_openai_options</code></td><td>– (prüft vor dem Upload)</td><td>Native OpenAI options are set by the program … · Options not supported by the OpenAI Responses API …</td></tr>
             <tr><td><code>native_pdf._upload_pdf</code></td><td>alle</td><td>Native PDF upload failed</td></tr>
             <tr><td><code>native_pdf._request_openai_batch</code></td><td><code>ValidationError</code>, <code>ValueError</code>, <code>TypeError</code> · alle übrigen</td><td>Native OpenAI response contained invalid cards · Native OpenAI PDF request failed</td></tr>
             <tr><td><code>native_pdf._delete_uploaded_file</code></td><td>alle → nur <code>RuntimeWarning</code></td><td>Native PDF upload … could not be deleted</td></tr>
@@ -1547,7 +1550,7 @@ Additional user instructions: Bevorzuge kurze Verständnisfragen.
           <ul class="checklist">
             <li>Standard ist <code>local</code>: Nur extrahierter Text geht an das Modell, bei Ollama bleibt alles lokal.</li>
             <li><code>native</code> braucht ausdrückliche Wahl; die CLI kündigt den Upload an.</li>
-            <li>Allowlist, Größe und Schlüssel werden vor dem Upload geprüft; Upload wird im <code>finally</code> gelöscht.</li>
+            <li>Allowlist, Größe, Schlüssel und Optionen werden vor dem Upload geprüft; Upload wird im <code>finally</code> gelöscht.</li>
             <li>Kein stiller Fallback auf lokale Extraktion oder ein anderes Modell.</li>
             <li>Quelltext steht im Prompt zwischen <code>&lt;source_document&gt;</code>-Begrenzern.</li>
           </ul>
@@ -1570,7 +1573,7 @@ Additional user instructions: Bevorzuge kurze Verständnisfragen.
       <div class="section-heading">
         <p class="eyebrow">tests/</p>
         <h2>Teststrategie und Test-Nahtstellen</h2>
-        <p>65 Tests in acht Dateien, eine Datei pro Modul (<code>cli</code> deckt <code>__main__</code> mit ab). Der Standardlauf braucht weder API-Schlüssel noch Netzwerk: KI-Antworten werden simuliert, der einzige HTTP-Test läuft gegen einen lokalen Server auf <code>127.0.0.1</code>.</p>
+        <p>72 Tests in acht Dateien, eine Datei pro Modul (<code>cli</code> deckt <code>__main__</code> mit ab). Der Standardlauf braucht weder API-Schlüssel noch Netzwerk: KI-Antworten werden simuliert, der einzige HTTP-Test läuft gegen einen lokalen Server auf <code>127.0.0.1</code>.</p>
       </div>
       <pre><button class="copy-button" type="button" aria-label="Befehle kopieren">Kopieren</button><code>.venv/bin/python -m ruff check src tests
 .venv/bin/python -m ruff format --check src tests
@@ -1583,7 +1586,7 @@ Additional user instructions: Bevorzuge kurze Verständnisfragen.
             <tr><td><code>test_documents.py</code></td><td>5</td><td>HTML ohne Skripte, DOCX mit Tabellen, leere und nicht unterstützte Dateien, beschädigte PDF, Überlappung beim Aufteilen</td></tr>
             <tr><td><code>test_models.py</code></td><td>4</td><td>JSON-Roundtrip, ungültiges JSON, Tags ohne Leerzeichen, Deduplizierung</td></tr>
             <tr><td><code>test_ai.py</code></td><td>3</td><td>Limit über Abschnitte, Unlimited-Prompt ohne erfundenes Limit, ungültige KI-Antwort</td></tr>
-            <tr><td><code>test_native_pdf.py</code></td><td>9</td><td>Allowlist, Upload/Parse/Delete, kein Upload bei falschem Modell, Nicht-PDF oder 50 MiB, Löschen nach Fehler, Löschwarnung, echtes OpenAI-SDK gegen lokalen Server</td></tr>
+            <tr><td><code>test_native_pdf.py</code></td><td>16</td><td>Allowlist inklusive <code>gpt-4o-mini</code>-Snapshot, Optionsprüfung vor dem Upload, Beispielprofil gegen die echte SDK-Signatur, Upload/Parse/Delete, kein Upload bei falschem Modell, Nicht-PDF oder 50 MiB, Löschen nach Fehler, Löschwarnung, echtes OpenAI-SDK gegen lokalen Server</td></tr>
             <tr><td><code>test_config.py</code></td><td>15</td><td>fehlende/leere/explizite Datei, ungültiges Schema und Secrets (parametrisiert), Profile, atomares Speichern, Gültigkeit von <code>config.example.yaml</code></td></tr>
             <tr><td><code>test_settings.py</code></td><td>8</td><td>YAML-Pfade, Prioritäten, Altvariablen ohne Wirkung, Profil-Fallbacks, Export-Defaults, <code>ANKI_CONFIG</code>, Diagnose ohne Secrets</td></tr>
             <tr><td><code>test_apkg.py</code></td><td>5</td><td>Neu/Erweitern/Inspizieren, Lernstand bleibt, echter moderner Anki-Export mit zstd, HTML-Escaping, Medien bleiben</td></tr>
@@ -1717,17 +1720,6 @@ print(result.added, result.skipped)</code></pre>
         <p>Diese Punkte wurden beim Schreiben dieses Handbuchs am tatsächlichen Code nachgeprüft. Sie beschreiben den Ist-Stand und sind keine beschlossenen Änderungen. Wird einer davon behoben, muss der Eintrag hier im selben Paket entfernt oder angepasst werden.</p>
       </div>
       <div class="grid two">
-        <article class="card searchable" data-module="native_pdf config">
-          <span class="tag err">Abweichung</span>
-          <h3>Beispielprofil <code>openai-native-pdf</code> und <code>max_tokens</code></h3>
-          <p><code>_request_openai_batch()</code> reicht <code>settings.options</code> unverändert an <code>client.responses.parse()</code> weiter. Diese Methode kennt <code>max_tokens</code> nicht (dort heißt es <code>max_output_tokens</code>) und wirft <code>TypeError</code>. Das Beispielprofil setzt <code>max_tokens: 8192</code>.</p>
-          <p><strong>Folge:</strong> Der Lauf scheitert erst nach dem Upload mit der irreführenden Meldung „Native OpenAI response contained invalid cards: … unexpected keyword argument 'max_tokens'“. Die Datei wird trotzdem gelöscht.</p>
-        </article>
-        <article class="card searchable" data-module="native_pdf">
-          <span class="tag err">Abweichung</span>
-          <h3>Datierte <code>gpt-4o-mini</code>-Snapshots</h3>
-          <p>Benutzerhandbuch und README nennen „datierte Snapshots dieser Modelle“ als freigegeben. <code>native_openai_model()</code> kennt aber nur die Präfixe <code>gpt-4o-</code> und <code>gpt-4.1-</code> mit direkt folgendem Datum. <code>gpt-4o-mini-2024-07-18</code> ergibt deshalb <code>None</code> und wird abgelehnt.</p>
-        </article>
         <article class="card searchable" data-module="settings">
           <span class="tag cfg">Verhalten</span>
           <h3><code>--model</code> behält das Profil</h3>

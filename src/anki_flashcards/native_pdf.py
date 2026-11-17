@@ -1,5 +1,6 @@
 """Generate cards from PDFs through verified native provider adapters."""
 
+import inspect
 import re
 import warnings
 from dataclasses import dataclass
@@ -20,7 +21,15 @@ OPENAI_MODEL_DOCUMENTATION = {
 }
 NATIVE_OPENAI_SNAPSHOT_PREFIXES = {
     "gpt-4o-": "gpt-4o",
+    "gpt-4o-mini-": "gpt-4o-mini",
     "gpt-4.1-": "gpt-4.1",
+}
+OPENAI_MANAGED_OPTIONS = frozenset(
+    {"model", "instructions", "input", "text_format", "store", "timeout"}
+)
+OPENAI_OPTION_REPLACEMENTS = {
+    "max_tokens": "max_output_tokens",
+    "max_completion_tokens": "max_output_tokens",
 }
 
 
@@ -164,6 +173,7 @@ class OpenAINativePDFAdapter:
             )
         _validate_openai_pdf(path)
         client = _openai_client(settings)
+        _validate_openai_options(client, settings.options)
         uploaded_id = _upload_pdf(client, path, settings.timeout)
         try:
             batch = _request_openai_batch(
@@ -225,6 +235,72 @@ def _openai_client(settings: AISettings) -> Any:
     if settings.api_base:
         options["base_url"] = settings.api_base
     return OpenAI(**options)
+
+
+def _validate_openai_options(client: Any, options: dict[str, Any]) -> None:
+    """Reject profile options the Responses request cannot accept before upload.
+
+    Args:
+        client: Initialized OpenAI client whose ``responses.parse`` signature
+            defines the accepted keyword arguments.
+        options: Provider options from the selected YAML profile.
+
+    Returns:
+        None when every option can be forwarded to ``responses.parse``.
+
+    Raises:
+        FlashcardError: If an option is set by the adapter itself or is not
+            a parameter of the installed SDK's ``responses.parse`` method.
+    """
+    managed = sorted(OPENAI_MANAGED_OPTIONS.intersection(options))
+    if managed:
+        raise FlashcardError(
+            "Native OpenAI options are set by the program and must not be configured: "
+            + ", ".join(managed)
+        )
+    accepted = _responses_parse_parameters(client)
+    if accepted is None:
+        return
+    unsupported = sorted(set(options) - accepted)
+    if unsupported:
+        raise FlashcardError(_unsupported_options_message(unsupported))
+
+
+def _responses_parse_parameters(client: Any) -> set[str] | None:
+    """Read the keyword names accepted by the client's structured Responses call.
+
+    Args:
+        client: OpenAI client or compatible test double.
+
+    Returns:
+        Accepted parameter names, or None when the callable accepts arbitrary
+        keyword arguments and therefore cannot be checked statically.
+    """
+    parameters = inspect.signature(client.responses.parse).parameters.values()
+    if any(parameter.kind is inspect.Parameter.VAR_KEYWORD for parameter in parameters):
+        return None
+    return {parameter.name for parameter in parameters}
+
+
+def _unsupported_options_message(unsupported: list[str]) -> str:
+    """Explain unsupported Responses options and name documented replacements.
+
+    Args:
+        unsupported: Sorted option names rejected by ``responses.parse``.
+
+    Returns:
+        User-facing error text including replacement hints where known.
+    """
+    hints = [
+        f"use {OPENAI_OPTION_REPLACEMENTS[name]} instead of {name}"
+        for name in unsupported
+        if name in OPENAI_OPTION_REPLACEMENTS
+    ]
+    suffix = f" ({'; '.join(hints)})" if hints else ""
+    return (
+        "Options not supported by the OpenAI Responses API in native PDF mode: "
+        f"{', '.join(unsupported)}{suffix}. Adjust the profile options."
+    )
 
 
 def _upload_pdf(client: Any, path: Path, timeout: int) -> str:
