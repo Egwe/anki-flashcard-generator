@@ -8,7 +8,7 @@ Ein CLI-Werkzeug, das aus lokalen Dokumenten mit KI überprüfbare Karteikarten 
 - [AGENTS.md](./AGENTS.md) enthält die verbindlichen Regeln für Architektur, Never Nesting, Docstrings, Konfiguration, Tests und kleine Commits.
 - Diese README beschreibt die **aktuell implementierte** Bedienung.
 
-Der erste MVP ist funktionsfähig. Never Nesting, kleine fachliche Einheiten und vollständige Funktions-/Klassendokumentation sind im Bestand umgesetzt und durch Ruff abgesichert. Die zentrale YAML-Konfiguration, modellabhängige native PDF-Verarbeitung sowie die erweiterte CLI-Hilfe sind noch offen. Web-UI und Proxmox-/Container-Deployment sind weiterhin spätere Ausbaustufen.
+Der erste MVP ist funktionsfähig. Never Nesting, kleine fachliche Einheiten und vollständige Funktions-/Klassendokumentation sind im Bestand umgesetzt und durch Ruff abgesichert. Die zentrale YAML-Konfiguration und modellabhängige native PDF-Verarbeitung sind noch offen. Web-UI und Proxmox-/Container-Deployment sind weiterhin spätere Ausbaustufen.
 
 ## Warum Python?
 
@@ -126,9 +126,13 @@ anki-flashcards decks output/mein-deck.apkg
 ### Alle Optionen
 
 ```bash
+anki-flashcards --help
 anki-flashcards generate --help
 anki-flashcards export --help
+anki-flashcards decks --help
 ```
+
+Die Hilfe funktioniert auch mit `-h` und enthält Beispiele, Pflicht- und optionsabhängige Werte, Standardwerte, Wertebereiche sowie das Verhalten bei neuen oder bestehenden Ausgabedateien. Erfolgreiche Befehle verwenden Exit-Code **0**, erwartete Anwendungs-/Providerfehler **1** und ungültige CLI-Nutzung **2**. Erwartete Fehler erscheinen ohne unnötigen Traceback auf `stderr`.
 
 ## KI-Provider konfigurieren
 

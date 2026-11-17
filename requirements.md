@@ -159,7 +159,7 @@ Bei Klassen werden zusätzlich wesentliche Attribute beziehungsweise Konstruktor
 **R-052 – Kleine fachliche Einheiten · soll · umgesetzt**
 Jede Funktion und jedes Modul soll eine klar benennbare Aufgabe erfüllen. Die Unix-Philosophie wird als Gestaltungsprinzip verstanden: kleine, kombinierbare Bausteine, eindeutige Schnittstellen und keine Vermischung von Dokumentzugriff, KI-Logik, Anki-Persistenz und Darstellung. Sie verlangt nicht künstlich viele Programme oder eine stdin/stdout-Schnittstelle für Binärdateien.
 
-**R-053 – CLI-Hilfe · muss · offen**
+**R-053 – CLI-Hilfe · muss · umgesetzt**
 `--help` muss für das Hauptprogramm und jeden Unterbefehl vollständig erklären:
 
 - Zweck und typischer Ablauf,
@@ -174,7 +174,7 @@ Jede Funktion und jedes Modul soll eine klar benennbare Aufgabe erfüllen. Die U
 
 Die Hilfe muss aus den tatsächlichen Optionen erzeugt werden und darf nicht vom Programmverhalten abweichen.
 
-**R-054 – CLI-Verhalten und Exit-Codes · muss · teilweise umgesetzt**
+**R-054 – CLI-Verhalten und Exit-Codes · muss · umgesetzt**
 Erfolgreiche Befehle enden mit Exit-Code 0. Erwartete Anwendungs-, Eingabe-, Konfigurations- und Providerfehler enden ungleich 0 und werden ohne unnötigen Traceback auf `stderr` ausgegeben. Hilfe und normale Ergebnisse erscheinen auf `stdout`. Programmeingaben werden über Optionen und Argumente gesteuert; eine interaktive Sitzung ist für den Normalablauf nicht erforderlich.
 
 **R-055 – Dokumentationssynchronität · muss · dauerhaft**
