@@ -8,7 +8,7 @@ Ein CLI-Werkzeug, das aus lokalen Dokumenten mit KI überprüfbare Karteikarten 
 - [AGENTS.md](./AGENTS.md) enthält die verbindlichen Regeln für Architektur, Never Nesting, Docstrings, Konfiguration, Tests und kleine Commits.
 - Diese README beschreibt die **aktuell implementierte** Bedienung.
 
-Der erste MVP ist funktionsfähig. Never Nesting, kleine fachliche Einheiten und vollständige Funktions-/Klassendokumentation sind im Bestand umgesetzt und durch Ruff abgesichert. Die zentrale YAML-Konfiguration und modellabhängige native PDF-Verarbeitung sind noch offen. Web-UI und Proxmox-/Container-Deployment sind weiterhin spätere Ausbaustufen.
+Der erste MVP ist funktionsfähig. Never Nesting, kleine fachliche Einheiten und vollständige Funktions-/Klassendokumentation sind im Bestand umgesetzt und durch Ruff abgesichert. Der UI-unabhängige YAML-Konfigurationsservice mit validierten Profilen und atomarer Speicherung ist implementiert; seine vollständige CLI-Integration und die modellabhängige native PDF-Verarbeitung sind noch offen. Web-UI und Proxmox-/Container-Deployment sind weiterhin spätere Ausbaustufen.
 
 ## Warum Python?
 
@@ -134,6 +134,12 @@ anki-flashcards decks --help
 
 Die Hilfe funktioniert auch mit `-h` und enthält Beispiele, Pflicht- und optionsabhängige Werte, Standardwerte, Wertebereiche sowie das Verhalten bei neuen oder bestehenden Ausgabedateien. Erfolgreiche Befehle verwenden Exit-Code **0**, erwartete Anwendungs-/Providerfehler **1** und ungültige CLI-Nutzung **2**. Erwartete Fehler erscheinen ohne unnötigen Traceback auf `stderr`.
 
+## Zentrale YAML-Konfiguration
+
+[config.example.yaml](./config.example.yaml) enthält sichere, direkt aktivierbare Modellbausteine für Ollama, OpenAI, Anthropic, Gemini und Moonshot. Der Service in `config.py` lädt versionierte YAML-Dateien, validiert unbekannte Felder und Werte strikt, löst Modellprofile auf und speichert Änderungen atomar. API-Schlüssel werden nicht gespeichert; `api_key_env` enthält ausschließlich den Namen der zugehörigen Umgebungsvariablen.
+
+Die CLI-Option `--config`, die Zusammenführung der Defaults und Pfadregeln werden im nächsten Integrationspaket ergänzt. Die Beispieldatei ist deshalb bereits validiert, aber noch kein Ersatz für die unten beschriebenen aktuellen CLI- und `.env`-Workflows.
+
 ## KI-Provider konfigurieren
 
 Das Modell wird als `provider/modell` angegeben und entweder über `--model` oder `ANKI_MODEL` gesetzt. Schlüssel stehen in einer lokalen `.env` oder in der Umgebung; sie werden nicht in das APKG oder die JSON-Datei geschrieben.
@@ -176,6 +182,7 @@ Dokument → Textextraktion → Chunks → LiteLLM → validierte Karten
 ```
 
 - Kartentext wird HTML-escaped, damit Zeichen wie `<`, `>` und `&` als Text erscheinen.
+- `config.py`: UI-unabhängiges YAML-Schema, Modellprofile und atomare Speicherung
 - `documents.py`: Dateiformate, Normalisierung und überlappende Textabschnitte
 - `ai.py`: Provider-Anbindung, Prompting und Antwortvalidierung
 - `models.py`: Karten- und JSON-Schema sowie Deduplizierung

@@ -1,0 +1,64 @@
+# Versioned configuration for anki-flashcards. Copy to config.yaml and adjust.
+# API keys are NEVER stored here: api_key_env names an environment variable.
+schema_version: 1
+
+# Relative input/output directories are resolved relative to this YAML file.
+input_dir: ./input
+output_dir: ./output
+
+# Select a reusable profile; direct CLI --model remains possible without one.
+default_profile: ollama-local
+
+# Values here override built-in defaults. Explicit CLI values override YAML.
+generation:
+  deck: null                 # null = derive deck name from input filename
+  limit: 50                  # 0 = unlimited, use deliberately
+  language: Deutsch
+  instructions: "Bevorzuge kurze, eindeutige Verständnisfragen."
+  chunk_size: 24000          # 1000..100000 characters for local extraction
+  timeout: 180               # seconds, 1..3600; overrides profile timeout
+  json_output: null          # optional path to reviewable card JSON
+  extend: false              # --extend/--no-extend overrides this value
+  pdf_mode: local            # local = extract text; native = verified provider upload
+
+models:
+  ollama-local:
+    model: ollama/llama3.2
+    # Ollama usually needs no API key. Optional for a remote/custom endpoint:
+    # api_base: http://localhost:11434
+    timeout: 180
+    pdf_mode: local
+    options: {}
+
+  openai-default:
+    model: openai/gpt-4o-mini
+    api_key_env: OPENAI_API_KEY
+    timeout: 180
+    pdf_mode: local
+    options: {}
+
+  anthropic-default:
+    model: anthropic/claude-sonnet-4-5
+    api_key_env: ANTHROPIC_API_KEY
+    timeout: 180
+    pdf_mode: local
+    options: {}
+
+  gemini-default:
+    model: gemini/gemini-2.5-flash
+    api_key_env: GEMINI_API_KEY
+    timeout: 180
+    pdf_mode: local
+    options: {}
+
+  moonshot-default:
+    model: moonshot/moonshot-v1-8k
+    api_key_env: MOONSHOT_API_KEY
+    timeout: 180
+    pdf_mode: local
+    options: {}
+
+# Provider-specific options may be placed in a profile's options mapping.
+# Connection/credential fields and secret-like options are rejected.
+# A native PDF profile must use a documented supported provider/model adapter;
+# native is not enabled by any of these defaults.
