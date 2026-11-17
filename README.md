@@ -2,6 +2,14 @@
 
 Ein CLI-Werkzeug, das aus lokalen Dokumenten mit KI überprüfbare Karteikarten und direkt importierbare **Anki-`.apkg`-Dateien** erzeugt. Neue Decks lassen sich erstellen und vorhandene Pakete gezielt erweitern.
 
+## Projektdokumente und aktueller Stand
+
+- [requirements.md](./requirements.md) bündelt alle ursprünglichen und neuen Anforderungen, ihren Status und die Abnahmekriterien.
+- [AGENTS.md](./AGENTS.md) enthält die verbindlichen Regeln für Architektur, Never Nesting, Docstrings, Konfiguration, Tests und kleine Commits.
+- Diese README beschreibt die **aktuell implementierte** Bedienung.
+
+Der erste MVP ist funktionsfähig. Die zentrale YAML-Konfiguration, modellabhängige native PDF-Verarbeitung sowie die vollständige Umsetzung der erweiterten Dokumentations- und CLI-Hilferegeln sind noch offen. Web-UI und Proxmox-/Container-Deployment sind weiterhin spätere Ausbaustufen.
+
 ## Warum Python?
 
 Python verbindet hier drei passende Ökosysteme: Dokumentverarbeitung (`pypdf`, `python-docx`), Anki-Dateien (`genanki` und die offizielle `anki`-API) sowie viele KI-Anbieter über `litellm`. Die fachliche Kernlogik ist von Typer, dem CLI-Framework, getrennt. Dadurch kann später eine Web-API, Desktop- oder Web-Oberfläche denselben Kern verwenden.
