@@ -141,12 +141,12 @@ Der Befehl `export` muss geprüfte JSON-Karten ohne erneuten KI-Aufruf in ein ne
 
 ## 7. Codequalität, Dokumentation und Unix-Prinzipien
 
-Die folgenden Regeln gelten für bestehenden Code bei dessen Bearbeitung und verbindlich für jeden neuen oder geänderten Code. Der aktuelle MVP erfüllt sie noch nicht vollständig; sie sind kein nachträglicher Fertigstellungsvermerk.
+Die folgenden Regeln gelten für bestehenden Code bei dessen Bearbeitung und verbindlich für jeden neuen oder geänderten Code. R-050 bis R-052 wurden für den gesamten Bestand umgesetzt und durch Ruff-Docstring- sowie Komplexitätsprüfungen abgesichert.
 
-**R-050 – Never Nesting · muss · offen**
+**R-050 – Never Nesting · muss · umgesetzt**
 Kontrollfluss darf nicht unnötig verschachtelt werden. Verschachtelte Bedingungen und Schleifen müssen durch Guard Clauses, frühe Rückgaben, kleine fachliche Funktionen, Lookup-Tabellen oder klar benannte Strategien aufgelöst werden. Tiefe `if`/`for`/`try`-Pyramiden sind nicht zulässig. Das Auslagern von Komplexität in unklare Hilfsfunktionen gilt nicht als Verbesserung. Kontextmanager und syntaktisch notwendige Blöcke bleiben so flach und klein wie möglich.
 
-**R-051 – Funktions- und Klassendokumentation · muss · offen**
+**R-051 – Funktions- und Klassendokumentation · muss · umgesetzt**
 Jede benannte Funktion, jede Methode und jede Klasse – einschließlich privater Hilfsfunktionen und Testfunktionen – muss einen aussagekräftigen Docstring besitzen. Dieser beschreibt mindestens:
 
 1. Zweck und Verhalten,
@@ -156,7 +156,7 @@ Jede benannte Funktion, jede Methode und jede Klasse – einschließlich private
 
 Bei Klassen werden zusätzlich wesentliche Attribute beziehungsweise Konstruktorparameter dokumentiert. „Keine Parameter“ oder „kein Rückgabewert“ muss nicht redundant ausgeschrieben werden; der Rückgabewert `None` ist jedoch anzugeben, wenn Seiteneffekte der Hauptzweck sind. Docstrings ergänzen Typannotationen, ersetzen sie aber nicht. Anonyme Ein-Zeilen-Lambdas sind nur für triviale Schlüssel/Adapter zulässig; fachliche Logik benötigt eine benannte, dokumentierte Funktion.
 
-**R-052 – Kleine fachliche Einheiten · soll · offen**
+**R-052 – Kleine fachliche Einheiten · soll · umgesetzt**
 Jede Funktion und jedes Modul soll eine klar benennbare Aufgabe erfüllen. Die Unix-Philosophie wird als Gestaltungsprinzip verstanden: kleine, kombinierbare Bausteine, eindeutige Schnittstellen und keine Vermischung von Dokumentzugriff, KI-Logik, Anki-Persistenz und Darstellung. Sie verlangt nicht künstlich viele Programme oder eine stdin/stdout-Schnittstelle für Binärdateien.
 
 **R-053 – CLI-Hilfe · muss · offen**

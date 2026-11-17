@@ -8,7 +8,7 @@ Ein CLI-Werkzeug, das aus lokalen Dokumenten mit KI überprüfbare Karteikarten 
 - [AGENTS.md](./AGENTS.md) enthält die verbindlichen Regeln für Architektur, Never Nesting, Docstrings, Konfiguration, Tests und kleine Commits.
 - Diese README beschreibt die **aktuell implementierte** Bedienung.
 
-Der erste MVP ist funktionsfähig. Die zentrale YAML-Konfiguration, modellabhängige native PDF-Verarbeitung sowie die vollständige Umsetzung der erweiterten Dokumentations- und CLI-Hilferegeln sind noch offen. Web-UI und Proxmox-/Container-Deployment sind weiterhin spätere Ausbaustufen.
+Der erste MVP ist funktionsfähig. Never Nesting, kleine fachliche Einheiten und vollständige Funktions-/Klassendokumentation sind im Bestand umgesetzt und durch Ruff abgesichert. Die zentrale YAML-Konfiguration, modellabhängige native PDF-Verarbeitung sowie die erweiterte CLI-Hilfe sind noch offen. Web-UI und Proxmox-/Container-Deployment sind weiterhin spätere Ausbaustufen.
 
 ## Warum Python?
 
@@ -181,6 +181,8 @@ Dokument → Textextraktion → Chunks → LiteLLM → validierte Karten
 Die Kernfunktionen akzeptieren normale Python-Objekte und sind deshalb ohne CLI aufrufbar. Eine spätere FastAPI-/Web-Schicht muss weder PDF-Verarbeitung noch Anki-Logik duplizieren.
 
 ## Qualität und Tests
+
+Ruff prüft neben Lint und Formatierung auch Modul-, Funktions-, Methoden- und Klassen-Docstrings sowie eine zyklomatische Komplexität von höchstens 8 pro Funktion. Die Projektregeln verlangen flachen Kontrollfluss und kleine fachliche Einheiten.
 
 ```bash
 python -m ruff check src tests

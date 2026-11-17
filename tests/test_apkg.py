@@ -1,7 +1,10 @@
+"""Test APKG creation, data-preserving extension, and package compatibility."""
+
 import sqlite3
 import tempfile
 import zipfile
 from pathlib import Path
+from typing import Any
 
 import genanki
 import zstandard
@@ -10,7 +13,16 @@ from anki_flashcards.apkg import append_apkg, create_apkg, inspect_apkg
 from anki_flashcards.models import Card
 
 
-def open_collection(package: Path):
+def open_collection(package: Path) -> tuple[tempfile.TemporaryDirectory, Any]:
+    """Open the classic collection of a generated test package.
+
+    Args:
+        package: APKG containing an uncompressed collection.anki2 member.
+
+    Returns:
+        The owning temporary directory and an open official Anki collection.
+        The caller must close the collection and clean up the directory.
+    """
     from anki.collection import Collection
 
     directory = tempfile.TemporaryDirectory(prefix="anki-test-")
@@ -22,6 +34,14 @@ def open_collection(package: Path):
 
 
 def test_create_append_and_inspect_preserves_existing_cards(tmp_path: Path) -> None:
+    """Verify extension adds new cards and skips normalized duplicates.
+
+    Args:
+        tmp_path: Pytest-provided isolated directory.
+
+    Returns:
+        None. Assertions inspect counts and persisted front/back fields.
+    """
     package = tmp_path / "biology.apkg"
     create_apkg(
         package,
@@ -57,6 +77,15 @@ def test_create_append_and_inspect_preserves_existing_cards(tmp_path: Path) -> N
 def test_extend_unrelated_standard_deck_without_losing_review_history(
     tmp_path: Path,
 ) -> None:
+    """Verify adding a deck preserves an existing card's review state.
+
+    Args:
+        tmp_path: Pytest-provided isolated directory.
+
+    Returns:
+        None. Assertions compare the original review fields before and after
+        extension and verify the new note's fields and tags.
+    """
     package = tmp_path / "existing.apkg"
     deck = genanki.Deck(123_456_789, "Bestehend")
     deck.add_note(
@@ -103,6 +132,15 @@ def test_extend_unrelated_standard_deck_without_losing_review_history(
 
 
 def test_latest_official_package_is_extended_and_remains_readable(tmp_path: Path) -> None:
+    """Verify a real current Anki export remains readable after extension.
+
+    Args:
+        tmp_path: Pytest-provided isolated directory.
+
+    Returns:
+        None. Assertions cover duplicate filtering, zstd framing, and SQLite
+        card counts.
+    """
     from anki.collection import Collection, ExportAnkiPackageOptions
 
     package = tmp_path / "latest.apkg"
@@ -148,6 +186,14 @@ def test_latest_official_package_is_extended_and_remains_readable(tmp_path: Path
 def test_card_text_is_html_escaped_and_duplicate_check_still_works(
     tmp_path: Path,
 ) -> None:
+    """Verify HTML-sensitive text is escaped without defeating deduplication.
+
+    Args:
+        tmp_path: Pytest-provided isolated directory.
+
+    Returns:
+        None. Assertions inspect duplicate count and stored escaped fields.
+    """
     package = tmp_path / "escaping.apkg"
     create_apkg(
         package,
@@ -172,6 +218,14 @@ def test_card_text_is_html_escaped_and_duplicate_check_still_works(
 
 
 def test_extension_preserves_other_package_entries(tmp_path: Path) -> None:
+    """Verify extension retains an unrelated media archive entry byte for byte.
+
+    Args:
+        tmp_path: Pytest-provided isolated directory.
+
+    Returns:
+        None. The assertion compares the media payload after package rewriting.
+    """
     package = tmp_path / "media.apkg"
     create_apkg(package, "Test", [Card(front="Alt?", back="Antwort")])
     with zipfile.ZipFile(package, "a") as archive:

@@ -1,3 +1,5 @@
+"""Create, extend, and inspect Anki package files without losing deck data."""
+
 import hashlib
 import html
 import os
@@ -22,6 +24,15 @@ ZSTD_MAGIC = b"\x28\xb5\x2f\xfd"
 
 @dataclass(frozen=True)
 class ExportResult:
+    """Summarize the outcome of creating or extending one APKG package.
+
+    Attributes:
+        path: APKG file that was written.
+        deck: Target deck name.
+        added: Number of newly written cards.
+        skipped: Number of duplicate cards not written.
+    """
+
     path: Path
     deck: str
     added: int
@@ -29,6 +40,20 @@ class ExportResult:
 
 
 def create_apkg(path: Path, deck_name: str, cards: list[Card]) -> ExportResult:
+    """Create a new classic APKG with a stable deck ID and note GUIDs.
+
+    Args:
+        path: Destination package whose parent directories may be created.
+        deck_name: Name of the single generated deck.
+        cards: Non-empty validated cards to add to the deck.
+
+    Returns:
+        An export result containing the package path and added-card count.
+
+    Raises:
+        FlashcardError: If no cards are supplied or the package cannot be
+            generated and atomically moved to its destination.
+    """
     if not cards:
         raise FlashcardError("Cannot create an APKG without cards")
     model = _note_model()
@@ -56,6 +81,20 @@ def create_apkg(path: Path, deck_name: str, cards: list[Card]) -> ExportResult:
 
 
 def append_apkg(path: Path, deck_name: str, cards: list[Card]) -> ExportResult:
+    """Extend an APKG through the official Anki API and replace it atomically.
+
+    Args:
+        path: Existing classic or zstd-compressed APKG package.
+        deck_name: Existing or new target deck inside the package.
+        cards: Non-empty cards to add after duplicate filtering.
+
+    Returns:
+        The number of added and skipped cards for the target deck.
+
+    Raises:
+        FlashcardError: If the package is unreadable, incompatible, or cannot
+            be safely written back in its original collection format.
+    """
     if not cards:
         raise FlashcardError("Cannot extend an APKG without cards")
     with tempfile.TemporaryDirectory(prefix="anki-flashcards-") as directory:
@@ -76,6 +115,17 @@ def append_apkg(path: Path, deck_name: str, cards: list[Card]) -> ExportResult:
 
 
 def inspect_apkg(path: Path) -> list[dict[str, Any]]:
+    """List normal decks and their direct card counts in an APKG package.
+
+    Args:
+        path: Existing classic or zstd-compressed APKG package.
+
+    Returns:
+        One dictionary per normal deck with ``id``, ``name``, and ``cards`` keys.
+
+    Raises:
+        FlashcardError: If the package or its collection cannot be opened.
+    """
     with tempfile.TemporaryDirectory(prefix="anki-flashcards-") as directory:
         database = Path(directory) / "collection.anki2"
         _extract_collection(path, database)
@@ -99,6 +149,21 @@ def _append_to_collection(
     deck_name: str,
     cards: list[Card],
 ) -> ExportResult:
+    """Add unique cards to one deck of an open Anki collection.
+
+    Args:
+        collection: Open official Anki collection object.
+        path: Original package path used in the returned result.
+        deck_name: Target deck name.
+        cards: Candidate cards in their preferred insertion order.
+
+    Returns:
+        Added and duplicate counts for the target deck.
+
+    Raises:
+        FlashcardError: If an existing generated note type has incompatible
+            fields.
+    """
     model = collection.models.by_name(MODEL_NAME)
     if model is None:
         model = _new_anki_model(collection)
@@ -121,18 +186,48 @@ def _append_to_collection(
         if key in existing:
             skipped += 1
             continue
-        note = collection.new_note(model)
-        note["Front"] = html.escape(card.front)
-        note["Back"] = html.escape(card.back)
-        note.tags = card.tags
-        note.guid = _stable_guid(deck_name, card.front)
-        collection.add_note(note, deck_id)
+        _add_anki_note(collection, model, deck_id, deck_name, card)
         existing.add(key)
         added += 1
     return ExportResult(path=path, deck=deck_name, added=added, skipped=skipped)
 
 
+def _add_anki_note(
+    collection: Any,
+    model: dict[str, Any],
+    deck_id: int,
+    deck_name: str,
+    card: Card,
+) -> None:
+    """Write one escaped card with a stable GUID through the Anki API.
+
+    Args:
+        collection: Open Anki collection used for persistence.
+        model: Compatible Front/Back note type.
+        deck_id: Numeric target deck identifier.
+        deck_name: Target deck name included in the stable GUID.
+        card: Plain-text card to persist.
+
+    Returns:
+        None. One note and its generated card are added to the collection.
+    """
+    note = collection.new_note(model)
+    note["Front"] = html.escape(card.front)
+    note["Back"] = html.escape(card.back)
+    note.tags = card.tags
+    note.guid = _stable_guid(deck_name, card.front)
+    collection.add_note(note, deck_id)
+
+
 def _new_anki_model(collection: Any) -> dict[str, Any]:
+    """Build the application's Front/Back note type in an open collection.
+
+    Args:
+        collection: Open Anki collection whose model manager supplies defaults.
+
+    Returns:
+        A not-yet-persisted note type with the standard fields, template, and CSS.
+    """
     generated = _note_model().to_json(0, 0)
     model = collection.models.new(MODEL_NAME)
     model["css"] = generated["css"]
@@ -147,6 +242,17 @@ def _new_anki_model(collection: Any) -> dict[str, Any]:
 
 
 def _open_collection(database: Path) -> Any:
+    """Open an extracted SQLite collection using Anki's official Python API.
+
+    Args:
+        database: Temporary SQLite collection path.
+
+    Returns:
+        An open collection that the caller must close.
+
+    Raises:
+        FlashcardError: If Anki cannot read or migrate the collection.
+    """
     try:
         from anki.collection import Collection
 
@@ -156,6 +262,19 @@ def _open_collection(database: Path) -> Any:
 
 
 def _extract_collection(path: Path, database: Path) -> str:
+    """Extract and, when needed, decompress an APKG collection to SQLite.
+
+    Args:
+        path: Existing APKG package.
+        database: Destination for the uncompressed SQLite collection.
+
+    Returns:
+        The collection member name used inside the original package.
+
+    Raises:
+        FlashcardError: If the package is missing, invalid, lacks a supported
+            collection, or contains invalid zstd data.
+    """
     if not path.is_file():
         raise FlashcardError(f"APKG file not found: {path}")
     try:
@@ -179,11 +298,33 @@ def _extract_collection(path: Path, database: Path) -> str:
 
 
 def _checkpoint_collection(database: Path) -> None:
+    """Flush SQLite WAL content into the main collection before packaging.
+
+    Args:
+        database: Closed SQLite collection file to checkpoint.
+
+    Returns:
+        None. The database main file contains all committed changes.
+    """
     with sqlite3.connect(database) as connection:
         connection.execute("PRAGMA wal_checkpoint(TRUNCATE)")
 
 
 def _replace_collection(path: Path, database: Path, collection_name: str) -> None:
+    """Replace an APKG collection while preserving all other archive entries.
+
+    Args:
+        path: Original package to replace atomically.
+        database: Updated uncompressed SQLite collection.
+        collection_name: Original collection member name and format.
+
+    Returns:
+        None. A compressed collection remains zstd-compressed.
+
+    Raises:
+        FlashcardError: If reading, compressing, writing, or replacing the
+            package fails.
+    """
     temporary = path.parent / f".{path.name}.{os.getpid()}.tmp"
     try:
         with zipfile.ZipFile(path) as source, zipfile.ZipFile(temporary, "w") as target:
@@ -202,6 +343,11 @@ def _replace_collection(path: Path, database: Path, collection_name: str) -> Non
 
 
 def _note_model() -> genanki.Model:
+    """Create the shared plain-text Front/Back genanki note model.
+
+    Returns:
+        A model with two fields, one card template, and whitespace-preserving CSS.
+    """
     return genanki.Model(
         model_id=MODEL_ID,
         name=MODEL_NAME,
@@ -222,13 +368,38 @@ def _note_model() -> genanki.Model:
 
 
 def _stable_id(value: str) -> int:
+    """Derive a repeatable positive Anki deck identifier from a string.
+
+    Args:
+        value: Stable input such as a qualified deck name.
+
+    Returns:
+        An integer between 1 and 2,000,000,000 inclusive.
+    """
     digest = hashlib.sha256(value.encode()).digest()
     return int.from_bytes(digest[:4], "big") % 2_000_000_000 + 1
 
 
 def _normalize_front(front: str) -> str:
+    """Normalize question text for case- and whitespace-insensitive comparison.
+
+    Args:
+        front: Plain-text question from a new or existing note.
+
+    Returns:
+        Case-folded text with each whitespace run reduced to one space.
+    """
     return " ".join(front.casefold().split())
 
 
 def _stable_guid(deck_name: str, front: str) -> str:
+    """Derive a stable Anki note GUID from deck and normalized question.
+
+    Args:
+        deck_name: Target deck name.
+        front: Plain-text question.
+
+    Returns:
+        A deterministic GUID accepted by genanki and Anki.
+    """
     return genanki.guid_for(deck_name, _normalize_front(front))

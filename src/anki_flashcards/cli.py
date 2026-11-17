@@ -1,3 +1,5 @@
+"""Expose document generation, JSON export, and deck inspection as a CLI."""
+
 import os
 from pathlib import Path
 
@@ -54,6 +56,16 @@ def generate(
         task = progress.add_task("Generating cards with AI...", total=None)
 
         def update(completed: int, total: int, count: int) -> None:
+            """Render the latest chunk and unique-card count in the progress UI.
+
+            Args:
+                completed: Number of processed document chunks.
+                total: Total document chunks in this generation run.
+                count: Unique cards accumulated so far.
+
+            Returns:
+                None. The Rich progress task is updated in place.
+            """
             progress.update(
                 task,
                 completed=completed,
@@ -113,6 +125,19 @@ def list_decks(
 
 
 def _validate_output(output: Path, extend: bool) -> None:
+    """Validate APKG extension and create-versus-extend file semantics.
+
+    Args:
+        output: Requested destination package path.
+        extend: Whether an existing package must be extended.
+
+    Returns:
+        None when the requested operation is valid.
+
+    Raises:
+        FlashcardError: If the suffix is wrong or the output existence does
+            not match the requested operation.
+    """
     if output.suffix.casefold() != ".apkg":
         raise FlashcardError("Output path must end in .apkg")
     if extend and not output.is_file():
@@ -122,6 +147,20 @@ def _validate_output(output: Path, extend: bool) -> None:
 
 
 def _write_deck(output: Path, deck: str, cards: list[Card], extend: bool) -> ExportResult:
+    """Dispatch a validated write request to APKG creation or extension.
+
+    Args:
+        output: Destination APKG path.
+        deck: Non-empty target deck name.
+        cards: Validated cards to write.
+        extend: Whether to preserve and extend an existing package.
+
+    Returns:
+        The export result reported to the user.
+
+    Raises:
+        FlashcardError: If the deck name is empty or package writing fails.
+    """
     if not deck.strip():
         raise FlashcardError("Deck name must not be empty")
     if extend:
@@ -130,6 +169,15 @@ def _write_deck(output: Path, deck: str, cards: list[Card], extend: bool) -> Exp
 
 
 def _print_result(result: ExportResult, json_output: Path | None) -> None:
+    """Print export counts, package path, and optional JSON path.
+
+    Args:
+        result: Completed APKG export summary.
+        json_output: Optional intermediate JSON file that was written.
+
+    Returns:
+        None. Human-readable output is written to standard output.
+    """
     console.print(
         f"[green]Fertig:[/green] {result.added} Karten in '{result.deck}' "
         f"→ {result.path} ({result.skipped} Duplikate übersprungen)"
@@ -139,6 +187,15 @@ def _print_result(result: ExportResult, json_output: Path | None) -> None:
 
 
 def run() -> None:
+    """Run the CLI and present expected application failures without tracebacks.
+
+    Returns:
+        None on successful command completion.
+
+    Raises:
+        typer.Exit: With status 1 after printing an expected FlashcardError to
+            standard error.
+    """
     load_dotenv()
     try:
         app()
