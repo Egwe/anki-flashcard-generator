@@ -463,6 +463,51 @@ def test_extend_requires_existing_output(tmp_path: Path) -> None:
     assert isinstance(result.exception, FlashcardError)
 
 
+def test_installed_cli_error_has_no_traceback(tmp_path: Path) -> None:
+    """Verify the real console entry point suppresses implementation tracebacks.
+
+    Args:
+        tmp_path: Pytest-provided isolated directory.
+
+    Returns:
+        None. Assertions inspect exit status and standard streams from a
+        subprocess using the installed anki-flashcards executable.
+    """
+    import os
+    import subprocess
+    import sys
+
+    source = tmp_path / "source.txt"
+    source.write_text("Ein Fakt", encoding="utf-8")
+    environment = os.environ.copy()
+    environment["PYTHONPATH"] = str(Path(__file__).parents[1] / "src")
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "anki_flashcards",
+            "generate",
+            str(source),
+            "--output",
+            str(tmp_path / "missing.apkg"),
+            "--model",
+            "ollama/test",
+            "--extend",
+        ],
+        env=environment,
+        text=True,
+        capture_output=True,
+        timeout=30,
+        check=False,
+    )
+
+    assert result.returncode == 1
+    assert "Cannot extend missing APKG" in result.stderr
+    assert "Traceback" not in result.stderr
+    assert result.stdout == ""
+
+
 def test_run_prints_expected_errors_without_a_traceback(monkeypatch, capsys) -> None:
     """Verify expected failures are printed to stderr without a traceback.
 
@@ -473,8 +518,6 @@ def test_run_prints_expected_errors_without_a_traceback(monkeypatch, capsys) -> 
     Returns:
         None. Assertions inspect the emitted error and Typer exit exception.
     """
-    import typer
-
     from anki_flashcards.cli import run
 
     def fail() -> None:
@@ -491,7 +534,7 @@ def test_run_prints_expected_errors_without_a_traceback(monkeypatch, capsys) -> 
     monkeypatch.setattr("anki_flashcards.cli.app", fail)
     monkeypatch.setattr("anki_flashcards.cli.load_dotenv", lambda: None)
 
-    with pytest.raises(typer.Exit):
+    with pytest.raises(SystemExit):
         run()
 
     captured = capsys.readouterr()
