@@ -199,7 +199,7 @@ Stand der Dokumentationsprüfung: **2026-11-17**.
 
 | Provider | Freigegebene Modelle und Snapshots | PDF-Fähigkeit | Strukturierte Ausgabe | Grenzen/Status |
 | --- | --- | --- | --- | --- |
-| OpenAI | `gpt-4o-mini`, `gpt-4o`, `gpt-4.1`; nur datierte Snapshots derselben Basismodelle | Responses API `input_file` mit Datei-ID; Text und Seitenbilder | `responses.parse` mit Pydantic `CardBatch` | Datei kleiner als 50 MiB; Modellkontextfenster zusätzlich beachten; Modelle derzeit von OpenAI als Deprecated markiert |
+| OpenAI | `gpt-4o-mini`, `gpt-4o`, `gpt-4.1`; nur datierte Snapshots derselben Basismodelle, z. B. `gpt-4o-mini-2024-07-18` | Responses API `input_file` mit Datei-ID; Text und Seitenbilder | `responses.parse` mit Pydantic `CardBatch` | Datei kleiner als 50 MiB; Modellkontextfenster zusätzlich beachten; Modelle derzeit von OpenAI als Deprecated markiert |
 
 Keine pauschale Freigabe für andere OpenAI-Modelle oder Audio-/Realtime-Varianten: Diese benötigen eine neue Prüfung und einen eigenen Eintrag. Anthropic, Gemini, Moonshot und Ollama verwenden bis zu ihrer eigenen belegten Implementierung weiterhin `local`.
 
@@ -213,6 +213,8 @@ Quellen:
 - [LiteLLM PDF Input](https://docs.litellm.ai/docs/completion/document_understanding) – Providerübergreifender Hintergrund; der native Adapter verwendet direkt das offizielle OpenAI-SDK
 
 ### Datenschutz und Ablauf
+
+Vor dem Upload prüft der Adapter zusätzlich die Profil-`options`: Sie gehen im nativen Modus an `responses.parse` der OpenAI Responses API, nicht an LiteLLM. Deshalb heißt die Ausgabegrenze dort `max_output_tokens` statt `max_tokens`. Unbekannte oder vom Programm selbst gesetzte Optionen (`model`, `input`, `instructions`, `text_format`, `store`, `timeout`) werden mit einer klaren Meldung abgelehnt, bevor die Datei übertragen wird.
 
 Der Adapter lädt mit `purpose=user_data`, fordert dieselbe validierte `CardBatch`-Struktur an und setzt `store=false` bei der Responses-Anfrage. Anschließend wird die hochgeladene Datei über die Files-API gelöscht – auch nach einem Anfragefehler. Schlägt die Löschung fehl, erscheint eine Warnung mit Datei-ID zur manuellen Bereinigung.
 
