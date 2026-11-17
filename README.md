@@ -6,7 +6,8 @@ Ein CLI-Werkzeug, das aus lokalen Dokumenten mit KI überprüfbare Karteikarten 
 
 - [requirements.md](./requirements.md) bündelt alle ursprünglichen und neuen Anforderungen, ihren Status und die Abnahmekriterien.
 - [AGENTS.md](./AGENTS.md) enthält die verbindlichen Regeln für Architektur, Never Nesting, Docstrings, Konfiguration, Tests und kleine Commits.
-- Diese README beschreibt die **aktuell implementierte** Bedienung.
+- Diese README beschreibt kompakt die **aktuell implementierte** Bedienung.
+- [docs/benutzerhandbuch.html](./docs/benutzerhandbuch.html) ist das ausführliche Benutzerhandbuch mit einfachen Erklärungen, allen Befehlen und Optionen, Suchfunktion und kopierbaren Beispielen. Öffne die Datei direkt in einem Browser; kein Server ist erforderlich.
 
 Der erste MVP ist funktionsfähig. Never Nesting, kleine fachliche Einheiten und vollständige Funktions-/Klassendokumentation sind im Bestand umgesetzt und durch Ruff abgesichert. Die zentrale YAML-Konfiguration ist einschließlich Modellprofilen, Prioritäten, Pfaden und Diagnose vollständig in die CLI integriert. Native PDF-Verarbeitung ist für ausdrücklich freigegebene OpenAI-Modelle implementiert; lokale Extraktion bleibt Standard. Web-UI und Proxmox-/Container-Deployment sind weiterhin spätere Ausbaustufen.
 
