@@ -519,12 +519,13 @@ def run() -> None:
         None on successful command completion.
 
     Raises:
-        typer.Exit: With status 1 after printing an expected FlashcardError to
-            standard error.
+        SystemExit: With status 1 after printing an expected FlashcardError to
+            standard error. Exception chaining is suppressed at the CLI boundary
+            so users do not see an implementation traceback.
     """
     load_dotenv()
     try:
         app()
     except FlashcardError as error:
         error_console.print(f"[red]Fehler:[/red] {error}")
-        raise typer.Exit(1) from error
+        raise SystemExit(1) from None

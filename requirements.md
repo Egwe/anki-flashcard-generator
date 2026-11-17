@@ -182,7 +182,7 @@ README, CLI-Hilfe, Anforderungen, Beispielkonfiguration und tatsächliches Verha
 
 ## 8. Tests und schrittweise Entwicklung
 
-**R-060 – Verhaltensbezogene Tests · muss · umgesetzt und fortlaufend offen**
+**R-060 – Verhaltensbezogene Tests · muss · umgesetzt und dauerhaft fortzuführen**
 Jede neue oder geänderte Verhalten muss durch fokussierte Tests abgesichert werden. Zu prüfen sind der erfolgreiche Ablauf, relevante Grenzwerte, ungültige Eingaben und nachweisbare Regressionen. Bestehende Tests müssen erweitert oder angepasst werden, wenn sich beabsichtigt das Verhalten ändert; reine Implementierungs- oder Konstantenwiederholungen zählen nicht als sinnvoller Test.
 
 **R-061 – Testabdeckung der Kernrisiken · muss · umgesetzt**
