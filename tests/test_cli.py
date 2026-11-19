@@ -61,11 +61,14 @@ def test_help_documents_usage_defaults_files_and_examples(command: list[str]) ->
         assert "Default: 180" in normalized
         assert "PDF, DOCX, HTML, Markdown, or UTF-8" in normalized
         assert "With --extend, it must already exist" in normalized
+        assert "--subdecks" in normalized and "--no-subdecks" in normalized
+        assert "DECK::chapter" in normalized
     if command == ["export"]:
         assert "--deck" in normalized and "-d" in normalized
         assert "required unless generation.deck is configured" in normalized
         assert "No AI request is made" in normalized
         assert "must be a new .apkg file" in normalized
+        assert "DECK::subdeck" in normalized
     if command == ["decks"]:
         assert "never modified" in normalized
         assert "zstd-compressed" in normalized
@@ -602,3 +605,169 @@ def test_run_prints_expected_errors_without_a_traceback(monkeypatch, capsys) -> 
     assert captured.out == ""
     assert "Ungültiges Paket" in captured.err
     assert "Traceback" not in captured.err
+
+
+def test_generate_subdecks_extend_sends_existing_context(tmp_path: Path, monkeypatch) -> None:
+    """Verify subdeck mode reads existing subdecks and writes chapter subdecks.
+
+    Args:
+        tmp_path: Pytest-provided isolated directory.
+        monkeypatch: Pytest fixture used to replace card generation.
+
+    Returns:
+        None. Assertions inspect the passed context, output, and package decks.
+    """
+    from anki_flashcards.apkg import create_apkg, inspect_apkg
+    from anki_flashcards.models import Card
+
+    source = tmp_path / "kapitel-2.txt"
+    source.write_text("Netzwerke bestehen aus Knoten.", encoding="utf-8")
+    output = tmp_path / "el1.apkg"
+    create_apkg(output, "EL1", [Card(front="Was ist Strom?", back="Fluss", subdeck="Grundlagen")])
+    captured = {}
+
+    def fake_generate(document, settings, **kwargs):
+        """Capture the subdeck context and return a card for a new subdeck.
+
+        Args:
+            document: Extracted source document supplied by the command.
+            settings: Provider settings constructed from CLI options.
+            **kwargs: Effective generation options including subdecks.
+
+        Returns:
+            One card assigned to a new chapter subdeck.
+        """
+        captured["subdecks"] = kwargs["subdecks"]
+        return [Card(front="Was ist ein Knoten?", back="Verbindung", subdeck="Netzwerke")]
+
+    monkeypatch.setattr("anki_flashcards.cli.generate_cards", fake_generate)
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            str(source),
+            "--output",
+            str(output),
+            "--deck",
+            "EL1",
+            "--model",
+            "ollama/test",
+            "--extend",
+            "--subdecks",
+        ],
+        env={"COLUMNS": "200"},
+    )
+
+    assert result.exit_code == 0, result.output
+    context = captured["subdecks"]
+    assert context.parent == "EL1"
+    assert [subdeck.name for subdeck in context.existing] == ["Grundlagen"]
+    assert context.existing[0].examples == ("Was ist Strom?",)
+    assert "1 vorhandene Unterdecks" in result.output
+    assert "EL1::Netzwerke: 1" in result.output
+    names = {row["name"] for row in inspect_apkg(output)}
+    assert {"EL1::Grundlagen", "EL1::Netzwerke"} <= names
+
+
+@pytest.mark.parametrize(("flag", "expected"), [(["--subdecks"], "EL1"), ([], None)])
+def test_generate_passes_subdeck_context_only_when_enabled(
+    tmp_path: Path, monkeypatch, flag: list[str], expected: str | None
+) -> None:
+    """Verify a new package gets an empty context and normal mode gets none.
+
+    Args:
+        tmp_path: Pytest-provided isolated directory.
+        monkeypatch: Pytest fixture used to replace card generation.
+        flag: Optional subdeck CLI flag.
+        expected: Expected parent deck of the context, or None.
+
+    Returns:
+        None. Assertions inspect the context passed to generation.
+    """
+    from anki_flashcards.models import Card
+
+    source = tmp_path / "vl.txt"
+    source.write_text("Ein Fakt.", encoding="utf-8")
+    captured = {}
+
+    def fake_generate(document, settings, **kwargs):
+        """Capture the subdeck context and return one card.
+
+        Args:
+            document: Extracted source document supplied by the command.
+            settings: Provider settings constructed from CLI options.
+            **kwargs: Effective generation options including subdecks.
+
+        Returns:
+            One deterministic card.
+        """
+        captured["subdecks"] = kwargs["subdecks"]
+        return [Card(front="F?", back="A")]
+
+    monkeypatch.setattr("anki_flashcards.cli.generate_cards", fake_generate)
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            str(source),
+            "-o",
+            str(tmp_path / "new.apkg"),
+            "-d",
+            "EL1",
+            "-m",
+            "ollama/test",
+            *flag,
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    context = captured["subdecks"]
+    assert (context.parent if context else None) == expected
+    assert context is None or context.existing == ()
+
+
+def test_export_places_json_subdecks_below_deck(tmp_path: Path) -> None:
+    """Verify export writes cards with a JSON subdeck into Deck::subdeck.
+
+    Args:
+        tmp_path: Pytest-provided isolated directory.
+
+    Returns:
+        None. Assertions inspect the exported deck names.
+    """
+    from anki_flashcards.apkg import inspect_apkg
+    from anki_flashcards.models import Card, save_cards
+
+    cards_file = tmp_path / "cards.json"
+    save_cards(
+        cards_file,
+        [Card(front="A?", back="1", subdeck="Grundlagen"), Card(front="B?", back="2")],
+        deck="EL1",
+    )
+    output = tmp_path / "el1.apkg"
+
+    result = runner.invoke(app, ["export", str(cards_file), "-o", str(output), "-d", "EL1"])
+
+    assert result.exit_code == 0, result.output
+    counts = {row["name"]: row["cards"] for row in inspect_apkg(output)}
+    assert counts["EL1::Grundlagen"] == 1
+    assert counts["EL1"] == 1
+
+
+def test_config_show_reports_subdeck_mode(tmp_path: Path) -> None:
+    """Verify diagnostics show the effective subdeck mode and its source.
+
+    Args:
+        tmp_path: Pytest-provided isolated directory.
+
+    Returns:
+        None. Assertions inspect the JSON diagnostic output.
+    """
+    result = runner.invoke(
+        app, ["config", "show", "source.txt", "-o", str(tmp_path / "x.apkg"), "--subdecks"]
+    )
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    assert payload["subdecks"] is True
+    assert payload["sources"]["subdecks"] == "cli"

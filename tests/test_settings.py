@@ -273,3 +273,30 @@ def test_diagnostics_hide_secret_values_and_include_sources(tmp_path: Path, monk
     assert diagnostics["sources"]["pdf_mode"] == "config"
     assert diagnostics["provider_options"] == ["temperature"]
     assert "never-print-this-key" not in serialized
+
+
+def test_subdeck_mode_follows_default_yaml_and_cli_precedence(tmp_path: Path) -> None:
+    """Verify subdeck mode is off by default and CLI overrides YAML both ways.
+
+    Args:
+        tmp_path: Isolated directory used as YAML location.
+
+    Returns:
+        None. Assertions inspect effective values, sources, and diagnostics.
+    """
+    base = {"input_file": Path("source.txt"), "output": Path("out.apkg")}
+    yaml_on = AppConfig(generation=GenerationConfig(subdecks=True))
+    config_path = tmp_path / "config.yaml"
+
+    default = resolve_generate_settings(base, AppConfig(), None)
+    from_yaml = resolve_generate_settings(base, yaml_on, config_path)
+    cli_off = resolve_generate_settings({**base, "subdecks": False}, yaml_on, config_path)
+    cli_on = resolve_generate_settings({**base, "subdecks": True}, AppConfig(), None)
+
+    assert default.subdecks is False
+    assert default.origins["subdecks"] == "built-in"
+    assert from_yaml.subdecks is True
+    assert from_yaml.origins["subdecks"] == "config"
+    assert cli_off.subdecks is False
+    assert cli_off.origins["subdecks"] == "cli"
+    assert configuration_diagnostics(cli_on, None)["subdecks"] is True

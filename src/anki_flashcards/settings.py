@@ -59,6 +59,7 @@ class GenerateSettings:
         chunk_size: Maximum source characters per local-text request.
         ai: Provider model, credentials, endpoint, timeout, and options.
         pdf_mode: Effective local or native PDF processing mode.
+        subdecks: Whether the AI assigns cards to subdecks below ``deck``.
         profile_name: Selected profile name or None for direct model settings.
         origins: Precedence-layer label for every effective scalar setting.
     """
@@ -74,6 +75,7 @@ class GenerateSettings:
     chunk_size: int
     ai: AISettings
     pdf_mode: PDFMode
+    subdecks: bool
     profile_name: str | None
     origins: dict[str, str] = field(default_factory=dict)
 
@@ -176,6 +178,7 @@ def resolve_generate_settings(
         chunk_size=cli.get("chunk_size", config.generation.chunk_size),
         ai=ai,
         pdf_mode=pdf_mode,
+        subdecks=cli.get("subdecks", config.generation.subdecks),
         profile_name=profile_name,
         origins=origins,
     )
@@ -542,6 +545,7 @@ def _generate_origins(
         ).source.value,
         "chunk_size": _source_for_option(cli, "chunk_size", config_path is not None).source.value,
         "pdf_mode": _pdf_mode_origin(cli, config, profile_name).source.value,
+        "subdecks": _source_for_option(cli, "subdecks", config_path is not None).source.value,
         "json_output": _source_for_option(
             cli, "json_output", config.generation.json_output is not None
         ).source.value,
@@ -575,6 +579,7 @@ def configuration_diagnostics(
         "instructions": settings.instructions,
         "chunk_size": settings.chunk_size,
         "pdf_mode": settings.pdf_mode.value,
+        "subdecks": settings.subdecks,
         "model": settings.ai.model,
         "api_base": settings.ai.api_base,
         "timeout": settings.ai.timeout,
