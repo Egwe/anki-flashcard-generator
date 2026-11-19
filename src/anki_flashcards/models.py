@@ -10,6 +10,8 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from anki_flashcards.errors import FlashcardError
 
+SUBDECK_MAX_LENGTH = 100
+
 
 class Card(BaseModel):
     """Represent one plain-text question-answer flashcard.
@@ -18,6 +20,8 @@ class Card(BaseModel):
         front: Self-contained question shown on the front of the card.
         back: Concise answer shown on the back of the card.
         tags: Optional Anki tags; whitespace inside a tag is not allowed.
+        subdeck: Optional single-level subdeck below the target deck, at most
+            100 characters; None keeps the card in the target deck itself.
     """
 
     model_config = ConfigDict(str_strip_whitespace=True)
@@ -25,6 +29,7 @@ class Card(BaseModel):
     front: str = Field(min_length=1, max_length=2_000)
     back: str = Field(min_length=1, max_length=20_000)
     tags: list[str] = Field(default_factory=list, max_length=20)
+    subdeck: str | None = Field(default=None, max_length=SUBDECK_MAX_LENGTH)
 
     @field_validator("tags")
     @classmethod
@@ -45,6 +50,40 @@ class Card(BaseModel):
             raise ValueError("Anki tags must not contain whitespace")
         return normalized
 
+    @field_validator("subdeck")
+    @classmethod
+    def validate_subdeck(cls, subdeck: str | None) -> str | None:
+        """Normalize a subdeck name and enforce a single deck level.
+
+        Args:
+            subdeck: Candidate subdeck name supplied by a model or JSON file.
+
+        Returns:
+            The name with collapsed whitespace, or None for a missing or blank
+            name.
+
+        Raises:
+            ValueError: If the name contains the Anki deck separator ``::``.
+        """
+        if subdeck is None:
+            return None
+        normalized = " ".join(subdeck.split())
+        if not normalized:
+            return None
+        if "::" in normalized:
+            raise ValueError("A subdeck name must be a single level without '::'")
+        return normalized
+
+
+class SubdeckCard(Card):
+    """Represent a model-generated card that must name its chapter subdeck.
+
+    Attributes:
+        subdeck: Required single-level subdeck name of 1 to 100 characters.
+    """
+
+    subdeck: str = Field(min_length=1, max_length=SUBDECK_MAX_LENGTH)
+
 
 class CardBatch(BaseModel):
     """Wrap the list of cards returned by an AI provider or stored in JSON.
@@ -54,6 +93,28 @@ class CardBatch(BaseModel):
     """
 
     cards: list[Card]
+
+
+class SubdeckCardBatch(CardBatch):
+    """Response schema for subdeck mode in which every card names a subdeck.
+
+    Attributes:
+        cards: Validated cards with a required subdeck name.
+    """
+
+    cards: list[SubdeckCard]
+
+
+def normalize_key(text: str) -> str:
+    """Build a case- and whitespace-insensitive comparison key.
+
+    Args:
+        text: Question or subdeck name to compare.
+
+    Returns:
+        Case-folded text with each whitespace run reduced to one space.
+    """
+    return " ".join(text.casefold().split())
 
 
 def save_cards(
@@ -73,11 +134,12 @@ def save_cards(
 
     Returns:
         None. The destination file is replaced only after serialization succeeds.
+        Cards without a subdeck are written without a ``subdeck`` key.
     """
     payload: dict[str, Any] = {
         "schema_version": 1,
         "deck": deck,
-        "cards": [card.model_dump() for card in cards],
+        "cards": [card.model_dump(exclude_none=True) for card in cards],
     }
     if source is not None:
         payload["source"] = source
@@ -136,7 +198,7 @@ def deduplicate_cards(cards: list[Card], limit: int = 0) -> list[Card]:
     unique: list[Card] = []
     seen: set[str] = set()
     for card in cards:
-        key = " ".join(card.front.casefold().split())
+        key = normalize_key(card.front)
         if key in seen:
             continue
         seen.add(key)

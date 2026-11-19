@@ -6,7 +6,7 @@ import pytest
 from pydantic import ValidationError
 
 from anki_flashcards.errors import FlashcardError
-from anki_flashcards.models import Card, deduplicate_cards, load_cards, save_cards
+from anki_flashcards.models import Card, SubdeckCard, deduplicate_cards, load_cards, save_cards
 
 
 def test_card_json_round_trip(tmp_path: Path) -> None:
@@ -65,3 +65,42 @@ def test_deduplicate_is_case_and_whitespace_insensitive() -> None:
 
     assert deduplicate_cards(cards, limit=1) == [cards[0]]
     assert deduplicate_cards(cards) == [cards[0], cards[2]]
+
+
+def test_subdeck_names_are_normalized_and_validated() -> None:
+    """Verify subdeck names are single-level, bounded, and whitespace-normalized.
+
+    Returns:
+        None. Assertions cover optional, required, valid, and invalid names.
+    """
+    assert Card(front="F?", back="A").subdeck is None
+    assert Card(front="F?", back="A", subdeck="   ").subdeck is None
+    assert SubdeckCard(front="F?", back="A", subdeck="  Kapitel   1 ").subdeck == "Kapitel 1"
+    for invalid in ("", "   ", "EL1::Kapitel 1", "x" * 101):
+        with pytest.raises(ValidationError):
+            SubdeckCard(front="F?", back="A", subdeck=invalid)
+
+
+def test_subdeck_json_round_trip_omits_missing_subdecks(tmp_path: Path) -> None:
+    """Verify JSON keeps subdecks and leaves cards without subdeck unchanged.
+
+    Args:
+        tmp_path: Pytest-provided isolated directory.
+
+    Returns:
+        None. Assertions inspect the raw JSON and the loaded cards.
+    """
+    import json
+
+    path = tmp_path / "cards.json"
+    expected = [
+        Card(front="A?", back="1", subdeck="Kapitel 1"),
+        Card(front="B?", back="2"),
+    ]
+    save_cards(path, expected, deck="EL1")
+    raw = json.loads(path.read_text(encoding="utf-8"))
+
+    assert raw["schema_version"] == 1
+    assert raw["cards"][0]["subdeck"] == "Kapitel 1"
+    assert "subdeck" not in raw["cards"][1]
+    assert load_cards(path) == expected

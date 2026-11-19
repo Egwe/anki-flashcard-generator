@@ -588,3 +588,41 @@ def test_real_openai_sdk_against_local_native_server(tmp_path: Path) -> None:
     assert ("POST", "/v1/files") in calls
     assert ("POST", "/v1/responses") in calls
     assert ("DELETE", "/v1/files/file-local-test") in calls
+
+
+def test_native_subdeck_mode_uses_rules_context_and_schema(tmp_path: Path, monkeypatch) -> None:
+    """Verify native processing applies the same subdeck strategy as local mode.
+
+    Args:
+        tmp_path: Pytest-provided isolated directory.
+        monkeypatch: Pytest fixture replacing the SDK client factory.
+
+    Returns:
+        None. Assertions inspect instructions, prompt, schema, and assignments.
+    """
+    from anki_flashcards.models import SubdeckCardBatch
+    from anki_flashcards.subdecks import ExistingSubdeck, SubdeckContext
+
+    batch = SubdeckCardBatch.model_validate(
+        {"cards": [{"front": "Frage?", "back": "Antwort", "subdeck": "grundlagen"}]}
+    )
+    client = FakeOpenAIClient(response=SimpleNamespace(output_parsed=batch))
+    monkeypatch.setattr("anki_flashcards.native_pdf._openai_client", lambda settings: client)
+    context = SubdeckContext(
+        parent="EL1", existing=(ExistingSubdeck("Grundlagen", ("Was ist Strom?",)),)
+    )
+
+    cards = generate_native_cards(
+        _native_pdf(tmp_path),
+        AISettings(model="openai/gpt-4o", api_key="test"),
+        subdecks=context,
+    )
+
+    request = client.requests[0]
+    prompt = request["input"][0]["content"][1]["text"]
+    assert request["text_format"] is SubdeckCardBatch
+    assert '"subdeck"' in request["instructions"]
+    assert "<parent_deck>EL1</parent_deck>" in prompt
+    assert "Was ist Strom?" in prompt
+    assert [card.subdeck for card in cards] == ["Grundlagen"]
+    assert client.deleted == ["file-test-123"]
