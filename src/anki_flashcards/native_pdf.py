@@ -12,6 +12,7 @@ from pydantic import ValidationError
 from anki_flashcards.ai import SYSTEM_PROMPT, AISettings
 from anki_flashcards.errors import FlashcardError
 from anki_flashcards.models import Card, CardBatch, deduplicate_cards
+from anki_flashcards.subdecks import SubdeckAssigner, SubdeckContext
 
 OPENAI_FILE_SIZE_LIMIT = 50 * 1024 * 1024
 OPENAI_MODEL_DOCUMENTATION = {
@@ -58,6 +59,7 @@ class NativePDFAdapter(Protocol):
         limit: int,
         language: str,
         instructions: str,
+        subdecks: SubdeckAssigner | None = None,
     ) -> NativePDFResult:
         """Upload one PDF and return validated cards from a native provider.
 
@@ -67,6 +69,8 @@ class NativePDFAdapter(Protocol):
             limit: Maximum cards; zero requests all useful source facts.
             language: Natural language for card content.
             instructions: Additional user guidance.
+            subdecks: Subdeck strategy supplying rules, context, and schema;
+                None means normal mode without subdecks.
 
         Returns:
             Validated cards and upload-deletion status.
@@ -106,6 +110,7 @@ def generate_native_cards(
     language: str = "Deutsch",
     instructions: str = "",
     adapter: NativePDFAdapter | None = None,
+    subdecks: SubdeckContext | None = None,
 ) -> list[Card]:
     """Generate cards with a verified native adapter without local extraction.
 
@@ -116,9 +121,12 @@ def generate_native_cards(
         language: Natural language for generated questions and answers.
         instructions: Additional prompt guidance.
         adapter: Optional test adapter; production uses OpenAINativePDFAdapter.
+        subdecks: Optional parent deck and known subdecks; enables the same
+            subdeck mode as local generation.
 
     Returns:
-        Validated unique cards, subject to the requested positive limit.
+        Validated unique cards, subject to the requested positive limit. In
+        subdeck mode every card carries a unified subdeck name.
 
     Raises:
         FlashcardError: If the input is not a supported PDF, the model lacks a
@@ -127,14 +135,16 @@ def generate_native_cards(
     if path.suffix.casefold() != ".pdf":
         raise FlashcardError("Native document processing currently supports PDF files only")
     selected_adapter = adapter or OpenAINativePDFAdapter()
+    assigner = SubdeckAssigner(subdecks)
     result = selected_adapter.generate(
         path,
         settings,
         limit=limit,
         language=language,
         instructions=instructions,
+        subdecks=assigner,
     )
-    return deduplicate_cards(result.cards, limit)
+    return deduplicate_cards(assigner.assign(result.cards), limit)
 
 
 class OpenAINativePDFAdapter:
@@ -148,6 +158,7 @@ class OpenAINativePDFAdapter:
         limit: int,
         language: str,
         instructions: str,
+        subdecks: SubdeckAssigner | None = None,
     ) -> NativePDFResult:
         """Upload a PDF, request a card batch, and delete the uploaded file.
 
@@ -157,6 +168,8 @@ class OpenAINativePDFAdapter:
             limit: Maximum cards; zero means no arbitrary numeric cap.
             language: Natural language for generated cards.
             instructions: Additional prompt guidance.
+            subdecks: Subdeck strategy supplying rules, context, and schema;
+                None means normal mode without subdecks.
 
         Returns:
             Validated cards and whether uploaded-file deletion succeeded.
@@ -184,6 +197,7 @@ class OpenAINativePDFAdapter:
                 limit=limit,
                 language=language,
                 instructions=instructions,
+                subdecks=subdecks or SubdeckAssigner(None),
             )
         finally:
             deleted = _delete_uploaded_file(client, uploaded_id)
@@ -334,6 +348,7 @@ def _request_openai_batch(
     limit: int,
     language: str,
     instructions: str,
+    subdecks: SubdeckAssigner,
 ) -> CardBatch:
     """Request and validate structured cards for an uploaded PDF.
 
@@ -345,6 +360,7 @@ def _request_openai_batch(
         limit: Maximum cards; zero requests all useful facts.
         language: Natural language for card content.
         instructions: Additional prompt guidance.
+        subdecks: Subdeck strategy supplying rules, context, and schema.
 
     Returns:
         Validated card batch parsed by the official SDK.
@@ -353,11 +369,15 @@ def _request_openai_batch(
         FlashcardError: If the response is missing, refused, or invalid.
     """
     target = f"at most {limit} cards" if limit else "all useful cards supported by the PDF"
-    prompt = f"Create {target} in {language}. {instructions}"
+    prompt = "\n\n".join(
+        part
+        for part in (f"Create {target} in {language}. {instructions}", subdecks.prompt_section())
+        if part
+    )
     try:
         response = client.responses.parse(
             model=model,
-            instructions=SYSTEM_PROMPT,
+            instructions=subdecks.system_prompt(SYSTEM_PROMPT),
             input=[
                 {
                     "role": "user",
@@ -367,7 +387,7 @@ def _request_openai_batch(
                     ],
                 }
             ],
-            text_format=CardBatch,
+            text_format=subdecks.response_model,
             store=False,
             timeout=settings.timeout,
             **settings.options,

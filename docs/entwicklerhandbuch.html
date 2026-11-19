@@ -315,6 +315,7 @@
       <button class="filter-button" type="button" data-filter="documents" aria-pressed="false">documents</button>
       <button class="filter-button" type="button" data-filter="ai" aria-pressed="false">ai</button>
       <button class="filter-button" type="button" data-filter="native_pdf" aria-pressed="false">native_pdf</button>
+      <button class="filter-button" type="button" data-filter="subdecks" aria-pressed="false">subdecks</button>
       <button class="filter-button" type="button" data-filter="models" aria-pressed="false">models</button>
       <button class="filter-button" type="button" data-filter="apkg" aria-pressed="false">apkg</button>
       <button class="filter-button" type="button" data-filter="errors" aria-pressed="false">errors</button>
@@ -326,7 +327,7 @@
       <div class="section-heading">
         <p class="eyebrow">Das große Bild</p>
         <h2>Wie ist das Projekt aufgebaut?</h2>
-        <p>Das Projekt ist ein Python-Paket <code>anki_flashcards</code> im <code>src</code>-Layout. Es hat genau einen Einstiegspunkt: Der Konsolenbefehl <code>anki-flashcards</code> ist in <code>pyproject.toml</code> auf <code>anki_flashcards.cli:run</code> abgebildet. Elf Dateien mit zusammen rund 2.800 Zeilen (inklusive Docstrings) bilden vier klar getrennte Schichten.</p>
+        <p>Das Projekt ist ein Python-Paket <code>anki_flashcards</code> im <code>src</code>-Layout. Es hat genau einen Einstiegspunkt: Der Konsolenbefehl <code>anki-flashcards</code> ist in <code>pyproject.toml</code> auf <code>anki_flashcards.cli:run</code> abgebildet. Zwölf Dateien mit zusammen rund 3.500 Zeilen (inklusive Docstrings) bilden vier klar getrennte Schichten.</p>
       </div>
       <div class="grid three">
         <article class="card searchable" data-module="documents native_pdf">
@@ -334,10 +335,10 @@
           <h3>Eingabe verstehen</h3>
           <p><code>documents.py</code> liest PDF, DOCX, HTML, Markdown und Text lokal und zerlegt den Text in überlappende Abschnitte. Alternativ übergibt <code>native_pdf.py</code> die Original-PDF direkt an OpenAI.</p>
         </article>
-        <article class="card searchable" data-module="ai native_pdf models">
+        <article class="card searchable" data-module="ai native_pdf models subdecks">
           <span class="step-number">2</span>
           <h3>Karten erzeugen</h3>
-          <p><code>ai.py</code> fragt über LiteLLM jedes beliebige Provider-Modell an. Jede Antwort wird gegen das Pydantic-Schema <code>CardBatch</code> aus <code>models.py</code> validiert und dedupliziert.</p>
+          <p><code>ai.py</code> fragt über LiteLLM jedes beliebige Provider-Modell an. Jede Antwort wird gegen das Pydantic-Schema <code>CardBatch</code> aus <code>models.py</code> validiert und dedupliziert. Auf Wunsch ordnet <code>subdecks.py</code> jede Karte einem Kapitel-Unterdeck zu.</p>
         </article>
         <article class="card searchable" data-module="apkg models">
           <span class="step-number">3</span>
@@ -388,16 +389,18 @@
             <path class="edge" d="M560 94 V144" marker-end="url(#arr-arch)"/>
             <text class="t-edge" x="568" y="124">1 · Einstellungen auflösen</text>
             <!-- Fachkern -->
-            <a href="#mod-documents"><g class="n-doc"><rect class="box" x="170" y="270" width="152" height="70" rx="10"/>
-              <text class="t-title" x="182" y="295">documents</text><text class="t-sub" x="182" y="316">Text extrahieren</text><text class="t-sub" x="182" y="332">Chunks bilden</text></g></a>
-            <a href="#mod-ai"><g class="n-ai"><rect class="box" x="333" y="270" width="152" height="70" rx="10"/>
-              <text class="t-title" x="345" y="295">ai</text><text class="t-sub" x="345" y="316">Prompt · LiteLLM</text><text class="t-sub" x="345" y="332">Antwort validieren</text></g></a>
-            <a href="#mod-native_pdf"><g class="n-ai"><rect class="box" x="496" y="270" width="152" height="70" rx="10"/>
-              <text class="t-title" x="508" y="295">native_pdf</text><text class="t-sub" x="508" y="316">PDF-Upload</text><text class="t-sub" x="508" y="332">OpenAI-Adapter</text></g></a>
-            <a href="#mod-models"><g class="n-model"><rect class="box" x="659" y="270" width="152" height="70" rx="10"/>
-              <text class="t-title" x="671" y="295">models</text><text class="t-sub" x="671" y="316">Card · CardBatch</text><text class="t-sub" x="671" y="332">JSON · Dedupe</text></g></a>
-            <a href="#mod-apkg"><g class="n-apkg"><rect class="box" x="822" y="270" width="154" height="70" rx="10"/>
-              <text class="t-title" x="834" y="295">apkg</text><text class="t-sub" x="834" y="316">neu: genanki</text><text class="t-sub" x="834" y="332">erweitern: Anki-API</text></g></a>
+            <a href="#mod-documents"><g class="n-doc"><rect class="box" x="170" y="270" width="126" height="70" rx="10"/>
+              <text class="t-title" x="180" y="295">documents</text><text class="t-sub" x="180" y="316">Text lesen</text><text class="t-sub" x="180" y="332">Chunks bilden</text></g></a>
+            <a href="#mod-ai"><g class="n-ai"><rect class="box" x="306" y="270" width="126" height="70" rx="10"/>
+              <text class="t-title" x="316" y="295">ai</text><text class="t-sub" x="316" y="316">Prompt, LiteLLM</text><text class="t-sub" x="316" y="332">Antwort prüfen</text></g></a>
+            <a href="#mod-native_pdf"><g class="n-ai"><rect class="box" x="442" y="270" width="126" height="70" rx="10"/>
+              <text class="t-title" x="452" y="295">native_pdf</text><text class="t-sub" x="452" y="316">PDF-Upload</text><text class="t-sub" x="452" y="332">OpenAI-Adapter</text></g></a>
+            <a href="#mod-subdecks"><g class="n-ai"><rect class="box" x="578" y="270" width="126" height="70" rx="10"/>
+              <text class="t-title" x="588" y="295">subdecks</text><text class="t-sub" x="588" y="316">Kapitel-Regeln</text><text class="t-sub" x="588" y="332">Namensabgleich</text></g></a>
+            <a href="#mod-models"><g class="n-model"><rect class="box" x="714" y="270" width="126" height="70" rx="10"/>
+              <text class="t-title" x="724" y="295">models</text><text class="t-sub" x="724" y="316">Card · Batch</text><text class="t-sub" x="724" y="332">JSON · Dedupe</text></g></a>
+            <a href="#mod-apkg"><g class="n-apkg"><rect class="box" x="850" y="270" width="126" height="70" rx="10"/>
+              <text class="t-title" x="860" y="295">apkg</text><text class="t-sub" x="860" y="316">neu: genanki</text><text class="t-sub" x="860" y="332">erw.: Anki-API</text></g></a>
             <a href="#mod-errors"><g class="n-err"><rect class="box" x="170" y="352" width="806" height="44" rx="10"/>
               <text class="t-title" x="186" y="379">errors.py</text><text class="t-sub" x="290" y="379">FlashcardError – in allen Modulen an Bibliotheksgrenzen erzeugt, nur in cli.run() gefangen</text></g></a>
             <path class="edge" d="M420 94 V114 H150 V305 H166" marker-end="url(#arr-arch)"/>
@@ -405,21 +408,22 @@
             <text class="t-edge" x="34" y="316">direkt</text>
             <text class="t-edge" x="34" y="332">aufrufen</text>
             <!-- Externe Grenzen -->
-            <g class="n-ext"><rect class="box" x="170" y="462" width="152" height="74" rx="10"/>
-              <text class="t-sub" x="182" y="486">pypdf</text><text class="t-sub" x="182" y="504">python-docx</text><text class="t-sub" x="182" y="522">BeautifulSoup</text></g>
-            <g class="n-ext"><rect class="box" x="333" y="462" width="152" height="74" rx="10"/>
-              <text class="t-sub" x="345" y="486">LiteLLM →</text><text class="t-sub" x="345" y="504">Ollama, OpenAI,</text><text class="t-sub" x="345" y="522">Anthropic, Gemini …</text></g>
-            <g class="n-ext"><rect class="box" x="496" y="462" width="152" height="74" rx="10"/>
-              <text class="t-sub" x="508" y="486">openai-SDK →</text><text class="t-sub" x="508" y="504">Files API</text><text class="t-sub" x="508" y="522">Responses API</text></g>
-            <g class="n-ext"><rect class="box" x="659" y="462" width="152" height="74" rx="10"/>
-              <text class="t-sub" x="671" y="486">Pydantic</text><text class="t-sub" x="671" y="504">json · tempfile</text><text class="t-sub" x="671" y="522">os.replace</text></g>
-            <g class="n-ext"><rect class="box" x="822" y="462" width="154" height="74" rx="10"/>
-              <text class="t-sub" x="834" y="486">genanki · anki</text><text class="t-sub" x="834" y="504">SQLite · zipfile</text><text class="t-sub" x="834" y="522">zstandard</text></g>
-            <path class="edge" d="M246 396 V458" marker-end="url(#arr-arch)"/>
-            <path class="edge" d="M409 396 V458" marker-end="url(#arr-arch)"/>
-            <path class="edge" d="M572 396 V458" marker-end="url(#arr-arch)"/>
-            <path class="edge" d="M735 396 V458" marker-end="url(#arr-arch)"/>
-            <path class="edge" d="M899 396 V458" marker-end="url(#arr-arch)"/>
+            <g class="n-ext"><rect class="box" x="170" y="462" width="126" height="74" rx="10"/>
+              <text class="t-sub" x="180" y="486">pypdf</text><text class="t-sub" x="180" y="504">python-docx</text><text class="t-sub" x="180" y="522">BeautifulSoup</text></g>
+            <g class="n-ext"><rect class="box" x="306" y="462" width="126" height="74" rx="10"/>
+              <text class="t-sub" x="316" y="486">LiteLLM →</text><text class="t-sub" x="316" y="504">Ollama, OpenAI,</text><text class="t-sub" x="316" y="522">Anthropic …</text></g>
+            <g class="n-ext"><rect class="box" x="442" y="462" width="126" height="74" rx="10"/>
+              <text class="t-sub" x="452" y="486">openai-SDK →</text><text class="t-sub" x="452" y="504">Files API</text><text class="t-sub" x="452" y="522">Responses API</text></g>
+            <g class="n-ext"><rect class="box" x="714" y="462" width="126" height="74" rx="10"/>
+              <text class="t-sub" x="724" y="486">Pydantic</text><text class="t-sub" x="724" y="504">json, tempfile</text><text class="t-sub" x="724" y="522">os.replace</text></g>
+            <g class="n-ext"><rect class="box" x="850" y="462" width="126" height="74" rx="10"/>
+              <text class="t-sub" x="860" y="486">genanki, anki</text><text class="t-sub" x="860" y="504">SQLite, zip</text><text class="t-sub" x="860" y="522">zstandard</text></g>
+            <text class="t-sub" x="588" y="504">reines Python</text>
+            <path class="edge" d="M233 396 V458" marker-end="url(#arr-arch)"/>
+            <path class="edge" d="M369 396 V458" marker-end="url(#arr-arch)"/>
+            <path class="edge" d="M505 396 V458" marker-end="url(#arr-arch)"/>
+            <path class="edge" d="M777 396 V458" marker-end="url(#arr-arch)"/>
+            <path class="edge" d="M913 396 V458" marker-end="url(#arr-arch)"/>
           </svg>
         </div>
         <figcaption>Schichtenmodell. Abhängigkeiten zeigen nur nach unten: Der Fachkern kennt weder Typer noch Rich. Klicke auf ein Modul, um zu seiner Beschreibung zu springen.</figcaption>
@@ -466,6 +470,7 @@
         <li><a href="#module">Alle Module und Funktionen im Detail</a></li>
         <li><a href="#konfiguration">Konfigurationsauflösung und Prioritäten</a></li>
         <li><a href="#ki-generierung">KI-Generierung: Chunks, Kontingent, Prompt</a></li>
+        <li><a href="#unterdecks">KI-Unterdecks: Kapitel automatisch zuordnen</a></li>
         <li><a href="#apkg-intern">Anki-Pakete erzeugen und erweitern</a></li>
         <li><a href="#native">Native PDF-Verarbeitung</a></li>
         <li><a href="#datenformate">Datenformate und Laufzeitobjekte</a></li>
@@ -504,7 +509,7 @@
           <li><span class="swatch sw-err"></span>Fehlerweg</li>
         </ul>
         <div class="diagram-scroll">
-          <svg viewBox="0 0 1000 1770" aria-labelledby="flow-title flow-desc">
+          <svg viewBox="0 0 1000 1860" aria-labelledby="flow-title flow-desc">
             <title id="flow-title">Ablauf eines generate-Aufrufs</title>
             <desc id="flow-desc">Von cli.run über Typer, Konfiguration und Ausgabeprüfung zur Verzweigung nach pdf_mode. Lokal: read_document, chunk_text und eine LiteLLM-Anfrage je Chunk. Nativ: Prüfungen, Upload, responses.parse und Löschen bei OpenAI. Danach Ergebnisprüfung, optionales JSON, Verzweigung nach extend in create_apkg oder append_apkg und Ergebnisausgabe. Jede FlashcardError führt zurück zu cli.run und Exit-Code 1.</desc>
             <defs>
@@ -513,8 +518,8 @@
             </defs>
 
             <!-- Fehlerweg zu run() -->
-            <path class="edge err" d="M978 1732 V124 H744" marker-end="url(#arr-err)"/>
-            <text class="t-err" transform="translate(993 930) rotate(-90)" text-anchor="middle">jede FlashcardError steigt bis cli.run() auf → „Fehler: …“ auf stderr · Exit-Code 1</text>
+            <path class="edge err" d="M978 1822 V124 H744" marker-end="url(#arr-err)"/>
+            <text class="t-err" transform="translate(993 1020) rotate(-90)" text-anchor="middle">jede FlashcardError steigt bis cli.run() auf → „Fehler: …“ auf stderr · Exit-Code 1</text>
 
             <!-- Start -->
             <rect class="terminal" x="150" y="16" width="700" height="44" rx="8"/>
@@ -546,80 +551,83 @@
             <a href="#schritt-6"><g class="n-cli"><rect class="box" x="260" y="544" width="480" height="60" rx="10"/><circle class="dot" cx="288" cy="574" r="16"/><text class="t-num" x="288" y="578.5">6</text>
               <text class="t-title" x="314" y="570">_validate_output()</text><text class="t-sub" x="314" y="591">Endung .apkg? neu ↔ --extend? – vor jeder KI-Anfrage</text></g></a>
             <path class="edge" d="M500 604 V630" marker-end="url(#arr-flow)"/>
+            <a href="#schritt-6b"><g class="n-apkg"><rect class="box opt" x="260" y="634" width="480" height="60" rx="10"/><circle class="dot" cx="288" cy="664" r="16"/><text class="t-num" x="288" y="668.5">6b</text>
+              <text class="t-title" x="314" y="660">read_subdeck_context()</text><text class="t-sub" x="314" y="681">nur mit --subdecks und --extend · Unterdecks + Beispiele</text></g></a>
+            <path class="edge" d="M500 694 V720" marker-end="url(#arr-flow)"/>
 
-            <g class="n-cli"><polygon class="box" points="500,634 600,674 500,714 400,674"/><text class="t-title" x="500" y="679" text-anchor="middle">pdf_mode?</text></g>
-            <path class="edge" d="M400 674 H255 V756" marker-end="url(#arr-flow)"/>
-            <text class="t-edge" x="268" y="664">local (Standard)</text>
-            <path class="edge" d="M600 674 H745 V756" marker-end="url(#arr-flow)"/>
-            <text class="t-edge" x="612" y="664">native (nur ausdrücklich)</text>
+            <g class="n-cli"><polygon class="box" points="500,724 600,764 500,804 400,764"/><text class="t-title" x="500" y="769" text-anchor="middle">pdf_mode?</text></g>
+            <path class="edge" d="M400 764 H255 V846" marker-end="url(#arr-flow)"/>
+            <text class="t-edge" x="268" y="754">local (Standard)</text>
+            <path class="edge" d="M600 764 H745 V846" marker-end="url(#arr-flow)"/>
+            <text class="t-edge" x="612" y="754">native (nur ausdrücklich)</text>
 
             <!-- Lokaler Zweig -->
-            <a href="#schritt-7"><g class="n-doc"><rect class="box" x="40" y="760" width="430" height="60" rx="10"/><circle class="dot" cx="68" cy="790" r="16"/><text class="t-num" x="68" y="794.5">7a</text>
-              <text class="t-title" x="94" y="786">read_document()</text><text class="t-sub" x="94" y="807">≤ 100 MiB · Endung · extrahieren · normalisieren</text></g></a>
-            <path class="edge" d="M255 820 V846" marker-end="url(#arr-flow)"/>
-            <a href="#schritt-7"><g class="n-doc"><rect class="box" x="40" y="850" width="430" height="60" rx="10"/>
-              <text class="t-title" x="60" y="876">chunk_text()</text><text class="t-sub" x="60" y="897">≤ chunk_size Zeichen · 500 Zeichen Überlappung</text></g></a>
+            <a href="#schritt-7"><g class="n-doc"><rect class="box" x="40" y="850" width="430" height="60" rx="10"/><circle class="dot" cx="68" cy="880" r="16"/><text class="t-num" x="68" y="884.5">7a</text>
+              <text class="t-title" x="94" y="876">read_document()</text><text class="t-sub" x="94" y="897">≤ 100 MiB · Endung · extrahieren · normalisieren</text></g></a>
             <path class="edge" d="M255 910 V936" marker-end="url(#arr-flow)"/>
-            <rect class="frame ai" x="40" y="940" width="430" height="214" rx="12"/>
-            <text class="t-label" x="56" y="962">ai.generate_cards() · je Chunk</text>
-            <a href="#ki-generierung"><g class="n-ai"><rect class="box" x="60" y="974" width="370" height="40" rx="8"/>
-              <text class="t-title" x="76" y="999">_build_prompt()</text><text class="t-sub" x="230" y="999">Kontingent + Quelltext</text></g></a>
-            <path class="edge" d="M245 1014 V1024" marker-end="url(#arr-flow)"/>
-            <a href="#ki-generierung"><g class="n-ext"><rect class="box" x="60" y="1028" width="370" height="40" rx="8"/>
-              <text class="t-title" x="76" y="1053">litellm.completion()</text><text class="t-sub" x="268" y="1053">2 Retries · Timeout</text></g></a>
-            <path class="edge" d="M245 1068 V1078" marker-end="url(#arr-flow)"/>
-            <a href="#ki-generierung"><g class="n-model"><rect class="box" x="60" y="1082" width="370" height="40" rx="8"/>
-              <text class="t-title" x="76" y="1107">CardBatch</text><text class="t-sub" x="168" y="1107">prüfen · deduplizieren · kürzen</text></g></a>
-            <path class="edge" d="M430 1102 H448 V994 H434" marker-end="url(#arr-flow)"/>
-            <text class="t-edge" transform="translate(466 1048) rotate(-90)" text-anchor="middle">nächster Chunk</text>
-            <text class="t-sub" x="60" y="1144">Limit erreicht → Schleife bricht sofort ab</text>
+            <a href="#schritt-7"><g class="n-doc"><rect class="box" x="40" y="940" width="430" height="60" rx="10"/>
+              <text class="t-title" x="60" y="966">chunk_text()</text><text class="t-sub" x="60" y="987">≤ chunk_size Zeichen · 500 Zeichen Überlappung</text></g></a>
+            <path class="edge" d="M255 1000 V1026" marker-end="url(#arr-flow)"/>
+            <rect class="frame ai" x="40" y="1030" width="430" height="214" rx="12"/>
+            <text class="t-label" x="56" y="1052">ai.generate_cards() · je Chunk</text>
+            <a href="#ki-generierung"><g class="n-ai"><rect class="box" x="60" y="1064" width="370" height="40" rx="8"/>
+              <text class="t-title" x="76" y="1089">_build_prompt()</text><text class="t-sub" x="230" y="1089">Kontingent · Unterdecks</text></g></a>
+            <path class="edge" d="M245 1104 V1114" marker-end="url(#arr-flow)"/>
+            <a href="#ki-generierung"><g class="n-ext"><rect class="box" x="60" y="1118" width="370" height="40" rx="8"/>
+              <text class="t-title" x="76" y="1143">litellm.completion()</text><text class="t-sub" x="268" y="1143">2 Retries · Timeout</text></g></a>
+            <path class="edge" d="M245 1158 V1168" marker-end="url(#arr-flow)"/>
+            <a href="#ki-generierung"><g class="n-model"><rect class="box" x="60" y="1172" width="370" height="40" rx="8"/>
+              <text class="t-title" x="76" y="1197">CardBatch</text><text class="t-sub" x="168" y="1197">zuordnen · deduplizieren · kürzen</text></g></a>
+            <path class="edge" d="M430 1192 H448 V1084 H434" marker-end="url(#arr-flow)"/>
+            <text class="t-edge" transform="translate(466 1138) rotate(-90)" text-anchor="middle">nächster Chunk</text>
+            <text class="t-sub" x="60" y="1234">Limit erreicht → Schleife bricht sofort ab</text>
 
             <!-- Nativer Zweig -->
-            <a href="#schritt-7"><g class="n-ai"><rect class="box" x="530" y="760" width="430" height="60" rx="10"/><circle class="dot" cx="558" cy="790" r="16"/><text class="t-num" x="558" y="794.5">7b</text>
-              <text class="t-title" x="584" y="786">generate_native_cards()</text><text class="t-sub" x="584" y="807">nur .pdf · keine lokale Extraktion</text></g></a>
-            <path class="edge" d="M745 820 V846" marker-end="url(#arr-flow)"/>
-            <a href="#native"><g class="n-ai"><rect class="box" x="530" y="850" width="430" height="60" rx="10"/>
-              <text class="t-head" x="550" y="876">Vor dem Upload prüfen</text><text class="t-sub" x="550" y="897">Allowlist · Datei &lt; 50 MiB · API-Key · Optionen</text></g></a>
+            <a href="#schritt-7"><g class="n-ai"><rect class="box" x="530" y="850" width="430" height="60" rx="10"/><circle class="dot" cx="558" cy="880" r="16"/><text class="t-num" x="558" y="884.5">7b</text>
+              <text class="t-title" x="584" y="876">generate_native_cards()</text><text class="t-sub" x="584" y="897">nur .pdf · keine lokale Extraktion</text></g></a>
             <path class="edge" d="M745 910 V936" marker-end="url(#arr-flow)"/>
-            <rect class="frame ext" x="530" y="940" width="430" height="214" rx="12"/>
-            <text class="t-label" x="546" y="962">OpenAI-API · offizielles SDK</text>
-            <a href="#native"><g class="n-ext"><rect class="box" x="550" y="974" width="390" height="40" rx="8"/>
-              <text class="t-title" x="566" y="999">files.create()</text><text class="t-sub" x="708" y="999">purpose="user_data"</text></g></a>
-            <path class="edge" d="M745 1014 V1024" marker-end="url(#arr-flow)"/>
-            <a href="#native"><g class="n-ext"><rect class="box" x="550" y="1028" width="390" height="40" rx="8"/>
-              <text class="t-title" x="566" y="1053">responses.parse()</text><text class="t-sub" x="736" y="1053">CardBatch · store=False</text></g></a>
-            <path class="edge" d="M745 1068 V1078" marker-end="url(#arr-flow)"/>
-            <a href="#native"><g class="n-ext"><rect class="box" x="550" y="1082" width="390" height="40" rx="8"/>
-              <text class="t-title" x="566" y="1107">files.delete()</text><text class="t-sub" x="708" y="1107">im finally – auch nach Fehlern</text></g></a>
-            <text class="t-sub" x="550" y="1144">Löschfehler → nur Warnung mit Datei-ID</text>
+            <a href="#native"><g class="n-ai"><rect class="box" x="530" y="940" width="430" height="60" rx="10"/>
+              <text class="t-head" x="550" y="966">Vor dem Upload prüfen</text><text class="t-sub" x="550" y="987">Allowlist · Datei &lt; 50 MiB · API-Key · Optionen</text></g></a>
+            <path class="edge" d="M745 1000 V1026" marker-end="url(#arr-flow)"/>
+            <rect class="frame ext" x="530" y="1030" width="430" height="214" rx="12"/>
+            <text class="t-label" x="546" y="1052">OpenAI-API · offizielles SDK</text>
+            <a href="#native"><g class="n-ext"><rect class="box" x="550" y="1064" width="390" height="40" rx="8"/>
+              <text class="t-title" x="566" y="1089">files.create()</text><text class="t-sub" x="708" y="1089">purpose="user_data"</text></g></a>
+            <path class="edge" d="M745 1104 V1114" marker-end="url(#arr-flow)"/>
+            <a href="#native"><g class="n-ext"><rect class="box" x="550" y="1118" width="390" height="40" rx="8"/>
+              <text class="t-title" x="566" y="1143">responses.parse()</text><text class="t-sub" x="736" y="1143">CardBatch · store=False</text></g></a>
+            <path class="edge" d="M745 1158 V1168" marker-end="url(#arr-flow)"/>
+            <a href="#native"><g class="n-ext"><rect class="box" x="550" y="1172" width="390" height="40" rx="8"/>
+              <text class="t-title" x="566" y="1197">files.delete()</text><text class="t-sub" x="708" y="1197">im finally – auch nach Fehlern</text></g></a>
+            <text class="t-sub" x="550" y="1234">Löschfehler → nur Warnung mit Datei-ID</text>
 
             <!-- Zusammenführung -->
-            <path class="edge" d="M255 1154 V1176 H400 V1196" marker-end="url(#arr-flow)"/>
-            <path class="edge" d="M745 1154 V1176 H600 V1196" marker-end="url(#arr-flow)"/>
-            <a href="#schritt-8"><g class="n-model"><rect class="box" x="260" y="1200" width="480" height="60" rx="10"/><circle class="dot" cx="288" cy="1230" r="16"/><text class="t-num" x="288" y="1234.5">8</text>
-              <text class="t-title" x="314" y="1226">list[Card] prüfen</text><text class="t-sub" x="314" y="1247">validiert · dedupliziert · gekürzt · leer → Fehler</text></g></a>
-            <path class="edge" d="M500 1260 V1286" marker-end="url(#arr-flow)"/>
-            <a href="#schritt-9"><g class="n-model"><rect class="box opt" x="260" y="1290" width="480" height="60" rx="10"/><circle class="dot" cx="288" cy="1320" r="16"/><text class="t-num" x="288" y="1324.5">9</text>
-              <text class="t-title" x="314" y="1316">save_cards()</text><text class="t-sub" x="314" y="1337">nur mit --json · Schema v1 · atomar · vor dem APKG</text></g></a>
+            <path class="edge" d="M255 1244 V1266 H400 V1286" marker-end="url(#arr-flow)"/>
+            <path class="edge" d="M745 1244 V1266 H600 V1286" marker-end="url(#arr-flow)"/>
+            <a href="#schritt-8"><g class="n-model"><rect class="box" x="260" y="1290" width="480" height="60" rx="10"/><circle class="dot" cx="288" cy="1320" r="16"/><text class="t-num" x="288" y="1324.5">8</text>
+              <text class="t-title" x="314" y="1316">list[Card] prüfen</text><text class="t-sub" x="314" y="1337">validiert · dedupliziert · gekürzt · leer → Fehler</text></g></a>
             <path class="edge" d="M500 1350 V1376" marker-end="url(#arr-flow)"/>
+            <a href="#schritt-9"><g class="n-model"><rect class="box opt" x="260" y="1380" width="480" height="60" rx="10"/><circle class="dot" cx="288" cy="1410" r="16"/><text class="t-num" x="288" y="1414.5">9</text>
+              <text class="t-title" x="314" y="1406">save_cards()</text><text class="t-sub" x="314" y="1427">nur mit --json · Schema v1 · atomar · vor dem APKG</text></g></a>
+            <path class="edge" d="M500 1440 V1466" marker-end="url(#arr-flow)"/>
 
-            <g class="n-cli"><polygon class="box" points="500,1380 600,1420 500,1460 400,1420"/><text class="t-title" x="500" y="1425" text-anchor="middle">extend?</text></g>
-            <path class="edge" d="M400 1420 H255 V1496" marker-end="url(#arr-flow)"/>
-            <text class="t-edge" x="268" y="1410">nein → neue Datei</text>
-            <path class="edge" d="M600 1420 H745 V1496" marker-end="url(#arr-flow)"/>
-            <text class="t-edge" x="612" y="1410">ja → vorhandene Datei erweitern</text>
+            <g class="n-cli"><polygon class="box" points="500,1470 600,1510 500,1550 400,1510"/><text class="t-title" x="500" y="1515" text-anchor="middle">extend?</text></g>
+            <path class="edge" d="M400 1510 H255 V1586" marker-end="url(#arr-flow)"/>
+            <text class="t-edge" x="268" y="1500">nein → neue Datei</text>
+            <path class="edge" d="M600 1510 H745 V1586" marker-end="url(#arr-flow)"/>
+            <text class="t-edge" x="612" y="1500">ja → vorhandene Datei erweitern</text>
 
-            <a href="#schritt-10"><g class="n-apkg"><rect class="box" x="40" y="1500" width="430" height="78" rx="10"/><circle class="dot" cx="68" cy="1539" r="16"/><text class="t-num" x="68" y="1543.5">10a</text>
-              <text class="t-title" x="94" y="1526">create_apkg()</text><text class="t-sub" x="94" y="1547">genanki · stabile Deck-ID und GUIDs</text><text class="t-sub" x="94" y="1566">HTML-escaped · Temp-Datei → os.replace</text></g></a>
-            <a href="#schritt-10"><g class="n-apkg"><rect class="box" x="530" y="1500" width="430" height="78" rx="10"/><circle class="dot" cx="558" cy="1539" r="16"/><text class="t-num" x="558" y="1543.5">10b</text>
-              <text class="t-title" x="584" y="1526">append_apkg()</text><text class="t-sub" x="584" y="1547">entpacken · offizielle Anki-API · Duplikate</text><text class="t-sub" x="584" y="1566">WAL-Checkpoint · neu packen → os.replace</text></g></a>
-            <path class="edge" d="M255 1578 V1600 H400 V1616" marker-end="url(#arr-flow)"/>
-            <path class="edge" d="M745 1578 V1600 H600 V1616" marker-end="url(#arr-flow)"/>
+            <a href="#schritt-10"><g class="n-apkg"><rect class="box" x="40" y="1590" width="430" height="78" rx="10"/><circle class="dot" cx="68" cy="1629" r="16"/><text class="t-num" x="68" y="1633.5">10a</text>
+              <text class="t-title" x="94" y="1616">create_apkg()</text><text class="t-sub" x="94" y="1637">genanki · Deck + Unterdecks · stabile GUIDs</text><text class="t-sub" x="94" y="1656">HTML-escaped · Temp-Datei → os.replace</text></g></a>
+            <a href="#schritt-10"><g class="n-apkg"><rect class="box" x="530" y="1590" width="430" height="78" rx="10"/><circle class="dot" cx="558" cy="1629" r="16"/><text class="t-num" x="558" y="1633.5">10b</text>
+              <text class="t-title" x="584" y="1616">append_apkg()</text><text class="t-sub" x="584" y="1637">Anki-API · Unterdecks anlegen · Duplikate</text><text class="t-sub" x="584" y="1656">WAL-Checkpoint · neu packen → os.replace</text></g></a>
+            <path class="edge" d="M255 1668 V1690 H400 V1706" marker-end="url(#arr-flow)"/>
+            <path class="edge" d="M745 1668 V1690 H600 V1706" marker-end="url(#arr-flow)"/>
 
-            <a href="#schritt-11"><g class="n-cli"><rect class="box" x="260" y="1620" width="480" height="60" rx="10"/><circle class="dot" cx="288" cy="1650" r="16"/><text class="t-num" x="288" y="1654.5">11</text>
-              <text class="t-title" x="314" y="1646">_print_result()</text><text class="t-sub" x="314" y="1667">„Fertig: N Karten in 'Deck' → Pfad …“ · Exit-Code 0</text></g></a>
-            <path class="edge" d="M500 1680 V1706" marker-end="url(#arr-flow)"/>
-            <g class="n-ext"><rect class="box" x="340" y="1710" width="320" height="44" rx="22"/><text class="t-title" x="500" y="1737" text-anchor="middle">output/biologie.apkg</text></g>
+            <a href="#schritt-11"><g class="n-cli"><rect class="box" x="260" y="1710" width="480" height="60" rx="10"/><circle class="dot" cx="288" cy="1740" r="16"/><text class="t-num" x="288" y="1744.5">11</text>
+              <text class="t-title" x="314" y="1736">_print_result()</text><text class="t-sub" x="314" y="1757">„Fertig: N Karten in 'Deck' → Pfad …“ · Exit-Code 0</text></g></a>
+            <path class="edge" d="M500 1770 V1796" marker-end="url(#arr-flow)"/>
+            <g class="n-ext"><rect class="box" x="340" y="1800" width="320" height="44" rx="22"/><text class="t-title" x="500" y="1827" text-anchor="middle">output/biologie.apkg</text></g>
           </svg>
         </div>
         <figcaption>Gestrichelte Kästen sind optional. Der rote Weg rechts gilt für jeden Schritt: Erwartete Fehler werden als <code>FlashcardError</code> bis <code>cli.run()</code> durchgereicht. Bedienfehler (Schritt 2) beendet Typer selbst mit Exit-Code 2.</figcaption>
@@ -663,11 +671,18 @@
           <p><code>_validate_output()</code> prüft, bevor Kosten entstehen: Endung <code>.apkg</code> (ohne Beachtung der Groß-/Kleinschreibung); bei <code>extend=True</code> muss die Datei existieren, bei <code>extend=False</code> darf sie nicht existieren.</p>
           <p>So wird nie eine KI-Anfrage bezahlt, deren Ergebnis anschließend nicht geschrieben werden darf.</p>
         </article>
-        <article class="card searchable" data-module="documents ai native_pdf" id="schritt-7">
+        <article class="card searchable" data-module="cli apkg subdecks" id="schritt-6b">
+          <span class="step-number">6b</span>
+          <h3>Optional: Unterdeck-Kontext lesen</h3>
+          <p>Nur mit <code>--subdecks</code> (oder <code>generation.subdecks: true</code>). <code>cli._subdeck_context()</code> liefert ohne <code>--extend</code> einen leeren <code>SubdeckContext</code> für das Zieldeck. Mit <code>--extend</code> liest <code>apkg.read_subdeck_context()</code> die direkten Unterdecks des Decks und je Unterdeck bis zu fünf Beispielfragen aus einer Temp-Kopie des Pakets; die CLI kündigt diese Übertragung an.</p>
+          <p>Ohne Unterdeck-Modus ist der Kontext <code>None</code>, und alle folgenden Schritte verhalten sich wie vor req-4. → <a href="#unterdecks">KI-Unterdecks</a></p>
+        </article>
+        <article class="card searchable" data-module="documents ai native_pdf subdecks" id="schritt-7">
           <span class="step-number">7</span>
           <h3>Karten erzeugen: lokal oder nativ</h3>
           <p><strong>7a · lokal (Standard, alle Formate):</strong> <code>read_document()</code> prüft Größe und Endung, extrahiert Text je Format und normalisiert Leerraum. Ein Rich-Spinner startet; <code>ai.generate_cards()</code> teilt den Text mit <code>chunk_text()</code> auf und sendet je Chunk eine Anfrage über LiteLLM. Jede Antwort wird gegen <code>CardBatch</code> validiert und mit <code>deduplicate_cards(cards, limit)</code> bereinigt. Ist das Limit erreicht, werden restliche Chunks nicht mehr angefragt. → <a href="#ki-generierung">KI-Generierung</a></p>
           <p><strong>7b · nativ:</strong> Die CLI meldet den Upload. <code>generate_native_cards()</code> akzeptiert nur <code>.pdf</code> und ruft <code>read_document()</code> nie auf. Allowlist, Größe, API-Schlüssel und Profiloptionen werden vor dem Upload geprüft. Es gibt genau eine Modellanfrage; <code>chunk_size</code> wirkt hier nicht. → <a href="#native">Native PDF</a></p>
+          <p><strong>Unterdeck-Modus:</strong> Beide Wege erhalten über <code>SubdeckAssigner</code> zusätzliche Regeln im Systemprompt, den Kontextabschnitt im Benutzer-Prompt und das Schema <code>SubdeckCardBatch</code>. <code>assign()</code> vereinheitlicht die Namen und gibt neue Unterdecks an spätere Chunks weiter.</p>
         </article>
         <article class="card searchable" data-module="cli models" id="schritt-8">
           <span class="step-number">8</span>
@@ -687,11 +702,13 @@
           <p><code>_write_deck()</code> lehnt einen leeren Decknamen ab und verzweigt nach <code>extend</code>.</p>
           <p><strong>10a · neu:</strong> <code>create_apkg()</code> baut mit genanki einen Notiztyp mit fester ID, ein Deck mit stabiler ID und je Karte eine Notiz mit HTML-escapten Feldern und stabiler GUID. Ziel: Temp-Datei <code>.&lt;name&gt;.&lt;PID&gt;.tmp</code>, dann <code>os.replace</code>.</p>
           <p><strong>10b · erweitern:</strong> <code>append_apkg()</code> entpackt die Sammlung in einen Temp-Ordner, schreibt über die offizielle Anki-API, überspringt vorhandene Fragen, führt einen WAL-Checkpoint aus und packt das ZIP neu. → <a href="#apkg-intern">Anki-Pakete</a></p>
+          <p>Karten mit <code>subdeck</code> landen in beiden Fällen in <code>Deck::subdeck</code>. Beim Erweitern umfasst die Duplikatprüfung dann das Deck mit allen Unterdecks.</p>
         </article>
         <article class="card searchable" data-module="cli" id="schritt-11">
           <span class="step-number">11</span>
           <h3>Ergebnis melden</h3>
           <p><code>_print_result()</code> schreibt auf stdout: <code>Fertig: N Karten in 'Deck' → Pfad (M Duplikate übersprungen)</code> und gegebenenfalls den JSON-Pfad. Typer beendet regulär mit Exit-Code 0.</p>
+          <p>Liegen Karten in Unterdecks, folgt die Liste „Neue Karten je Unterdeck“ aus <code>ExportResult.added_by_deck</code>.</p>
           <p class="small muted">Bei <code>create_apkg()</code> ist die Duplikatzahl immer 0, weil die Liste bereits in Schritt 7 dedupliziert wurde. Nur <code>append_apkg()</code> kann gegen vorhandene Karten zusätzliche Duplikate finden.</p>
         </article>
       </div>
@@ -721,6 +738,7 @@
             <li>Ohne <code>--output</code> entsteht <code>output_dir/&lt;json-name-ohne-.json&gt;.apkg</code> – aus <code>biologie.cards.json</code> wird also <code>biologie.cards.apkg</code>.</li>
             <li>Es gibt kein Limit; <code>deduplicate_cards()</code> läuft mit <code>limit=0</code> und entfernt nur doppelte Fragen.</li>
             <li><code>--extend</code> verhält sich exakt wie bei <code>generate</code>, weil beide <code>_validate_output()</code> und <code>_write_deck()</code> teilen.</li>
+            <li>Karten mit dem JSON-Feld <code>subdeck</code> landen in <code>--deck::subdeck</code>. Der Export ist datengesteuert und braucht dafür keine Option.</li>
           </ul>
         </article>
         <article class="card searchable" data-module="cli apkg" id="ablauf-decks">
@@ -765,18 +783,19 @@
       </div>
 
       <h3>Wer importiert wen?</h3>
-      <div class="table-wrap searchable" data-module="cli settings config documents ai native_pdf models apkg errors">
+      <div class="table-wrap searchable" data-module="cli settings config documents ai native_pdf subdecks models apkg errors">
         <table>
           <thead><tr><th>Modul</th><th>importiert aus dem Paket</th><th>wird verwendet von</th></tr></thead>
           <tbody>
-            <tr><td><code>cli</code></td><td><code>ai</code>, <code>apkg</code>, <code>config</code>, <code>documents</code>, <code>errors</code>, <code>models</code>, <code>native_pdf</code>, <code>settings</code></td><td><code>__main__</code>, Konsolenbefehl</td></tr>
+            <tr><td><code>cli</code></td><td><code>ai</code>, <code>apkg</code>, <code>config</code>, <code>documents</code>, <code>errors</code>, <code>models</code>, <code>native_pdf</code>, <code>settings</code>, <code>subdecks</code></td><td><code>__main__</code>, Konsolenbefehl</td></tr>
             <tr><td><code>settings</code></td><td><code>ai</code> (<code>AISettings</code>), <code>config</code>, <code>errors</code></td><td><code>cli</code></td></tr>
             <tr><td><code>config</code></td><td><code>errors</code></td><td><code>settings</code>, <code>cli</code> (<code>PDFMode</code>)</td></tr>
-            <tr><td><code>native_pdf</code></td><td><code>ai</code> (<code>SYSTEM_PROMPT</code>, <code>AISettings</code>), <code>errors</code>, <code>models</code></td><td><code>cli</code></td></tr>
-            <tr><td><code>ai</code></td><td><code>documents</code> (<code>SourceDocument</code>, <code>chunk_text</code>), <code>errors</code>, <code>models</code></td><td><code>cli</code>, <code>settings</code>, <code>native_pdf</code></td></tr>
-            <tr><td><code>apkg</code></td><td><code>errors</code>, <code>models</code> (<code>Card</code>)</td><td><code>cli</code></td></tr>
+            <tr><td><code>native_pdf</code></td><td><code>ai</code> (<code>SYSTEM_PROMPT</code>, <code>AISettings</code>), <code>errors</code>, <code>models</code>, <code>subdecks</code></td><td><code>cli</code></td></tr>
+            <tr><td><code>ai</code></td><td><code>documents</code> (<code>SourceDocument</code>, <code>chunk_text</code>), <code>errors</code>, <code>models</code>, <code>subdecks</code></td><td><code>cli</code>, <code>settings</code>, <code>native_pdf</code></td></tr>
+            <tr><td><code>subdecks</code></td><td><code>models</code></td><td><code>ai</code>, <code>native_pdf</code>, <code>apkg</code>, <code>cli</code></td></tr>
+            <tr><td><code>apkg</code></td><td><code>errors</code>, <code>models</code> (<code>Card</code>), <code>subdecks</code> (<code>SubdeckContext</code>)</td><td><code>cli</code></td></tr>
             <tr><td><code>documents</code></td><td><code>errors</code></td><td><code>cli</code>, <code>ai</code></td></tr>
-            <tr><td><code>models</code></td><td><code>errors</code></td><td><code>cli</code>, <code>ai</code>, <code>native_pdf</code>, <code>apkg</code></td></tr>
+            <tr><td><code>models</code></td><td><code>errors</code></td><td><code>cli</code>, <code>ai</code>, <code>native_pdf</code>, <code>subdecks</code>, <code>apkg</code></td></tr>
             <tr><td><code>errors</code></td><td>–</td><td>alle Module</td></tr>
           </tbody>
         </table>
@@ -810,24 +829,33 @@
         <p>Das gemeinsame Datenmodell aller Wege: Pydantic-Klassen für eine Karte und eine Kartenliste, das versionierte JSON-Format und die Duplikaterkennung. Lokale KI, native KI, JSON-Import und APKG-Ausgabe sprechen alle über <code>Card</code>.</p>
         <dl class="facts">
           <dt>Importiert</dt><dd><code>errors</code> · Pydantic, <code>json</code>, <code>tempfile</code>, <code>os</code></dd>
-          <dt>Verwendet von</dt><dd><code>ai</code>, <code>native_pdf</code>, <code>apkg</code>, <code>cli</code></dd>
-          <dt>Tests</dt><dd><code>tests/test_models.py</code> (4 Tests)</dd>
+          <dt>Verwendet von</dt><dd><code>ai</code>, <code>native_pdf</code>, <code>subdecks</code>, <code>apkg</code>, <code>cli</code></dd>
+          <dt>Tests</dt><dd><code>tests/test_models.py</code> (6 Tests)</dd>
         </dl>
         <details open>
           <summary>Öffentliche Schnittstelle</summary>
           <div class="details-body">
             <div class="option">
               <div class="option-heading"><span class="option-name"><code>class Card(BaseModel)</code></span><span class="option-meta">Pydantic-Modell</span></div>
-              <p>Eine Klartext-Karte: <code>front</code> (1–2.000 Zeichen), <code>back</code> (1–20.000 Zeichen), <code>tags</code> (höchstens 20). <code>str_strip_whitespace=True</code> entfernt Leerraum am Rand aller Strings.</p>
+              <p>Eine Klartext-Karte: <code>front</code> (1–2.000 Zeichen), <code>back</code> (1–20.000 Zeichen), <code>tags</code> (höchstens 20), optional <code>subdeck</code> (eine Ebene, höchstens 100 Zeichen; <code>None</code> = Zieldeck selbst). <code>str_strip_whitespace=True</code> entfernt Leerraum am Rand aller Strings.</p>
               <p><code>validate_tags()</code> trimmt Tags, entfernt leere und doppelte Einträge (Reihenfolge bleibt) und lehnt Tags mit Leerzeichen ab – Anki trennt Tags an Leerzeichen.</p>
             </div>
             <div class="option">
               <div class="option-heading"><span class="option-name"><code>class CardBatch(BaseModel)</code></span><span class="option-meta">Pydantic-Modell</span></div>
               <p><code>cards: list[Card]</code>. Eine leere Liste ist an dieser Grenze erlaubt. <code>CardBatch</code> ist zugleich das <strong>Antwortschema für die KI</strong>: LiteLLM erhält es als <code>response_format</code>, das OpenAI-SDK als <code>text_format</code>.</p>
+              <p><code>validate_subdeck()</code> fasst Leerraum zusammen, macht leere Namen zu <code>None</code> und lehnt <code>::</code> ab – ein Unterdeck hat genau eine Ebene.</p>
+            </div>
+            <div class="option">
+              <div class="option-heading"><span class="option-name"><code>class SubdeckCard(Card)</code> · <code>class SubdeckCardBatch(CardBatch)</code></span><span class="option-meta">Antwortschema Unterdeck-Modus</span></div>
+              <p>Wie <code>Card</code>/<code>CardBatch</code>, aber <code>subdeck</code> ist Pflicht (1–100 Zeichen). Das Modell sieht dadurch im Unterdeck-Modus ein Schema, in dem jede Karte ein Kapitel nennen muss.</p>
+            </div>
+            <div class="option">
+              <div class="option-heading"><span class="option-name"><code>normalize_key(text) → str</code></span><span class="option-meta">rein funktional</span></div>
+              <p>Vergleichsschlüssel ohne Groß-/Kleinschreibung und mit zusammengefasstem Leerraum. Genutzt für doppelte Fragen und für den Abgleich von Unterdecknamen.</p>
             </div>
             <div class="option">
               <div class="option-heading"><span class="option-name"><code>save_cards(path, cards, *, deck, source=None) → None</code></span><span class="option-meta">schreibt Datei</span></div>
-              <p>Schreibt <code>{"schema_version": 1, "deck", "cards", "source"?}</code> als UTF-8-JSON (<code>ensure_ascii=False</code>, Einrückung 2). Elternordner werden angelegt. Atomar: <code>NamedTemporaryFile</code> im Zielordner, dann <code>os.replace</code>; die Temp-Datei wird im <code>finally</code> entfernt.</p>
+              <p>Schreibt <code>{"schema_version": 1, "deck", "cards", "source"?}</code> als UTF-8-JSON (<code>ensure_ascii=False</code>, Einrückung 2). Elternordner werden angelegt. Atomar: <code>NamedTemporaryFile</code> im Zielordner, dann <code>os.replace</code>; die Temp-Datei wird im <code>finally</code> entfernt. Karten ohne Unterdeck erscheinen ohne <code>subdeck</code>-Schlüssel (<code>exclude_none</code>), sodass alte Dateien und Programme kompatibel bleiben.</p>
             </div>
             <div class="option">
               <div class="option-heading"><span class="option-name"><code>load_cards(path) → list[Card]</code></span><span class="option-meta">liest Datei</span></div>
@@ -843,7 +871,7 @@
           <summary>Wichtige Einzelheiten</summary>
           <div class="details-body">
             <ul class="checklist">
-              <li>Dieselbe Normalisierung steckt in <code>apkg._normalize_front()</code>. Ändert man die eine, muss man die andere mitziehen, sonst weichen Duplikate in Liste und Paket voneinander ab.</li>
+              <li>Dieselbe Normalisierung wie <code>normalize_key()</code> steckt in <code>apkg._normalize_front()</code>. Ändert man die eine, muss man die andere mitziehen, sonst weichen Duplikate in Liste und Paket voneinander ab.</li>
               <li>Die Grenzen 2.000/20.000/20 stammen aus R-024. Ungültige Karten einer KI-Antwort machen den <em>ganzen</em> Batch ungültig – es gibt kein Teil-Retten.</li>
             </ul>
           </div>
@@ -896,9 +924,9 @@
         <div class="command-header"><h3 class="command-title"><code>ai.py</code></h3><span class="tag ai">Fachkern · KI über LiteLLM</span></div>
         <p>Providerunabhängige Kartengenerierung aus Text. Baut je Abschnitt einen Prompt, ruft LiteLLM mit strukturierter Ausgabe auf, validiert die Antwort und führt alle Abschnitte zu einer deduplizierten, begrenzten Liste zusammen.</p>
         <dl class="facts">
-          <dt>Importiert</dt><dd><code>documents</code>, <code>errors</code>, <code>models</code> · LiteLLM (verzögert)</dd>
+          <dt>Importiert</dt><dd><code>documents</code>, <code>errors</code>, <code>models</code>, <code>subdecks</code> · LiteLLM (verzögert)</dd>
           <dt>Verwendet von</dt><dd><code>cli</code> (<code>generate_cards</code>), <code>settings</code> (<code>AISettings</code>), <code>native_pdf</code> (<code>SYSTEM_PROMPT</code>, <code>AISettings</code>)</dd>
-          <dt>Tests</dt><dd><code>tests/test_ai.py</code> (3 Tests, <code>_completion</code> simuliert)</dd>
+          <dt>Tests</dt><dd><code>tests/test_ai.py</code> (5 Tests, <code>_completion</code> simuliert)</dd>
         </dl>
         <details open>
           <summary>Öffentliche Schnittstelle</summary>
@@ -912,16 +940,18 @@
               <p>Alles, was eine Provider-Anfrage braucht – unabhängig von CLI oder Web. <code>options</code> sind die validierten Zusatzparameter des YAML-Profils.</p>
             </div>
             <div class="option">
-              <div class="option-heading"><span class="option-name"><code>generate_cards(document, settings, *, limit=50, language="Deutsch", instructions="", chunk_size=24_000, progress=None) → list[Card]</code></span><span class="option-meta">Netzwerk</span></div>
-              <p>Guard Clauses: <code>limit &lt; 0</code> → <code>ValueError</code>; leeres Modell → <code>FlashcardError</code> („No AI model configured“). Danach je Abschnitt: Kontingent berechnen → <code>_build_prompt</code> → <code>_request_batch</code> → Karten anhängen → <code>deduplicate_cards(cards, limit)</code> → <code>progress(i, n, anzahl)</code> → bei erreichtem Limit abbrechen.</p>
+              <div class="option-heading"><span class="option-name"><code>generate_cards(document, settings, *, limit=50, language="Deutsch", instructions="", chunk_size=24_000, progress=None, subdecks=None) → list[Card]</code></span><span class="option-meta">Netzwerk</span></div>
+              <p>Guard Clauses: <code>limit &lt; 0</code> → <code>ValueError</code>; leeres Modell → <code>FlashcardError</code> („No AI model configured“). Danach je Abschnitt: Kontingent berechnen (<code>_allocation</code>) → <code>_build_prompt</code> → <code>_request_batch</code> → <code>SubdeckAssigner.assign()</code> → <code>deduplicate_cards(cards, limit)</code> → <code>progress(i, n, anzahl)</code> → bei erreichtem Limit abbrechen.</p>
+              <p><code>subdecks</code> ist ein optionaler <code>SubdeckContext</code>. Ist er gesetzt, läuft der Unterdeck-Modus; ohne ihn verwirft <code>assign()</code> etwaige Unterdecks des Modells. → <a href="#unterdecks">KI-Unterdecks</a></p>
             </div>
           </div>
         </details>
         <details>
           <summary>Interne Bausteine</summary>
           <div class="details-body">
-            <div class="option"><div class="option-heading"><span class="option-name"><code>_request_batch(prompt, settings, chunk_number) → CardBatch</code></span></div><p>Ruft <code>_completion()</code> mit <code>messages=[system, user]</code>, <code>response_format=CardBatch</code>, <code>timeout</code>, <code>num_retries=2</code>, <code>drop_params=True</code>, den Profil-<code>options</code> und <code>_provider_options()</code>. Die Antwort wird mit <code>CardBatch.model_validate_json</code> geprüft. <code>ValidationError</code>/<code>ValueError</code>/<code>TypeError</code> → „invalid card data for document chunk N“, jede andere Ausnahme → „request failed for document chunk N“ (bewusste Bibliotheksgrenze).</p></div>
-            <div class="option"><div class="option-heading"><span class="option-name"><code>_build_prompt(text, *, allocation, language, instructions)</code></span></div><p>„Create at most N cards“ oder – im Unlimited-Modus – „as many useful cards as the source supports“, Sprache, optionale Zusatzanweisungen und der Quelltext in <code>&lt;source_document&gt;…&lt;/source_document&gt;</code>. Die Begrenzer kennzeichnen den Text als Daten, nicht als Anweisung.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>_request_batch(prompt, settings, chunk_number, assigner) → CardBatch</code></span></div><p>Ruft <code>_completion()</code> mit <code>messages=[system, user]</code> (System: <code>assigner.system_prompt(SYSTEM_PROMPT)</code>), <code>response_format=assigner.response_model</code>, <code>timeout</code>, <code>num_retries=2</code>, <code>drop_params=True</code>, den Profil-<code>options</code> und <code>_provider_options()</code>. Die Antwort wird mit <code>assigner.response_model.model_validate_json</code> geprüft. <code>ValidationError</code>/<code>ValueError</code>/<code>TypeError</code> → „invalid card data for document chunk N“, jede andere Ausnahme → „request failed for document chunk N“ (bewusste Bibliotheksgrenze).</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>_allocation(limit, produced, remaining)</code></span></div><p>Verteilt das restliche Kartenbudget gleichmäßig auf die offenen Abschnitte; <code>None</code> im Unlimited-Modus.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>_build_prompt(text, *, allocation, language, instructions, subdeck_section="")</code></span></div><p>„Create at most N cards“ oder – im Unlimited-Modus – „as many useful cards as the source supports“, Sprache, optionale Zusatzanweisungen und der Quelltext in <code>&lt;source_document&gt;…&lt;/source_document&gt;</code>. Im Unterdeck-Modus steht der Kontextabschnitt (<code>&lt;parent_deck&gt;</code>, <code>&lt;known_subdecks&gt;</code>) vor dem Quelltext. Die Begrenzer kennzeichnen den Text als Daten, nicht als Anweisung.</p></div>
             <div class="option"><div class="option-heading"><span class="option-name"><code>_provider_options(settings)</code></span></div><p>Gibt <code>api_key</code> und <code>api_base</code> nur zurück, wenn sie gesetzt sind. Ohne Schlüssel liest LiteLLM die providerspezifische Variable selbst (z. B. <code>OPENAI_API_KEY</code>).</p></div>
             <div class="option"><div class="option-heading"><span class="option-name"><code>_completion(**kwargs)</code></span></div><p>Einzige Stelle, die <code>litellm</code> importiert – verzögert. Tests ersetzen genau diese Funktion.</p></div>
             <div class="option"><div class="option-heading"><span class="option-name"><code>_response_content(response)</code> / <code>_strip_code_fence(content)</code></span></div><p>Liest <code>choices[0].message.content</code>, lehnt leere Antworten ab und entfernt einen umschließenden Markdown-Codeblock (<code>```json … ```</code>), den manche Modelle trotz JSON-Modus liefern.</p></div>
@@ -934,16 +964,16 @@
         <div class="command-header"><h3 class="command-title"><code>native_pdf.py</code></h3><span class="tag ai">Fachkern · Provider-Adapter</span></div>
         <p>Native PDF-Verarbeitung: Die Original-PDF wird beim Provider hochgeladen, statt lokal Text zu extrahieren. Aktuell gibt es genau einen geprüften Adapter für OpenAI (Files API + Responses API über das offizielle <code>openai</code>-SDK). Das Ergebnis ist dieselbe <code>CardBatch</code>-Struktur wie im lokalen Weg.</p>
         <dl class="facts">
-          <dt>Importiert</dt><dd><code>ai</code>, <code>errors</code>, <code>models</code> · <code>openai</code> (verzögert)</dd>
+          <dt>Importiert</dt><dd><code>ai</code>, <code>errors</code>, <code>models</code>, <code>subdecks</code> · <code>openai</code> (verzögert)</dd>
           <dt>Verwendet von</dt><dd><code>cli</code> (<code>generate_native_cards</code>)</dd>
-          <dt>Tests</dt><dd><code>tests/test_native_pdf.py</code> (16 Tests, Fake-Clients und lokaler HTTP-Server)</dd>
+          <dt>Tests</dt><dd><code>tests/test_native_pdf.py</code> (17 Tests, Fake-Clients und lokaler HTTP-Server)</dd>
         </dl>
         <details open>
           <summary>Öffentliche Schnittstelle</summary>
           <div class="details-body">
             <div class="option">
               <div class="option-heading"><span class="option-name"><code>class NativePDFAdapter(Protocol)</code></span><span class="option-meta">Erweiterungspunkt</span></div>
-              <p>Vertrag für jeden nativen Adapter: <code>generate(path, settings, *, limit, language, instructions) → NativePDFResult</code>. Strukturelle Typisierung – ein Adapter muss nicht erben, nur diese Methode anbieten.</p>
+              <p>Vertrag für jeden nativen Adapter: <code>generate(path, settings, *, limit, language, instructions, subdecks=None) → NativePDFResult</code>. <code>subdecks</code> ist ein <code>SubdeckAssigner</code>; <code>None</code> bedeutet normaler Modus. Strukturelle Typisierung – ein Adapter muss nicht erben, nur diese Methode anbieten.</p>
             </div>
             <div class="option">
               <div class="option-heading"><span class="option-name"><code>NativePDFResult(cards, deleted)</code></span><span class="option-meta">frozen dataclass</span></div>
@@ -954,8 +984,8 @@
               <p>Gibt den nackten OpenAI-Modellnamen nur für geprüfte Modelle zurück: <code>gpt-4o</code>, <code>gpt-4o-mini</code>, <code>gpt-4.1</code> (Schlüssel von <code>OPENAI_MODEL_DOCUMENTATION</code>) sowie datierte Snapshots mit den Präfixen <code>gpt-4o-</code>, <code>gpt-4o-mini-</code> und <code>gpt-4.1-</code> plus exakt <code>JJJJ-MM-TT</code> (z. B. <code>gpt-4o-mini-2024-07-18</code>). Varianten wie <code>gpt-4o-mini-audio-preview-…</code> bleiben ausgeschlossen. Ein Provider-Präfix muss <code>openai/</code> sein oder fehlen. Alles andere → <code>None</code>.</p>
             </div>
             <div class="option">
-              <div class="option-heading"><span class="option-name"><code>generate_native_cards(path, settings, *, limit=50, language="Deutsch", instructions="", adapter=None) → list[Card]</code></span><span class="option-meta">Netzwerk · Upload</span></div>
-              <p>Lehnt Nicht-PDFs sofort ab, nutzt standardmäßig <code>OpenAINativePDFAdapter()</code> und dedupliziert das Ergebnis mit <code>limit</code>. Der Parameter <code>adapter</code> erlaubt Tests und künftige Adapter ohne Monkeypatching.</p>
+              <div class="option-heading"><span class="option-name"><code>generate_native_cards(path, settings, *, limit=50, language="Deutsch", instructions="", adapter=None, subdecks=None) → list[Card]</code></span><span class="option-meta">Netzwerk · Upload</span></div>
+              <p>Lehnt Nicht-PDFs sofort ab, nutzt standardmäßig <code>OpenAINativePDFAdapter()</code> und dedupliziert das Ergebnis mit <code>limit</code>. Der Parameter <code>adapter</code> erlaubt Tests und künftige Adapter ohne Monkeypatching. Aus <code>subdecks</code> (optionaler <code>SubdeckContext</code>) entsteht ein <code>SubdeckAssigner</code>, der an den Adapter geht und danach die Unterdecknamen vereinheitlicht.</p>
             </div>
             <div class="option">
               <div class="option-heading"><span class="option-name"><code>class OpenAINativePDFAdapter</code></span><span class="option-meta">Adapter</span></div>
@@ -970,8 +1000,34 @@
             <div class="option"><div class="option-heading"><span class="option-name"><code>_openai_client(settings)</code></span></div><p>Schlüssel aus <code>settings.api_key</code>, sonst <code>OPENAI_API_KEY</code>; fehlt beides → Fehler vor jedem Upload. <code>api_base</code> wird zu <code>base_url</code>. Test-Nahtstelle für den Fake-Client.</p></div>
             <div class="option"><div class="option-heading"><span class="option-name"><code>_validate_openai_options(client, options)</code></span></div><p>Prüft die Profil-<code>options</code> vor dem Upload. Vom Adapter selbst gesetzte Parameter (<code>OPENAI_MANAGED_OPTIONS</code>: <code>model</code>, <code>instructions</code>, <code>input</code>, <code>text_format</code>, <code>store</code>, <code>timeout</code>) sind verboten. Alle übrigen Namen müssen Parameter von <code>client.responses.parse</code> im installierten SDK sein – gelesen per <code>inspect.signature</code> in <code>_responses_parse_parameters()</code>. <code>_unsupported_options_message()</code> nennt bekannte Ersatznamen, etwa <code>max_output_tokens</code> statt <code>max_tokens</code>. Akzeptiert die Methode beliebige <code>**kwargs</code> (Test-Doubles), entfällt die Namensprüfung.</p></div>
             <div class="option"><div class="option-heading"><span class="option-name"><code>_upload_pdf(client, path, timeout)</code></span></div><p><code>client.files.create(file=…, purpose="user_data")</code> → Datei-ID. Jede Ausnahme wird zu „Native PDF upload failed“.</p></div>
-            <div class="option"><div class="option-heading"><span class="option-name"><code>_request_openai_batch(client, file_id, model, settings, *, limit, language, instructions)</code></span></div><p><code>client.responses.parse(model, instructions=SYSTEM_PROMPT, input=[input_file, input_text], text_format=CardBatch, store=False, timeout, **settings.options)</code>. Ist <code>output_parsed</code> kein <code>CardBatch</code> (z. B. Ablehnung durch das Modell), entsteht ein Fehler.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>_request_openai_batch(client, file_id, model, settings, *, limit, language, instructions, subdecks)</code></span></div><p><code>client.responses.parse(model, instructions=subdecks.system_prompt(SYSTEM_PROMPT), input=[input_file, input_text], text_format=subdecks.response_model, store=False, timeout, **settings.options)</code>. Der Text enthält im Unterdeck-Modus zusätzlich den Kontextabschnitt. Ist <code>output_parsed</code> kein <code>CardBatch</code> (z. B. Ablehnung durch das Modell), entsteht ein Fehler.</p></div>
             <div class="option"><div class="option-heading"><span class="option-name"><code>_delete_uploaded_file(client, file_id) → bool</code></span></div><p>Best-Effort-Löschung. Scheitert sie, erscheint eine <code>RuntimeWarning</code> mit Datei-ID zur manuellen Bereinigung – der Lauf gilt trotzdem als erfolgreich.</p></div>
+          </div>
+        </details>
+      </article>
+
+      <!-- subdecks.py -->
+      <article class="card command-section module-card searchable" data-module="subdecks" id="mod-subdecks">
+        <div class="command-header"><h3 class="command-title"><code>subdecks.py</code></h3><span class="tag ai">Fachkern · Unterdeck-Strategie</span></div>
+        <p>Bündelt alles, was den Unterdeck-Modus (req-4) vom normalen Modus unterscheidet: zusätzliche Modellregeln, den Kontextabschnitt im Prompt, das Antwortschema und die einheitliche Benennung. Lokaler und nativer Weg nutzen dieselbe Strategie; ohne Kontext verhält sie sich neutral.</p>
+        <dl class="facts">
+          <dt>Importiert</dt><dd><code>models</code></dd>
+          <dt>Verwendet von</dt><dd><code>ai</code>, <code>native_pdf</code>, <code>apkg</code> (Datentypen), <code>cli</code></dd>
+          <dt>Tests</dt><dd><code>tests/test_subdecks.py</code> (4 Tests) sowie Unterdeck-Tests in <code>test_ai</code>, <code>test_native_pdf</code>, <code>test_apkg</code>, <code>test_cli</code></dd>
+        </dl>
+        <details open>
+          <summary>Öffentliche Schnittstelle</summary>
+          <div class="details-body">
+            <div class="option"><div class="option-heading"><span class="option-name"><code>SUBDECK_RULES</code></span><span class="option-meta">Konstante</span></div><p>Wird an den Systemprompt angehängt: Antwortform mit <code>subdeck</code>, Kapitel aus Überschriften, Nummerierung oder Inhaltsverzeichnis ableiten, wenige grobe Kapitel bevorzugen, bekannte Unterdecks exakt wiederverwenden, neue nur bei Bedarf, kein Elterndeck und kein <code>::</code> im Namen.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>ExistingSubdeck(name, examples=())</code> · <code>SubdeckContext(parent, existing=())</code></span><span class="option-meta">frozen dataclasses</span></div><p>Eingabe für einen Lauf: übergeordnetes Deck und vorhandene Unterdecks mit Beispielfragen. Erzeugt von <code>cli._subdeck_context()</code> beziehungsweise <code>apkg.read_subdeck_context()</code>.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>class SubdeckAssigner(context)</code></span><span class="option-meta">Strategie je Lauf</span></div><p><code>enabled</code>, <code>response_model</code> (<code>CardBatch</code> oder <code>SubdeckCardBatch</code>), <code>created</code> (in diesem Lauf neue Namen), <code>system_prompt(base)</code>, <code>prompt_section()</code> (<code>&lt;parent_deck&gt;</code> und <code>&lt;known_subdecks&gt;</code> mit Beispielfragen und „new in this run“) und <code>assign(cards)</code>: liefert neue <code>Card</code>-Objekte, ordnet Schreibvarianten der ersten bekannten Schreibweise zu und merkt neue Namen – im normalen Modus entfernt es alle Unterdecks.</p></div>
+          </div>
+        </details>
+        <details>
+          <summary>Interne Bausteine</summary>
+          <div class="details-body">
+            <div class="option"><div class="option-heading"><span class="option-name"><code>_known_name(name)</code></span></div><p>Vergleicht über <code>normalize_key</code>. Vorhandene Unterdecks haben Vorrang, danach die erste Schreibweise eines neuen Namens.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>_examples(subdeck)</code> · <code>_with_subdeck(card, subdeck)</code></span></div><p>Formatiert Beispielfragen mit <code>|</code> und kopiert Karten in den einheitlichen Typ <code>Card</code>.</p></div>
           </div>
         </details>
       </article>
@@ -991,7 +1047,7 @@
             <div class="option"><div class="option-heading"><span class="option-name">Eingebaute Defaults</span><span class="option-meta">Modulkonstanten</span></div><p><code>CONFIG_SCHEMA_VERSION = 1</code>, <code>DEFAULT_CONFIG_PATH = config.yaml</code>, <code>DEFAULT_LIMIT = 50</code>, <code>DEFAULT_LANGUAGE = "Deutsch"</code>, <code>DEFAULT_CHUNK_SIZE = 24_000</code>, <code>DEFAULT_TIMEOUT = 180</code>. Diese Werte sind die unterste Prioritätsschicht.</p></div>
             <div class="option"><div class="option-heading"><span class="option-name"><code>PDFMode(StrEnum)</code></span></div><p><code>local</code> oder <code>native</code>. Typer nutzt dasselbe Enum direkt für <code>--pdf-mode</code>.</p></div>
             <div class="option"><div class="option-heading"><span class="option-name"><code>StrictModel</code></span></div><p>Basisklasse mit <code>extra="forbid"</code> und <code>str_strip_whitespace=True</code>. Ein Tippfehler in einem YAML-Schlüssel wird so sofort mit Fehlerort gemeldet statt ignoriert.</p></div>
-            <div class="option"><div class="option-heading"><span class="option-name"><code>GenerationConfig</code></span></div><p>Defaults für die Generierung: <code>profile</code>, <code>deck</code>, <code>limit ≥ 0</code>, <code>language</code>, <code>instructions</code>, <code>chunk_size 1000..100000</code>, <code>timeout 1..3600 | None</code>, <code>json_output</code>, <code>extend</code>, <code>pdf_mode | None</code>. Der Profilname <code>cli</code> ist reserviert.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>GenerationConfig</code></span></div><p>Defaults für die Generierung: <code>profile</code>, <code>deck</code>, <code>limit ≥ 0</code>, <code>language</code>, <code>instructions</code>, <code>chunk_size 1000..100000</code>, <code>timeout 1..3600 | None</code>, <code>json_output</code>, <code>extend</code>, <code>pdf_mode | None</code>, <code>subdecks</code> (Standard <code>false</code>). Der Profilname <code>cli</code> ist reserviert.</p></div>
             <div class="option"><div class="option-heading"><span class="option-name"><code>ModelProfile</code></span></div><p><code>model</code> muss dem Muster <code>provider/modell</code> entsprechen. <code>api_key_env</code> muss ein gültiger Variablenname sein – ein eingefügter Schlüssel fällt dadurch auf. <code>options</code> verbietet <code>api_key</code>, <code>api_base</code>, <code>model</code>, <code>messages</code>, <code>response_format</code> sowie geheim wirkende Schlüssel (<code>secret</code>, <code>password</code>, <code>credential</code>, <code>apikey</code>, <code>token</code>, <code>*_token</code>, <code>token_*</code>) – auch verschachtelt. <code>max_tokens</code> bleibt erlaubt.</p></div>
             <div class="option"><div class="option-heading"><span class="option-name"><code>AppConfig</code></span></div><p>Wurzel des Schemas: <code>schema_version</code> (nur <code>1</code>), <code>default_profile</code>, <code>input_dir</code>, <code>output_dir</code>, <code>generation</code>, <code>models</code>. Der Modell-Validator prüft, dass referenzierte Profile existieren und dass nicht gleichzeitig <code>default_profile</code> und <code>generation.profile</code> gesetzt sind. <code>selected_profile_name()</code> liefert den einen konfigurierten Profilnamen.</p></div>
           </div>
@@ -1012,13 +1068,13 @@
         <dl class="facts">
           <dt>Importiert</dt><dd><code>ai</code> (<code>AISettings</code>), <code>config</code>, <code>errors</code></dd>
           <dt>Verwendet von</dt><dd><code>cli</code></dd>
-          <dt>Tests</dt><dd><code>tests/test_settings.py</code> (8 Tests)</dd>
+          <dt>Tests</dt><dd><code>tests/test_settings.py</code> (9 Tests)</dd>
         </dl>
         <details open>
           <summary>Öffentliche Schnittstelle</summary>
           <div class="details-body">
             <div class="option"><div class="option-heading"><span class="option-name"><code>ValueSource</code> · <code>SourcedValue(value, source)</code></span></div><p>Herkunftsschicht eines Wertes: <code>built-in</code>, <code>config</code>, <code>cli</code>. Bewusst ohne „env“ – die Umgebung liefert nur Schlüssel, keine Einstellungen.</p></div>
-            <div class="option"><div class="option-heading"><span class="option-name"><code>GenerateSettings</code> · <code>ExportSettings</code></span><span class="option-meta">frozen dataclasses</span></div><p>Vollständig aufgelöste Werte für einen Lauf inklusive <code>origins</code> (Herkunft je Wert). <code>GenerateSettings.ai</code> ist das fertige <code>AISettings</code>.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>GenerateSettings</code> · <code>ExportSettings</code></span><span class="option-meta">frozen dataclasses</span></div><p>Vollständig aufgelöste Werte für einen Lauf inklusive <code>origins</code> (Herkunft je Wert). <code>GenerateSettings.ai</code> ist das fertige <code>AISettings</code>; <code>GenerateSettings.subdecks</code> schaltet den Unterdeck-Modus.</p></div>
             <div class="option"><div class="option-heading"><span class="option-name"><code>load_selected_config(path) → (AppConfig, Path | None)</code></span></div><p>Wählt explizite Datei → <code>ANKI_CONFIG</code> → optionale <code>./config.yaml</code> und liefert zusätzlich den absoluten Pfad als Basis für relative YAML-Pfade.</p></div>
             <div class="option"><div class="option-heading"><span class="option-name"><code>resolve_generate_settings(cli, config, config_path) → GenerateSettings</code></span></div><p><code>cli</code> ist ein einfaches Mapping, das nur explizit gesetzte Werte enthält. Damit ist die Funktion auch aus einer Web-Schicht nutzbar.</p></div>
             <div class="option"><div class="option-heading"><span class="option-name"><code>resolve_export_settings(cli, config, config_path) → ExportSettings</code></span></div><p>Wie oben für <code>export</code>; zusätzlich Pflicht: Deck aus CLI oder <code>generation.deck</code>.</p></div>
@@ -1052,16 +1108,17 @@
         <div class="command-header"><h3 class="command-title"><code>apkg.py</code></h3><span class="tag apkg">Fachkern · Anki-Persistenz</span></div>
         <p>Erzeugt neue Anki-Pakete mit <code>genanki</code>, erweitert vorhandene Pakete über die offizielle <code>anki</code>-Python-API und listet Decks auf. Klassische und zstd-komprimierte Sammlungen werden gelesen und im ursprünglichen Format zurückgeschrieben.</p>
         <dl class="facts">
-          <dt>Importiert</dt><dd><code>errors</code>, <code>models</code> · genanki, anki (verzögert), sqlite3, zipfile, zstandard</dd>
+          <dt>Importiert</dt><dd><code>errors</code>, <code>models</code>, <code>subdecks</code> · genanki, anki (verzögert), sqlite3, zipfile, zstandard</dd>
           <dt>Verwendet von</dt><dd><code>cli</code></dd>
-          <dt>Tests</dt><dd><code>tests/test_apkg.py</code> (5 Tests, darunter ein echter Anki-Export)</dd>
+          <dt>Tests</dt><dd><code>tests/test_apkg.py</code> (9 Tests, darunter ein echter Anki-Export)</dd>
         </dl>
         <details open>
           <summary>Öffentliche Schnittstelle</summary>
           <div class="details-body">
-            <div class="option"><div class="option-heading"><span class="option-name"><code>ExportResult(path, deck, added, skipped)</code></span><span class="option-meta">frozen dataclass</span></div><p>Zusammenfassung für die Ergebnisausgabe.</p></div>
-            <div class="option"><div class="option-heading"><span class="option-name"><code>create_apkg(path, deck_name, cards) → ExportResult</code></span><span class="option-meta">schreibt Datei</span></div><p>Neues klassisches Paket (<code>collection.anki2</code> + <code>media</code>). Leere Kartenliste → Fehler. Schreibt in <code>.&lt;name&gt;.&lt;PID&gt;.tmp</code> neben dem Ziel und ersetzt dann atomar.</p></div>
-            <div class="option"><div class="option-heading"><span class="option-name"><code>append_apkg(path, deck_name, cards) → ExportResult</code></span><span class="option-meta">ändert Datei</span></div><p>Erweitert ein vorhandenes Paket in einem Temp-Ordner und ersetzt es erst am Ende atomar. Fehlende Decks und der Notiztyp werden angelegt. → <a href="#apkg-intern">Diagramm</a></p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>ExportResult(path, deck, added, skipped, added_by_deck)</code></span><span class="option-meta">frozen dataclass</span></div><p>Zusammenfassung für die Ergebnisausgabe. <code>added_by_deck</code> zählt neue Karten je vollem Decknamen, etwa <code>EL1::Netzwerke</code>.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>create_apkg(path, deck_name, cards) → ExportResult</code></span><span class="option-meta">schreibt Datei</span></div><p>Neues klassisches Paket (<code>collection.anki2</code> + <code>media</code>). Karten mit <code>subdeck</code> kommen in <code>deck::subdeck</code>; das Zieldeck ist immer enthalten. Leere Kartenliste → Fehler. Schreibt in <code>.&lt;name&gt;.&lt;PID&gt;.tmp</code> neben dem Ziel und ersetzt dann atomar.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>append_apkg(path, deck_name, cards) → ExportResult</code></span><span class="option-meta">ändert Datei</span></div><p>Erweitert ein vorhandenes Paket in einem Temp-Ordner und ersetzt es erst am Ende atomar. Fehlende Decks, Unterdecks und der Notiztyp werden angelegt. → <a href="#apkg-intern">Diagramm</a></p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>read_subdeck_context(path, deck_name, *, examples=5) → SubdeckContext</code></span><span class="option-meta">nur lesen</span></div><p>Liest die direkten Unterdecks eines Decks (Groß-/Kleinschreibung egal, tiefere Ebenen zählen zu ihrem Unterdeck erster Ebene) mit bis zu <code>examples</code> Beispielfragen als Klartext, je höchstens 200 Zeichen. Arbeitet auf einer Temp-Kopie; fehlt das Deck, ist die Liste leer.</p></div>
             <div class="option"><div class="option-heading"><span class="option-name"><code>inspect_apkg(path) → list[dict]</code></span><span class="option-meta">nur lesen</span></div><p>Je normalem Deck <code>{"id", "name", "cards"}</code> mit direkter Kartenanzahl.</p></div>
           </div>
         </details>
@@ -1070,11 +1127,12 @@
           <div class="details-body">
             <div class="option"><div class="option-heading"><span class="option-name"><code>_extract_collection(path, database) → str</code></span></div><p>Sucht im ZIP in der Reihenfolge <code>collection.anki21b</code> › <code>collection.anki21</code> › <code>collection.anki2</code>. <code>anki21b</code> mit zstd-Magic <code>28 B5 2F FD</code> wird entpackt (Obergrenze 2 GiB). Gibt den gefundenen Eintragsnamen zurück – er bestimmt das Rückschreibformat.</p></div>
             <div class="option"><div class="option-heading"><span class="option-name"><code>_open_collection(database)</code></span></div><p>Öffnet die Temp-Sammlung mit <code>anki.collection.Collection</code>. Einzige Stelle, die <code>anki</code> importiert.</p></div>
-            <div class="option"><div class="option-heading"><span class="option-name"><code>_append_to_collection(collection, path, deck_name, cards)</code></span></div><p>Holt oder erzeugt den Notiztyp <code>KI Karteikarte (Front/Back)</code> und verlangt exakt die Felder <code>Front</code>, <code>Back</code>. <code>decks.id(name)</code> liefert oder erzeugt das Deck. Vorhandene Fragen des Zieldecks werden per lesendem SQL gesammelt (erstes Feld aller Notiztypen, HTML-unescaped, normalisiert). Neue Karten mit bekannter Frage werden gezählt und übersprungen.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>_append_to_collection(collection, path, deck_name, cards)</code></span></div><p>Holt oder erzeugt den Notiztyp <code>KI Karteikarte (Front/Back)</code> und verlangt exakt die Felder <code>Front</code>, <code>Back</code>. <code>decks.id(name)</code> liefert oder erzeugt Deck und Unterdecks. Vorhandene Fragen werden per lesendem SQL gesammelt (<code>_existing_fronts</code>: erstes Feld aller Notiztypen, HTML-unescaped, normalisiert). <code>_duplicate_scope</code> sucht im Zieldeck – und in allen Unterdecks (<code>deck_and_child_ids</code>), sobald eine Karte ein <code>subdeck</code> hat. Neue Karten mit bekannter Frage werden gezählt und übersprungen. <code>_compatible_note_type</code> holt oder erzeugt den Notiztyp und prüft seine Felder.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>_existing_subdecks</code> · <code>_child_deck_names</code> · <code>_sample_questions</code> · <code>_plain_text</code></span></div><p>Bausteine von <code>read_subdeck_context</code>: Unterdecks erster Ebene ermitteln, Beispielfragen per <code>SELECT DISTINCT … LIMIT</code> lesen, HTML entfernen und kürzen.</p></div>
             <div class="option"><div class="option-heading"><span class="option-name"><code>_add_anki_note(...)</code> / <code>_new_anki_model(collection)</code></span></div><p>Schreiben ausschließlich über die API (<code>new_note</code>, <code>add_note</code>, <code>models.add</code>). Der Notiztyp wird aus dem genanki-Modell abgeleitet, damit neue und erweiterte Pakete identisch aussehen.</p></div>
             <div class="option"><div class="option-heading"><span class="option-name"><code>_checkpoint_collection(database)</code></span></div><p><code>PRAGMA wal_checkpoint(TRUNCATE)</code> nach dem Schließen: Alle Änderungen landen in der Hauptdatei, bevor sie verpackt wird.</p></div>
             <div class="option"><div class="option-heading"><span class="option-name"><code>_replace_collection(path, database, collection_name)</code></span></div><p>Neues ZIP: alle Einträge außer <code>collection.*</code> 1:1 kopieren (Medien, <code>media</code>, <code>meta</code>), dann die Sammlung unter ihrem Originalnamen – bei <code>anki21b</code> wieder zstd-komprimiert – hinzufügen, dann <code>os.replace</code>.</p></div>
-            <div class="option"><div class="option-heading"><span class="option-name"><code>_note_model()</code> · <code>_stable_id()</code> · <code>_stable_guid()</code> · <code>_normalize_front()</code></span></div><p>Feste Modell-ID <code>1704219001</code>, Deck-ID aus SHA-256 des Decknamens, GUID über <code>genanki.guid_for(deck, normalisierte Frage)</code>, Normalisierung wie in <code>models</code>.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>_note_model()</code> · <code>_stable_id()</code> · <code>_stable_guid()</code> · <code>_normalize_front()</code> · <code>_genanki_deck()</code> · <code>_target_deck()</code> · <code>_count_by_deck()</code></span></div><p>Feste Modell-ID <code>1704219001</code>, Deck-ID aus SHA-256 des vollen Decknamens, GUID über <code>genanki.guid_for(zieldeck, normalisierte Frage)</code> – auch im Unterdeck-Modus mit dem übergeordneten Deck, damit eine Frage beim Wechsel des Kapitels dieselbe Notiz bleibt. <code>_target_deck</code> bildet <code>deck::subdeck</code>.</p></div>
           </div>
         </details>
       </article>
@@ -1086,15 +1144,15 @@
         <dl class="facts">
           <dt>Importiert</dt><dd>alle Paketmodule außer <code>__main__</code> · Typer, Rich, python-dotenv</dd>
           <dt>Verwendet von</dt><dd>Konsolenbefehl <code>anki-flashcards</code>, <code>__main__.py</code></dd>
-          <dt>Tests</dt><dd><code>tests/test_cli.py</code> (16 Tests mit <code>CliRunner</code> und einem Subprozess-Test)</dd>
+          <dt>Tests</dt><dd><code>tests/test_cli.py</code> (21 Tests mit <code>CliRunner</code> und einem Subprozess-Test)</dd>
         </dl>
         <details open>
           <summary>Befehle und Objekte</summary>
           <div class="details-body">
             <div class="option"><div class="option-heading"><span class="option-name"><code>app</code> · <code>config_app</code></span></div><p>Typer-Hauptapp (<code>no_args_is_help</code>, <code>-h</code>/<code>--help</code>) und die Unter-App <code>config</code>. <code>console</code> schreibt auf stdout, <code>error_console</code> auf stderr.</p></div>
-            <div class="option"><div class="option-heading"><span class="option-name"><code>generate(...)</code></span></div><p>Der Ablauf aus <a href="#anfrage">Schritt 3 bis 11</a>. Lokale Generierung steckt in <code>_generate_local_cards()</code> mit Rich-Spinner und innerem Callback <code>update()</code>.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>generate(...)</code></span></div><p>Der Ablauf aus <a href="#anfrage">Schritt 3 bis 11</a>. Lokale Generierung steckt in <code>_generate_local_cards()</code> mit Rich-Spinner und innerem Callback <code>update()</code>. <code>_subdeck_context()</code> baut im Unterdeck-Modus den Kontext (Schritt 6b) und kündigt bei <code>--extend</code> die Übertragung an.</p></div>
             <div class="option"><div class="option-heading"><span class="option-name"><code>export_cards(...)</code> · <code>list_decks(...)</code> · <code>show_config(...)</code></span></div><p>Die Befehle <code>export</code>, <code>decks</code> und <code>config show</code>. → <a href="#weitere-ablaeufe">Abläufe</a></p></div>
-            <div class="option"><div class="option-heading"><span class="option-name"><code>_explicit_values</code> · <code>_validate_output</code> · <code>_write_deck</code> · <code>_print_result</code></span></div><p>Gemeinsame Bausteine aller schreibenden Befehle.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>_explicit_values</code> · <code>_validate_output</code> · <code>_write_deck</code> · <code>_print_result</code></span></div><p>Gemeinsame Bausteine aller schreibenden Befehle. <code>_print_result</code> listet zusätzlich „Neue Karten je Unterdeck“, sobald <code>added_by_deck</code> andere Decks als das Zieldeck enthält.</p></div>
             <div class="option"><div class="option-heading"><span class="option-name"><code>run()</code></span></div><p>Einstiegspunkt: <code>.env</code> laden, App starten, <code>FlashcardError</code> in stderr-Meldung und Exit-Code 1 übersetzen.</p></div>
           </div>
         </details>
@@ -1106,6 +1164,7 @@
               <li>Ausführliche Hilfe steht in den Epilog-Konstanten <code>MAIN_EPILOG</code>, <code>GENERATE_EPILOG</code>, <code>EXPORT_EPILOG</code>, <code>DECKS_EPILOG</code>. Tests prüfen deren Inhalt.</li>
               <li>Optionen mit konfigurierbarem Default haben den Typer-Default <code>None</code>; boolesche Werte gibt es immer als Paar (<code>--extend/--no-extend</code>).</li>
               <li><code>--config</code> hat <code>envvar="ANKI_CONFIG"</code>.</li>
+              <li><code>--subdecks/--no-subdecks</code> gibt es bei <code>generate</code> und <code>config show</code>; <code>export</code> braucht keine Option, weil das JSON-Feld <code>subdeck</code> die Zuordnung bereits enthält.</li>
             </ul>
           </div>
         </details>
@@ -1166,6 +1225,7 @@
             <tr><td><code>model</code></td><td><code>--model</code> → <code>profile.model</code> → <code>""</code> (später Fehler „No AI model configured“)</td><td><code>_resolve_model</code></td></tr>
             <tr><td><code>api_base</code></td><td><code>--api-base</code> → <code>profile.api_base</code> → <code>None</code> (Provider-Standard)</td><td><code>_resolve_api_base</code></td></tr>
             <tr><td><code>timeout</code></td><td><code>--timeout</code> → <code>generation.timeout</code> → <code>profile.timeout</code> (Feld-Default 180) → 180</td><td><code>_resolve_timeout</code></td></tr>
+            <tr><td><code>subdecks</code></td><td><code>--subdecks/--no-subdecks</code> → <code>generation.subdecks</code> → <code>false</code></td><td><code>cli.get("subdecks", config.generation.subdecks)</code></td></tr>
             <tr><td><code>pdf_mode</code></td><td><code>--pdf-mode</code> → <code>generation.pdf_mode</code> → <code>profile.pdf_mode</code> (Feld-Default <code>local</code>) → <code>local</code></td><td><code>_resolve_pdf_mode</code></td></tr>
             <tr><td><code>api_key</code></td><td>nur <code>os.getenv(profile.api_key_env)</code>; ohne Profil <code>None</code> – dann liest LiteLLM die Providervariable selbst</td><td><code>_profile_api_key</code></td></tr>
             <tr><td><code>options</code></td><td>nur <code>profile.options</code> (Kopie); keine CLI-Option</td><td><code>resolve_generate_settings</code></td></tr>
@@ -1261,14 +1321,14 @@ Additional user instructions: Bevorzuge kurze Verständnisfragen.
 [Seite 1]
 …Text des Abschnitts…
 &lt;/source_document&gt;</code></pre>
-          <p class="small muted">Der Systemprompt (<code>SYSTEM_PROMPT</code>) legt Format und Qualitätsregeln fest. Der Benutzer-Prompt enthält nur Kontingent, Sprache, Zusatzanweisungen und den abgegrenzten Quelltext.</p>
+          <p class="small muted">Der Systemprompt (<code>SYSTEM_PROMPT</code>) legt Format und Qualitätsregeln fest. Der Benutzer-Prompt enthält nur Kontingent, Sprache, Zusatzanweisungen, im Unterdeck-Modus den Kontextabschnitt und den abgegrenzten Quelltext.</p>
         </article>
         <article class="card searchable" data-module="ai">
           <h3>Der LiteLLM-Aufruf</h3>
           <pre><button class="copy-button" type="button" aria-label="Code kopieren">Kopieren</button><code>completion(
     model=settings.model,            # "provider/modell"
     messages=[system, user],
-    response_format=CardBatch,       # Pydantic → JSON-Schema
+    response_format=assigner.response_model,  # CardBatch oder SubdeckCardBatch
     timeout=settings.timeout,
     num_retries=2,                   # Wiederholung durch LiteLLM
     drop_params=True,                # nicht unterstützte Parameter verwerfen
@@ -1276,6 +1336,114 @@ Additional user instructions: Bevorzuge kurze Verständnisfragen.
     **_provider_options(settings),   # api_key / api_base, nur wenn gesetzt
 )</code></pre>
           <p class="small muted">Wie gut ein Provider <code>response_format</code> umsetzt, ist unterschiedlich. Deshalb wird jede Antwort zusätzlich mit <code>CardBatch.model_validate_json()</code> geprüft – egal, was der Provider verspricht.</p>
+        </article>
+      </div>
+    </section>
+
+    <!-- ============================================================ UNTERDECKS -->
+    <section id="unterdecks">
+      <div class="section-heading">
+        <p class="eyebrow">subdecks.py · req-4 (R-130 bis R-138)</p>
+        <h2>KI-Unterdecks: Kapitel automatisch zuordnen</h2>
+        <p>Ein Deck steht für eine Vorlesung, seine Unterdecks für deren Kapitel. Mit <code>--subdecks</code> ordnet das Modell jede Karte einem Unterdeck <code>Deck::Kapitel</code> zu. Mehrere Dokumente werden nacheinander mit <code>--extend</code> verarbeitet; das vorhandene Deck dient dabei als Kontext. Umgesetzt ist das als Kombination aus zusätzlichen Modellanweisungen und einem strenger validierten Antwortformat.</p>
+      </div>
+      <figure class="diagram wide">
+        <div class="diagram-scroll">
+          <svg viewBox="0 0 1000 390" aria-labelledby="sub-title sub-desc">
+            <title id="sub-title">Datenfluss im Unterdeck-Modus</title>
+            <desc id="sub-desc">Beim Erweitern liest read_subdeck_context die vorhandenen Unterdecks samt Beispielfragen aus dem Paket. Daraus entstehen SubdeckContext und SubdeckAssigner. Je Chunk enthält die Anfrage Regeln, Kontext und das Schema SubdeckCardBatch. assign vereinheitlicht die Namen und gibt neue Unterdecks an den nächsten Chunk weiter. Das Ergebnis landet in Deck::Kapitel.</desc>
+            <defs>
+              <marker id="arr-sub" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#6b7f8c"/></marker>
+            </defs>
+            <text class="t-label" x="40" y="28">Kontext aufbauen · Schritt 6b</text>
+            <g class="n-ext"><rect class="box" x="40" y="40" width="212" height="74" rx="10"/><text class="t-title" x="56" y="66">ziel.apkg</text><text class="t-sub" x="56" y="87">nur bei --extend;</text><text class="t-sub" x="56" y="104">sonst leerer Kontext</text></g>
+            <g class="n-apkg"><rect class="box" x="276" y="40" width="212" height="74" rx="10"/><text class="t-title sm" x="292" y="66">read_subdeck_context</text><text class="t-sub" x="292" y="87">direkte Unterdecks,</text><text class="t-sub" x="292" y="104">≤ 5 Beispielfragen je</text></g>
+            <g class="n-ai"><rect class="box" x="512" y="40" width="212" height="74" rx="10"/><text class="t-title" x="528" y="66">SubdeckContext</text><text class="t-sub" x="528" y="87">parent + existing</text><text class="t-sub" x="528" y="104">(Name, Beispiele)</text></g>
+            <g class="n-ai"><rect class="box" x="748" y="40" width="212" height="74" rx="10"/><text class="t-title" x="764" y="66">SubdeckAssigner</text><text class="t-sub" x="764" y="87">eine Strategie je Lauf,</text><text class="t-sub" x="764" y="104">kennt alle Namen</text></g>
+            <path class="edge" d="M252 77 H272" marker-end="url(#arr-sub)"/>
+            <path class="edge" d="M488 77 H508" marker-end="url(#arr-sub)"/>
+            <path class="edge" d="M724 77 H744" marker-end="url(#arr-sub)"/>
+            <path class="edge" d="M854 114 V136 H146 V156" marker-end="url(#arr-sub)"/>
+            <text class="t-label" x="300" y="152">Je Chunk · Schritt 7</text>
+            <g class="n-ai"><rect class="box" x="40" y="160" width="212" height="92" rx="10"/><text class="t-head" x="56" y="186">Anfrage</text><text class="t-sub" x="56" y="207">System: + SUBDECK_RULES</text><text class="t-sub" x="56" y="224">User: &lt;known_subdecks&gt;</text><text class="t-sub" x="56" y="241">Schema: SubdeckCardBatch</text></g>
+            <g class="n-ext"><rect class="box" x="276" y="160" width="212" height="92" rx="10"/><text class="t-head" x="292" y="186">KI-Modell</text><text class="t-sub" x="292" y="207">LiteLLM-Provider</text><text class="t-sub" x="292" y="224">oder OpenAI nativ</text></g>
+            <g class="n-model"><rect class="box" x="512" y="160" width="212" height="92" rx="10"/><text class="t-title" x="528" y="186">SubdeckCardBatch</text><text class="t-sub" x="528" y="207">subdeck ist Pflicht,</text><text class="t-sub" x="528" y="224">1 Ebene, ≤ 100 Zeichen</text></g>
+            <g class="n-ai"><rect class="box" x="748" y="160" width="212" height="92" rx="10"/><text class="t-title" x="764" y="186">assign()</text><text class="t-sub" x="764" y="207">Namen vereinheitlichen,</text><text class="t-sub" x="764" y="224">neue Namen merken</text></g>
+            <path class="edge" d="M252 206 H272" marker-end="url(#arr-sub)"/>
+            <path class="edge" d="M488 206 H508" marker-end="url(#arr-sub)"/>
+            <path class="edge" d="M724 206 H744" marker-end="url(#arr-sub)"/>
+            <path class="edge" d="M960 206 H982 V77 H964" marker-end="url(#arr-sub)"/>
+            <text class="t-edge" transform="translate(995 141) rotate(-90)" text-anchor="middle">nächster Chunk</text>
+            <path class="edge" d="M854 252 V272 H146 V292" marker-end="url(#arr-sub)"/>
+            <text class="t-label" x="300" y="288">Ergebnis · Schritte 8 bis 11</text>
+            <g class="n-model"><rect class="box" x="40" y="296" width="212" height="74" rx="10"/><text class="t-title" x="56" y="322">list[Card]</text><text class="t-sub" x="56" y="343">subdeck je Karte,</text><text class="t-sub" x="56" y="360">dedupliziert, Limit</text></g>
+            <g class="n-model"><rect class="box" x="276" y="296" width="212" height="74" rx="10"/><text class="t-title" x="292" y="322">save_cards()</text><text class="t-sub" x="292" y="343">optional: JSON mit</text><text class="t-sub" x="292" y="360">Feld subdeck</text></g>
+            <g class="n-apkg"><rect class="box" x="512" y="296" width="212" height="74" rx="10"/><text class="t-head" x="528" y="322">APKG schreiben</text><text class="t-sub" x="528" y="343">Deck::Kapitel,</text><text class="t-sub" x="528" y="360">Duplikate im Decks-Baum</text></g>
+            <g class="n-ext"><rect class="box" x="748" y="296" width="212" height="74" rx="10"/><text class="t-title" x="764" y="322">ziel.apkg</text><text class="t-sub" x="764" y="343">neue Unterdecks</text><text class="t-sub" x="764" y="360">+ vorhandene</text></g>
+            <path class="edge" d="M252 333 H272" marker-end="url(#arr-sub)"/>
+            <path class="edge" d="M488 333 H508" marker-end="url(#arr-sub)"/>
+            <path class="edge" d="M724 333 H744" marker-end="url(#arr-sub)"/>
+          </svg>
+        </div>
+        <figcaption>Innerhalb der KI-Generierung ist <code>SubdeckAssigner</code> der einzige Ort, an dem sich Unterdeck-Modus und normaler Modus unterscheiden; außerhalb unterscheiden nur <code>cli._subdeck_context()</code> und der Duplikat-Suchbereich in <code>apkg</code>. Ohne Kontext liefert sie den normalen Prompt, das Schema <code>CardBatch</code> und Karten ohne Unterdeck.</figcaption>
+      </figure>
+      <div class="grid two" style="margin-top:1rem">
+        <article class="card searchable" data-module="subdecks cli settings">
+          <h3>Wann ist der Modus aktiv?</h3>
+          <ul class="checklist">
+            <li><code>--subdecks</code> oder <code>generation.subdecks: true</code>; <code>--no-subdecks</code> schaltet YAML ab. Standard: aus.</li>
+            <li>Das Deck aus <code>--deck</code> (sonst <code>generation.deck</code> oder Dateiname) ist das übergeordnete Deck.</li>
+            <li>Neues Paket: leerer Kontext – das Modell bildet alle Kapitel aus der Quelle. <code>--extend</code>: Kontext aus dem Paket.</li>
+            <li>Lokaler und nativer Weg verhalten sich gleich. Ohne Modus ändert sich nichts gegenüber dem Stand vor req-4.</li>
+          </ul>
+        </article>
+        <article class="card searchable" data-module="subdecks models">
+          <h3>Namensregeln und Vereinheitlichung</h3>
+          <ul class="checklist">
+            <li><code>SubdeckCard</code> verlangt einen Namen mit 1–100 Zeichen, eine Ebene, kein <code>::</code>. Verstößt das Modell dagegen, scheitert der Batch wie jede ungültige Antwort.</li>
+            <li><code>assign()</code> vergleicht Namen über <code>normalize_key</code>: Schreibvarianten werden auf das vorhandene Unterdeck oder die erste Schreibweise im Lauf abgebildet.</li>
+            <li>Neue Namen erscheinen im nächsten Chunk als „new in this run“, damit gleiche Kapitel gleich heißen.</li>
+            <li>Im Unterdeck-Modus liegt jede neue Karte in einem Unterdeck; vorhandene Karten werden nie verschoben.</li>
+          </ul>
+        </article>
+        <article class="card searchable" data-module="subdecks ai native_pdf">
+          <h3>Regeln im Systemprompt</h3>
+          <pre><code>Also assign every card to exactly one chapter subdeck. Each card then has the form
+{&quot;front&quot;: &quot;...&quot;, &quot;back&quot;: &quot;...&quot;, &quot;tags&quot;: [], &quot;subdeck&quot;: &quot;...&quot;}.
+Derive subdecks from the structure of the source: chapter or section headings, their numbering,
+or a table of contents. Prefer few, coarse chapters over many narrow ones.
+Reuse a known subdeck whenever the card fits it and spell its name exactly as listed.
+Create a new subdeck only for content that fits none of the known subdecks and name it after the
+matching chapter of the source. Write only the subdeck name: no parent deck name and no &quot;::&quot;.</code></pre>
+        </article>
+        <article class="card searchable" data-module="subdecks ai native_pdf">
+          <h3>Kontext im Benutzer-Prompt</h3>
+          <pre><code>Parent deck (do not repeat it in subdeck names):
+&lt;parent_deck&gt;EL1&lt;/parent_deck&gt;
+Known subdecks; reuse them when the content fits:
+&lt;known_subdecks&gt;
+- Kapitel 1 – Grundlagen
+  Example questions: Was ist Strom? | Was ist Spannung?
+- Kapitel 2 – Netzwerke (new in this run)
+&lt;/known_subdecks&gt;</code></pre>
+          <p class="small muted">Der Abschnitt steht zwischen Zusatzanweisungen und <code>&lt;source_document&gt;</code>. Ohne vorhandene Unterdecks steht dort <code>none yet</code>.</p>
+        </article>
+        <article class="card searchable" data-module="apkg models subdecks">
+          <h3>Duplikate, IDs und Export</h3>
+          <ul class="checklist">
+            <li>Hat eine Karte ein <code>subdeck</code>, sucht <code>append_apkg</code> Duplikate im Zieldeck und allen Unterdecks. Ohne Unterdecks bleibt der Suchbereich das Zieldeck.</li>
+            <li>Die GUID nutzt weiterhin das übergeordnete Deck – eine Frage bleibt dieselbe Notiz, auch wenn sie in einem anderen Kapitel landet.</li>
+            <li>Karten-JSON enthält <code>subdeck</code>; <code>export</code> legt die Karten wieder unter <code>--deck::subdeck</code> ab.</li>
+          </ul>
+        </article>
+        <article class="card searchable" data-module="subdecks apkg">
+          <h3>Datenschutz und Grenzen</h3>
+          <ul class="checklist">
+            <li>Mit <code>--extend</code> gehen die Namen aller direkten Unterdecks und je bis zu fünf Beispielfragen (je höchstens 200 Zeichen) an den Provider. Die CLI kündigt das an.</li>
+            <li>Die Zahl der Unterdecks im Kontext ist nicht begrenzt; sehr große Decks verlängern jeden Prompt.</li>
+            <li>Die Zuordnung ist eine Modellentscheidung und kann falsch sein. Prüfen über <code>--json</code> oder in Anki.</li>
+            <li>Es gibt genau eine Unterdeck-Ebene unter dem Zieldeck.</li>
+          </ul>
         </article>
       </div>
     </section>
@@ -1300,7 +1468,7 @@ Additional user instructions: Bevorzuge kurze Verständnisfragen.
             <path class="edge" d="M252 77 H272" marker-end="url(#arr-apkg)"/>
             <g class="n-apkg"><rect class="box" x="276" y="40" width="212" height="74" rx="10"/><text class="t-title" x="292" y="66">genanki.Note</text><text class="t-sub" x="292" y="87">Felder HTML-escaped</text><text class="t-sub" x="292" y="104">GUID aus Deck + Frage</text></g>
             <path class="edge" d="M488 77 H508" marker-end="url(#arr-apkg)"/>
-            <g class="n-apkg"><rect class="box" x="512" y="40" width="212" height="74" rx="10"/><text class="t-title" x="528" y="66">genanki.Package</text><text class="t-sub" x="528" y="87">Deck mit stabiler ID</text><text class="t-sub" x="528" y="104">→ .ziel.apkg.PID.tmp</text></g>
+            <g class="n-apkg"><rect class="box" x="512" y="40" width="212" height="74" rx="10"/><text class="t-title" x="528" y="66">genanki.Package</text><text class="t-sub" x="528" y="87">Decks mit stabiler ID</text><text class="t-sub" x="528" y="104">→ .ziel.apkg.PID.tmp</text></g>
             <path class="edge" d="M724 77 H744" marker-end="url(#arr-apkg)"/>
             <g class="n-ext"><rect class="box" x="748" y="40" width="212" height="74" rx="10"/><text class="t-title" x="764" y="66">os.replace</text><text class="t-sub" x="764" y="87">→ ziel.apkg (neu)</text></g>
 
@@ -1313,7 +1481,7 @@ Additional user instructions: Bevorzuge kurze Verständnisfragen.
             <path class="edge" d="M724 209 H744" marker-end="url(#arr-apkg)"/>
             <g class="n-apkg"><rect class="box" x="748" y="172" width="212" height="74" rx="10"/><text class="t-title sm" x="764" y="198">_open_collection</text><text class="t-sub" x="764" y="219">anki.collection.Collection</text><text class="t-sub" x="764" y="236">offizielle Anki-API</text></g>
             <path class="edge" d="M854 246 V266 H146 V286" marker-end="url(#arr-apkg)"/>
-            <g class="n-apkg"><rect class="box" x="40" y="290" width="212" height="74" rx="10"/><text class="t-title sm" x="56" y="316">_append_to_collection</text><text class="t-sub" x="56" y="337">Notiztyp, Deck anlegen</text><text class="t-sub" x="56" y="354">Duplikate überspringen</text></g>
+            <g class="n-apkg"><rect class="box" x="40" y="290" width="212" height="74" rx="10"/><text class="t-title sm" x="56" y="316">_append_to_collection</text><text class="t-sub" x="56" y="337">Notiztyp, Decks anlegen</text><text class="t-sub" x="56" y="354">Duplikate überspringen</text></g>
             <path class="edge" d="M252 327 H272" marker-end="url(#arr-apkg)"/>
             <g class="n-apkg"><rect class="box" x="276" y="290" width="212" height="74" rx="10"/><text class="t-title sm" x="292" y="316">_checkpoint_collection</text><text class="t-sub" x="292" y="337">nach close(): PRAGMA</text><text class="t-sub" x="292" y="354">wal_checkpoint(TRUNCATE)</text></g>
             <path class="edge" d="M488 327 H508" marker-end="url(#arr-apkg)"/>
@@ -1329,13 +1497,13 @@ Additional user instructions: Bevorzuge kurze Verständnisfragen.
       <div class="grid two" style="margin-top:1rem">
         <article class="card searchable" data-module="apkg models">
           <h3>Duplikaterkennung beim Erweitern</h3>
-          <p><code>_append_to_collection()</code> liest per <code>SELECT</code> das erste Feld aller Notizen, deren Karten im Zieldeck liegen – unabhängig vom Notiztyp. Die Werte werden HTML-unescaped und wie in <code>models</code> normalisiert.</p>
+          <p><code>_append_to_collection()</code> liest per <code>SELECT</code> das erste Feld aller Notizen, deren Karten im Zieldeck liegen – unabhängig vom Notiztyp. Hat eine neue Karte ein <code>subdeck</code>, umfasst der Suchbereich zusätzlich alle Unterdecks (<code>deck_and_child_ids</code>). Die Werte werden HTML-unescaped und wie in <code>models</code> normalisiert.</p>
           <p>Jede neue Karte mit bekannter Frage wird gezählt und übersprungen; jede hinzugefügte Frage kommt sofort in die Vergleichsmenge. Andere Decks im Paket spielen keine Rolle.</p>
         </article>
         <article class="card searchable" data-module="apkg">
           <h3>Stabile IDs und GUIDs</h3>
-          <p><strong>Notiztyp:</strong> feste ID <code>1704219001</code>, Name <code>KI Karteikarte (Front/Back)</code>. <strong>Deck</strong> (nur neu): <code>sha256("deck:" + name)</code>, erste 4 Byte modulo 2·10⁹ plus 1. <strong>Notiz-GUID</strong> (neu und erweitert): <code>genanki.guid_for(deck, normalisierte Frage)</code>.</p>
-          <p>Gleiche Frage im gleichen Deck ergibt also immer dieselbe GUID. Anki erkennt beim Import so dieselbe Notiz wieder, statt sie doppelt anzulegen.</p>
+          <p><strong>Notiztyp:</strong> feste ID <code>1704219001</code>, Name <code>KI Karteikarte (Front/Back)</code>. <strong>Deck</strong> (nur neu, auch je Unterdeck mit vollem Namen): <code>sha256("deck:" + name)</code>, erste 4 Byte modulo 2·10⁹ plus 1. <strong>Notiz-GUID</strong> (neu und erweitert): <code>genanki.guid_for(deck, normalisierte Frage)</code>.</p>
+          <p>Gleiche Frage im gleichen (übergeordneten) Deck ergibt also immer dieselbe GUID – unabhängig vom Unterdeck. Anki erkennt beim Import so dieselbe Notiz wieder, statt sie doppelt anzulegen.</p>
         </article>
         <article class="card searchable" data-module="apkg">
           <h3>Notiztyp und Darstellung</h3>
@@ -1438,7 +1606,7 @@ Additional user instructions: Bevorzuge kurze Verständnisfragen.
       <div class="grid two">
         <article class="card searchable" data-module="models">
           <h3>Karten-JSON (Schema-Version 1)</h3>
-          <p>Geschrieben von <code>save_cards()</code>, gelesen von <code>load_cards()</code>. <code>source</code> fehlt, wenn die Karten nicht aus einem Dokument stammen.</p>
+          <p>Geschrieben von <code>save_cards()</code>, gelesen von <code>load_cards()</code>. <code>source</code> fehlt, wenn die Karten nicht aus einem Dokument stammen; <code>subdeck</code> fehlt bei Karten ohne Unterdeck.</p>
           <pre><button class="copy-button" type="button" aria-label="JSON kopieren">Kopieren</button><code>{
   "schema_version": 1,
   "deck": "Biologie::Grundlagen",
@@ -1446,7 +1614,8 @@ Additional user instructions: Bevorzuge kurze Verständnisfragen.
     {
       "front": "Welche Funktion haben Mitochondrien?",
       "back": "Sie erzeugen den Großteil des ATP der Zelle.",
-      "tags": ["zellbiologie"]
+      "tags": ["zellbiologie"],
+      "subdeck": "Kapitel 2 – Zellorganellen"
     }
   ],
   "source": "/home/nutzer/projekt/input/skript.pdf"
@@ -1464,7 +1633,8 @@ Additional user instructions: Bevorzuge kurze Verständnisfragen.
 │  ├─ limit ≥ 0 (50) · language ("Deutsch")
 │  ├─ instructions ("") · chunk_size (24000)
 │  ├─ timeout 1..3600 | null · json_output | null
-│  └─ extend (false) · pdf_mode | null
+│  ├─ extend (false) · pdf_mode | null
+│  └─ subdecks (false)
 └─ models: {name → ModelProfile}
    ├─ model: "provider/modell"
    ├─ api_base | null · api_key_env | null
@@ -1484,6 +1654,8 @@ Additional user instructions: Bevorzuge kurze Verständnisfragen.
             <tr><td><code>SourceDocument</code></td><td><code>documents</code></td><td><code>read_document()</code></td><td><code>generate_cards()</code></td></tr>
             <tr><td><code>Card</code> / <code>CardBatch</code></td><td><code>models</code></td><td>KI-Antwort, <code>load_cards()</code></td><td>alle Kernmodule</td></tr>
             <tr><td><code>NativePDFResult</code></td><td><code>native_pdf</code></td><td><code>OpenAINativePDFAdapter.generate()</code></td><td><code>generate_native_cards()</code></td></tr>
+            <tr><td><code>SubdeckContext</code> / <code>ExistingSubdeck</code></td><td><code>subdecks</code></td><td><code>cli._subdeck_context()</code>, <code>apkg.read_subdeck_context()</code></td><td><code>generate_cards()</code>, <code>generate_native_cards()</code></td></tr>
+            <tr><td><code>SubdeckAssigner</code></td><td><code>subdecks</code></td><td><code>generate_cards()</code>, <code>generate_native_cards()</code></td><td><code>_request_batch()</code>, nativer Adapter</td></tr>
             <tr><td><code>ExportResult</code></td><td><code>apkg</code></td><td><code>create_apkg()</code>, <code>append_apkg()</code></td><td><code>cli._print_result()</code></td></tr>
           </tbody>
         </table>
@@ -1508,6 +1680,7 @@ Additional user instructions: Bevorzuge kurze Verständnisfragen.
             <tr><td><code>documents._extract_text</code></td><td><code>OSError</code>, <code>UnicodeError</code>, <code>ValueError</code>, <code>PyPdfError</code>, <code>PackageNotFoundError</code>, <code>BadZipFile</code></td><td>Could not read</td></tr>
             <tr><td><code>documents._read_pdf</code></td><td><code>NotImplementedError</code></td><td>Encrypted PDF is not supported</td></tr>
             <tr><td><code>ai._request_batch</code></td><td><code>ValidationError</code>, <code>ValueError</code>, <code>TypeError</code> · alle übrigen</td><td>AI returned invalid card data … chunk N · AI request failed … chunk N</td></tr>
+            <tr><td><code>Card.validate_subdeck</code> (über <code>ai._request_batch</code> bzw. nativ)</td><td><code>ValidationError</code></td><td>AI returned invalid card data … A subdeck name must be a single level without '::'</td></tr>
             <tr><td><code>native_pdf._validate_openai_options</code></td><td>– (prüft vor dem Upload)</td><td>Native OpenAI options are set by the program … · Options not supported by the OpenAI Responses API …</td></tr>
             <tr><td><code>native_pdf._upload_pdf</code></td><td>alle</td><td>Native PDF upload failed</td></tr>
             <tr><td><code>native_pdf._request_openai_batch</code></td><td><code>ValidationError</code>, <code>ValueError</code>, <code>TypeError</code> · alle übrigen</td><td>Native OpenAI response contained invalid cards · Native OpenAI PDF request failed</td></tr>
@@ -1551,6 +1724,7 @@ Additional user instructions: Bevorzuge kurze Verständnisfragen.
             <li>Standard ist <code>local</code>: Nur extrahierter Text geht an das Modell, bei Ollama bleibt alles lokal.</li>
             <li><code>native</code> braucht ausdrückliche Wahl; die CLI kündigt den Upload an.</li>
             <li>Allowlist, Größe, Schlüssel und Optionen werden vor dem Upload geprüft; Upload wird im <code>finally</code> gelöscht.</li>
+            <li>Unterdeck-Modus mit <code>--extend</code>: Unterdecknamen und je bis zu fünf Beispielfragen gehen zusätzlich an den Provider; die CLI kündigt das an.</li>
             <li>Kein stiller Fallback auf lokale Extraktion oder ein anderes Modell.</li>
             <li>Quelltext steht im Prompt zwischen <code>&lt;source_document&gt;</code>-Begrenzern.</li>
           </ul>
@@ -1573,7 +1747,7 @@ Additional user instructions: Bevorzuge kurze Verständnisfragen.
       <div class="section-heading">
         <p class="eyebrow">tests/</p>
         <h2>Teststrategie und Test-Nahtstellen</h2>
-        <p>72 Tests in acht Dateien, eine Datei pro Modul (<code>cli</code> deckt <code>__main__</code> mit ab). Der Standardlauf braucht weder API-Schlüssel noch Netzwerk: KI-Antworten werden simuliert, der einzige HTTP-Test läuft gegen einen lokalen Server auf <code>127.0.0.1</code>.</p>
+        <p>91 Tests in neun Dateien, eine Datei pro Modul (<code>cli</code> deckt <code>__main__</code> mit ab). Der Standardlauf braucht weder API-Schlüssel noch Netzwerk: KI-Antworten werden simuliert, der einzige HTTP-Test läuft gegen einen lokalen Server auf <code>127.0.0.1</code>.</p>
       </div>
       <pre><button class="copy-button" type="button" aria-label="Befehle kopieren">Kopieren</button><code>.venv/bin/python -m ruff check src tests
 .venv/bin/python -m ruff format --check src tests
@@ -1584,13 +1758,14 @@ Additional user instructions: Bevorzuge kurze Verständnisfragen.
           <thead><tr><th>Datei</th><th>Tests</th><th>Schwerpunkte</th></tr></thead>
           <tbody>
             <tr><td><code>test_documents.py</code></td><td>5</td><td>HTML ohne Skripte, DOCX mit Tabellen, leere und nicht unterstützte Dateien, beschädigte PDF, Überlappung beim Aufteilen</td></tr>
-            <tr><td><code>test_models.py</code></td><td>4</td><td>JSON-Roundtrip, ungültiges JSON, Tags ohne Leerzeichen, Deduplizierung</td></tr>
-            <tr><td><code>test_ai.py</code></td><td>3</td><td>Limit über Abschnitte, Unlimited-Prompt ohne erfundenes Limit, ungültige KI-Antwort</td></tr>
-            <tr><td><code>test_native_pdf.py</code></td><td>16</td><td>Allowlist inklusive <code>gpt-4o-mini</code>-Snapshot, Optionsprüfung vor dem Upload, Beispielprofil gegen die echte SDK-Signatur, Upload/Parse/Delete, kein Upload bei falschem Modell, Nicht-PDF oder 50 MiB, Löschen nach Fehler, Löschwarnung, echtes OpenAI-SDK gegen lokalen Server</td></tr>
+            <tr><td><code>test_models.py</code></td><td>6</td><td>JSON-Roundtrip, ungültiges JSON, Tags ohne Leerzeichen, Deduplizierung, Unterdeck-Validierung, JSON mit optionalem <code>subdeck</code></td></tr>
+            <tr><td><code>test_ai.py</code></td><td>5</td><td>Limit über Abschnitte, Unlimited-Prompt ohne erfundenes Limit, ungültige KI-Antwort, Unterdeck-Schema und neue Unterdecks über Chunks hinweg, Verwerfen im normalen Modus</td></tr>
+            <tr><td><code>test_subdecks.py</code></td><td>4</td><td>Neutraler Normalmodus, Regeln und Kontextabschnitt, Namensvereinheitlichung und Merken neuer Unterdecks, leerer Kontext</td></tr>
+            <tr><td><code>test_native_pdf.py</code></td><td>17</td><td>Unterdeck-Modus mit Regeln, Kontext und Schema, Allowlist inklusive <code>gpt-4o-mini</code>-Snapshot, Optionsprüfung vor dem Upload, Beispielprofil gegen die echte SDK-Signatur, Upload/Parse/Delete, kein Upload bei falschem Modell, Nicht-PDF oder 50 MiB, Löschen nach Fehler, Löschwarnung, echtes OpenAI-SDK gegen lokalen Server</td></tr>
             <tr><td><code>test_config.py</code></td><td>15</td><td>fehlende/leere/explizite Datei, ungültiges Schema und Secrets (parametrisiert), Profile, atomares Speichern, Gültigkeit von <code>config.example.yaml</code></td></tr>
-            <tr><td><code>test_settings.py</code></td><td>8</td><td>YAML-Pfade, Prioritäten, Altvariablen ohne Wirkung, Profil-Fallbacks, Export-Defaults, <code>ANKI_CONFIG</code>, Diagnose ohne Secrets</td></tr>
-            <tr><td><code>test_apkg.py</code></td><td>5</td><td>Neu/Erweitern/Inspizieren, Lernstand bleibt, echter moderner Anki-Export mit zstd, HTML-Escaping, Medien bleiben</td></tr>
-            <tr><td><code>test_cli.py</code></td><td>16</td><td>Hilfeseiten, Exit-Codes, alle Befehle, YAML-Integration, nativ ohne lokale Extraktion und umgekehrt, <code>.env</code>, Subprozess ohne Traceback</td></tr>
+            <tr><td><code>test_settings.py</code></td><td>9</td><td>Unterdeck-Priorität, YAML-Pfade, Prioritäten, Altvariablen ohne Wirkung, Profil-Fallbacks, Export-Defaults, <code>ANKI_CONFIG</code>, Diagnose ohne Secrets</td></tr>
+            <tr><td><code>test_apkg.py</code></td><td>9</td><td>Unterdecks neu und erweitert, Duplikate im Decks-Baum, unveränderter Normalmodus, Kontext lesen ohne Änderung, Neu/Erweitern/Inspizieren, Lernstand bleibt, echter moderner Anki-Export mit zstd, HTML-Escaping, Medien bleiben</td></tr>
+            <tr><td><code>test_cli.py</code></td><td>21</td><td>Unterdeck-Kontext bei <code>--extend</code>, Export mit Unterdecks, <code>config show</code>, Hilfeseiten, Exit-Codes, alle Befehle, YAML-Integration, nativ ohne lokale Extraktion und umgekehrt, <code>.env</code>, Subprozess ohne Traceback</td></tr>
           </tbody>
         </table>
       </div>
@@ -1745,6 +1920,11 @@ print(result.added, result.skipped)</code></pre>
           <h3>Platzhalter in modernen Exporten</h3>
           <p>Moderne Anki-Exporte enthalten <code>collection.anki2</code> (Platzhalter für alte Versionen) und <code>collection.anki21b</code>. <code>_replace_collection()</code> verwirft alle <code>collection.*</code>-Einträge und schreibt nur den bearbeiteten zurück. Nach dem Erweitern fehlt der Platzhalter; aktuelle Anki-Versionen lesen <code>anki21b</code> unverändert.</p>
         </article>
+        <article class="card searchable" data-module="documents ai cli">
+          <span class="tag err">Abweichung</span>
+          <h3><code>--chunk-size 1000</code> endet mit Traceback</h3>
+          <p>Die CLI erlaubt <code>--chunk-size</code> ab 1000. <code>chunk_text()</code> verlangt aber eine Überlappung kleiner als die halbe Abschnittsgröße; bei festen 500 Zeichen scheitern daher 1000 und 1001 mit <code>ValueError: Overlap must be … less than half the chunk size</code>. Die Ausnahme ist keine <code>FlashcardError</code> und erscheint als Python-Traceback, bevor eine KI-Anfrage stattfindet.</p>
+        </article>
         <article class="card searchable" data-module="native_pdf">
           <span class="tag ext">Abhängigkeit</span>
           <h3><code>openai</code> ist nicht direkt deklariert</h3>
@@ -1771,6 +1951,7 @@ print(result.added, result.skipped)</code></pre>
         <article class="card searchable" data-module="native_pdf"><h3>Protocol</h3><p>Strukturelle Schnittstelle aus <code>typing</code>: Jede Klasse mit passender Methode erfüllt sie, ohne zu erben.</p></article>
         <article class="card searchable" data-module="documents ai"><h3>Chunk</h3><p>Ein Abschnitt des normalisierten Textes, der in einer einzelnen Modellanfrage verarbeitet wird.</p></article>
         <article class="card searchable" data-module="ai"><h3>Kontingent</h3><p>Die Höchstzahl an Karten, die der Prompt für einen Chunk verlangt.</p></article>
+        <article class="card searchable" data-module="subdecks apkg"><h3>Unterdeck-Modus</h3><p>Optionaler Modus, in dem das Modell jede Karte einem Kapitel-Unterdeck <code>Deck::Kapitel</code> zuordnet. Gesteuert durch <code>SubdeckAssigner</code>.</p></article>
         <article class="card searchable" data-module="settings"><h3>Herkunft (source)</h3><p>Die Schicht, aus der ein effektiver Wert stammt: <code>built-in</code>, <code>config</code> oder <code>cli</code>.</p></article>
       </div>
     </section>

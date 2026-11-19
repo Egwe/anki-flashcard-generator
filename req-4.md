@@ -1,0 +1,9 @@
+Ich möchte eine zusätzliche Funktion. In dem Projekt Anki Flash cut Generator haben. Und dabei soll es sich um eine Funktion handeln. Die Dem ki-modell erlaubt? Nicht einfach nur. An ein vorhandenes Deck. Quasi hinten dran neue Karten zu erstellen erstellen Sondern? Die sollen auch eingeordnet werden. Die Idee ist quasi, dass wenn ich Zum Beispiel als Erklärung, ich habe eine Vorlesung.
+
+Und diese Vorlesung hat beispielsweise einen Namen. Dieser Name wäre dann quasi mein. Deck und innerhalb dieser Vorlesung gibt es verschiedene Kapitel. Und? Ich möchte quasi Sub. Decks haben? Die in diesem Deck drin sind. Und inhaltlich vom ki-modell gebildet werden können. Und dann gebe ich quasi. Gebe ich vielleicht mehrere PDFs nacheinander rein?
+
+Und dann wird anhand dieser. Dieses Kontext, weil das Deck des vorhandene Deck muss ja auch reingegeben werden. Und? Aus dem aus dem Daten, die dann neu dazukommen. Wird quasi! Geschaut okay, wo kann ich die? In welchem Teil in welche subdecks passen die vielleicht schon? Was sind die Kapitel? Vielleicht stehen solche ähnlichen Kapitel ja auch in der Vorlesung selbst drin nach sowas muss halt das Modell suchen.
+
+Und? Dann muss das. Ja, quasi aufgefangen werden. Ich denke mal bei den implementation ist das eine Mission eine Mischung aus. Anweisungen, die an das ki-modell gegeben werden müssen Und aber auch je nach Anweisung, was als Rückgabewert von dem von dem ki-modell erwartet wird. Darauf muss beides reagiert werden. Und Genau dann möchte ich quasi das halt ich die Möglichkeit habe.
+
+Ich habe schon ein Deck und ich will das erweitern. Und ich will aber auch dann die Möglichkeit haben das halt. Intelligente subdex erstellt werden. Und genau das ist die systemanforderung.

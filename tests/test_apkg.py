@@ -235,3 +235,137 @@ def test_extension_preserves_other_package_entries(tmp_path: Path) -> None:
 
     with zipfile.ZipFile(package) as archive:
         assert archive.read("0") == b"image-data"
+
+
+def deck_card_counts(package: Path) -> dict[str, int]:
+    """Read direct card counts of all normal decks in a classic test package.
+
+    Args:
+        package: APKG containing an uncompressed collection.anki2 member.
+
+    Returns:
+        Mapping of full deck names to their direct card counts.
+    """
+    directory, collection = open_collection(package)
+    try:
+        return {
+            deck.name: collection.decks.card_count(deck.id, include_subdecks=False)
+            for deck in collection.decks.all_names_and_ids(include_filtered=False)
+        }
+    finally:
+        collection.close()
+        directory.cleanup()
+
+
+def test_create_apkg_places_cards_in_subdecks(tmp_path: Path) -> None:
+    """Verify new packages contain the parent deck and every used subdeck.
+
+    Args:
+        tmp_path: Pytest-provided isolated directory.
+
+    Returns:
+        None. Assertions inspect deck counts and the per-deck result.
+    """
+    package = tmp_path / "el1.apkg"
+    result = create_apkg(
+        package,
+        "EL1",
+        [
+            Card(front="A?", back="1", subdeck="Grundlagen"),
+            Card(front="B?", back="2", subdeck="Grundlagen"),
+            Card(front="C?", back="3", subdeck="Netzwerke"),
+            Card(front="D?", back="4"),
+        ],
+    )
+
+    counts = deck_card_counts(package)
+    assert counts["EL1"] == 1
+    assert counts["EL1::Grundlagen"] == 2
+    assert counts["EL1::Netzwerke"] == 1
+    assert result.added == 4
+    assert result.added_by_deck == {"EL1::Grundlagen": 2, "EL1::Netzwerke": 1, "EL1": 1}
+
+
+def test_append_with_subdecks_reuses_creates_and_skips_tree_duplicates(tmp_path: Path) -> None:
+    """Verify extension reuses subdecks, creates new ones, and checks the deck tree.
+
+    Args:
+        tmp_path: Pytest-provided isolated directory.
+
+    Returns:
+        None. Assertions inspect counts, skipped duplicates, and kept cards.
+    """
+    package = tmp_path / "el1.apkg"
+    create_apkg(package, "EL1", [Card(front="Was ist Strom?", back="Fluss", subdeck="Grundlagen")])
+
+    result = append_apkg(
+        package,
+        "EL1",
+        [
+            Card(front=" was ist  STROM? ", back="Duplikat", subdeck="Netzwerke"),
+            Card(front="Was ist Spannung?", back="Potenzial", subdeck="Grundlagen"),
+            Card(front="Was ist ein Knoten?", back="Verbindung", subdeck="Netzwerke"),
+        ],
+    )
+
+    counts = deck_card_counts(package)
+    assert result.added == 2
+    assert result.skipped == 1
+    assert result.added_by_deck == {"EL1::Grundlagen": 1, "EL1::Netzwerke": 1}
+    assert counts["EL1::Grundlagen"] == 2
+    assert counts["EL1::Netzwerke"] == 1
+
+
+def test_normal_extension_keeps_direct_deck_duplicate_scope(tmp_path: Path) -> None:
+    """Verify cards without subdecks still compare only with the target deck.
+
+    Args:
+        tmp_path: Pytest-provided isolated directory.
+
+    Returns:
+        None. A question that exists only in a subdeck is added to the parent.
+    """
+    package = tmp_path / "el1.apkg"
+    create_apkg(package, "EL1", [Card(front="Was ist Strom?", back="Fluss", subdeck="Grundlagen")])
+
+    result = append_apkg(package, "EL1", [Card(front="Was ist Strom?", back="Direkt")])
+
+    assert result.added == 1
+    assert deck_card_counts(package)["EL1"] == 1
+
+
+def test_read_subdeck_context_lists_direct_children_without_changes(tmp_path: Path) -> None:
+    """Verify context reading returns first-level subdecks and bounded examples.
+
+    Args:
+        tmp_path: Pytest-provided isolated directory.
+
+    Returns:
+        None. Assertions inspect names, examples, other decks, and file bytes.
+    """
+    from anki_flashcards.apkg import read_subdeck_context
+
+    package = tmp_path / "el1.apkg"
+    grundlagen = [Card(front=f"Frage {n}?", back="A", subdeck="Grundlagen") for n in range(6)]
+    create_apkg(
+        package,
+        "EL1",
+        [
+            *grundlagen,
+            Card(front="Ist a < b & c?", back="Ja", subdeck="Netzwerke"),
+            Card(front="Direkt im Elterndeck?", back="Ja"),
+        ],
+    )
+    append_apkg(package, "EL1::Netzwerke::Vertiefung", [Card(front="Tief?", back="Ja")])
+    append_apkg(package, "Andere", [Card(front="Fremd?", back="Ja", subdeck="Kapitel")])
+    before = package.read_bytes()
+
+    context = read_subdeck_context(package, "el1")
+    missing = read_subdeck_context(package, "Unbekannt")
+
+    assert context.parent == "el1"
+    assert [subdeck.name for subdeck in context.existing] == ["Grundlagen", "Netzwerke"]
+    assert len(context.existing[0].examples) == 5
+    assert set(context.existing[1].examples) == {"Ist a < b & c?", "Tief?"}
+    assert missing.existing == ()
+    assert package.read_bytes() == before

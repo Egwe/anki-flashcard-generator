@@ -2,7 +2,7 @@
 
 ## 1. Zweck und Geltung
 
-Dieses Dokument bündelt alle fachlichen und technischen Anforderungen aus [req.md](./req.md), [req-2.md](./req-2.md) und [req-3.md](./req-3.md). Es ergänzt die Entscheidungen und Funktionen, die bereits beim ersten MVP entstanden sind. Die drei Ausgangsdateien bleiben als Originalvorgaben erhalten; dieses Dokument ist die konsolidierte Arbeitsgrundlage.
+Dieses Dokument bündelt alle fachlichen und technischen Anforderungen aus [req.md](./req.md), [req-2.md](./req-2.md), [req-3.md](./req-3.md) und [req-4.md](./req-4.md). Es ergänzt die Entscheidungen und Funktionen, die bereits beim ersten MVP entstanden sind. Die vier Ausgangsdateien bleiben als Originalvorgaben erhalten; dieses Dokument ist die konsolidierte Arbeitsgrundlage.
 
 Die Begriffe **muss**, **soll** und **kann** sind verbindlich zu unterscheiden:
 
@@ -264,7 +264,38 @@ Native Dokumentverarbeitung wird über einen provider-spezifischen Adapter hinte
 **R-124 – Native-Verarbeitung testen · muss · umgesetzt**
 Unit-Tests müssen Auswahl und Vorrang des PDF-Modus, fehlende Provider-Fähigkeit, lokale Extraktion ohne Upload, native Übergabe ohne lokale Extraktion, Upload-/Antwortfehler und ungültige native Antworten prüfen. Ein regulärer Testlauf darf keine Originaldatei an einen externen Dienst übertragen.
 
-## 11. Spätere Erweiterungen
+## 11. KI-gestützte Unterdecks (req-4)
+
+Ziel aus [req-4.md](./req-4.md): Ein Deck steht beispielsweise für eine Vorlesung, seine Unterdecks für deren Kapitel. Das KI-Modell soll neue Karten nicht nur anhängen, sondern inhaltlich passenden Unterdecks zuordnen. Mehrere Dokumente derselben Vorlesung werden nacheinander verarbeitet; dabei dient das vorhandene Deck als Kontext, damit passende Unterdecks wiederverwendet und nur bei Bedarf neue angelegt werden. Die Umsetzung kombiniert zusätzliche Modellanweisungen mit einem erweiterten, streng validierten Antwortformat.
+
+**R-130 – Unterdeck-Modus · muss · umgesetzt**
+Ein ausdrücklich aktivierbarer Modus (`--subdecks/--no-subdecks`, YAML `generation.subdecks`, Standard: aus) lässt das Modell jede Karte genau einem Unterdeck zuordnen. Das mit `--deck` beziehungsweise der bestehenden Namensregel bestimmte Deck ist dann das übergeordnete Deck; Karten landen in `Deck::Unterdeck`. Ohne den Modus bleibt das bisherige Verhalten unverändert. Der CLI-Wert überschreibt YAML in beiden Richtungen.
+
+**R-131 – Unterdecks aus der Quelle · muss · umgesetzt**
+Das Modell bildet Unterdecknamen inhaltlich und orientiert sich dabei vorrangig an der Struktur der Quelle, etwa Kapitel- und Abschnittsüberschriften, Nummerierungen oder einem Inhaltsverzeichnis. Innerhalb einer Generierung über mehrere Textabschnitte werden bereits vergebene Unterdecknamen an spätere Anfragen weitergegeben, damit gleiche Kapitel gleich heißen.
+
+**R-132 – Vorhandenes Deck als Kontext · muss · umgesetzt**
+Beim Erweitern (`--extend`) werden die vorhandenen direkten Unterdecks des Zieldecks aus dem APKG gelesen und mit einer begrenzten Zahl von Beispielfragen an das Modell übergeben. Das Modell muss passende vorhandene Unterdecks bevorzugen und darf nur für nicht passende Inhalte neue anlegen. Das Lesen des Kontexts verändert das Paket nicht. Dadurch lassen sich mehrere Dokumente einer Vorlesung nacheinander konsistent einordnen.
+
+**R-133 – Antwortformat und Validierung · muss · umgesetzt**
+Im Unterdeck-Modus verlangt das Antwortschema je Karte das Pflichtfeld `subdeck`. Unterdecknamen werden mit Pydantic validiert: nicht leer, höchstens 100 Zeichen, eine Ebene ohne `::`. Ungültige Antworten sind wie bisher ein verständlicher Fehler. Namen, die sich von vorhandenen oder bereits vergebenen Unterdecks nur in Groß-/Kleinschreibung oder Leerraum unterscheiden, werden auf deren Schreibweise vereinheitlicht. Ohne aktivierten Modus werden etwaige `subdeck`-Angaben des Modells verworfen.
+
+**R-134 – Anki-Ausgabe mit Unterdecks · muss · umgesetzt**
+Neue Pakete enthalten das übergeordnete Deck und alle verwendeten Unterdecks. Beim Erweitern werden fehlende Unterdecks über die offizielle Anki-API angelegt; vorhandene Karten, Lernstände und Unterdecks bleiben erhalten. Die Duplikatprüfung umfasst bei Karten mit Unterdeck das übergeordnete Deck einschließlich aller Unterdecks. Die Ergebnismeldung weist die hinzugefügten Karten je Unterdeck aus.
+
+**R-135 – JSON und Export · muss · umgesetzt**
+Karten-JSON enthält das optionale Feld `subdeck`; Schema-Version 1 bleibt rückwärtskompatibel, Karten ohne Unterdeck werden unverändert geschrieben. `export` legt Karten mit `subdeck` ohne KI-Aufruf unter `--deck::subdeck` ab.
+
+**R-136 – Native PDF-Verarbeitung · soll · umgesetzt**
+Der Unterdeck-Modus funktioniert auch mit dem geprüften nativen OpenAI-Adapter und verwendet dieselben Anweisungen, dasselbe Antwortschema und dieselbe Validierung.
+
+**R-137 – Tests · muss · umgesetzt**
+Tests decken Prompt-Anweisungen und Kontext, Weitergabe neuer Unterdecks zwischen Abschnitten, Namensvereinheitlichung, Verwerfen von Unterdecks ohne Modus, Validierung, APKG-Erzeugung und -Erweiterung mit Unterdecks, Duplikate über Unterdecks hinweg, unveränderliches Lesen des Kontexts, JSON-Roundtrip, Export, Konfigurationspriorität, CLI-Integration und den nativen Weg ab – ohne echte KI-Aufrufe.
+
+**R-138 – Dokumentation · muss · umgesetzt**
+README, Benutzerhandbuch, Entwicklerhandbuch, CLI-Hilfe und `config.example.yaml` beschreiben Modus, Ablauf für mehrere Dokumente, Kontextübertragung an den Provider, Grenzen und Beispiele.
+
+## 12. Spätere Erweiterungen
 
 Die folgenden Punkte sind Ideen und keine aktuellen Implementierungsaufträge:
 
@@ -275,11 +306,11 @@ Die folgenden Punkte sind Ideen und keine aktuellen Implementierungsaufträge:
 - **R-204 · kann · später:** Quellenangaben pro Karte, interaktive Prüfung und Fortsetzen abgebrochener Generierungen.
 - **R-205 · kann · später:** Lückentext, weitere Notiztypen sowie Bilder und Audio in Karten.
 
-## 12. Aktuelle CLI-Vertragsgrundlage
+## 13. Aktuelle CLI-Vertragsgrundlage
 
 Bis zur Umsetzung der neuen Konfigurations- und Hilfeanforderungen bestehen diese Befehle:
 
-- `generate EINGABE [--output ZIEL.apkg] [--deck NAME] [--model PROVIDER/MODELL] [--profile NAME] [--limit N] [--extend/--no-extend] [--json DATEI] [--config DATEI] [--pdf-mode local|native]`
+- `generate EINGABE [--output ZIEL.apkg] [--deck NAME] [--model PROVIDER/MODELL] [--profile NAME] [--limit N] [--extend/--no-extend] [--subdecks/--no-subdecks] [--json DATEI] [--config DATEI] [--pdf-mode local|native]`
 - `export KARTEN.json [--output ZIEL.apkg] [--deck NAME] [--extend/--no-extend] [--config DATEI]`
 - `decks PAKET.apkg`
 - `config show EINGABE [--config DATEI] [weitere Overrides]`
@@ -296,7 +327,7 @@ Wichtige Ist-Eigenschaften:
 - `--limit` akzeptiert nichtnegative ganze Zahlen; `0` bedeutet Unlimited.
 - API-Schlüssel werden über die in YAML referenzierten provider-spezifischen Umgebungsvariablen aus `.env` oder der Prozessumgebung bereitgestellt; `.env` enthält keine Modelle oder Endpunkte.
 
-## 13. Abnahmekriterien für die noch offenen Hauptpakete
+## 14. Abnahmekriterien für die noch offenen Hauptpakete
 
 ### A. Qualitäts- und CLI-Paket (req-2)
 
@@ -324,3 +355,12 @@ Wichtige Ist-Eigenschaften:
 4. Nicht unterstützte Modelle, Dateigrenzen und Fehler werden verständlich gemeldet; kein stiller Datentransfer oder Fallback findet statt.
 5. Datenschutz, Upload-Lebenszyklus, Grenzen und getestete Provider sind dokumentiert.
 6. Alle Tests laufen ohne echten externen Datei-Upload.
+
+### D. Unterdeck-Paket (req-4)
+
+1. Der Unterdeck-Modus ist standardmäßig aus und wird über CLI oder YAML ausdrücklich aktiviert; ohne ihn bleibt das Verhalten unverändert.
+2. Generierte Karten landen in `Deck::Unterdeck`; Unterdecknamen sind validiert und innerhalb eines Laufs konsistent.
+3. Beim Erweitern werden vorhandene Unterdecks mit Beispielfragen als Kontext übergeben und bevorzugt wiederverwendet; das Lesen verändert das Paket nicht.
+4. Duplikate werden über das übergeordnete Deck und alle Unterdecks erkannt; Lernstände bleiben erhalten.
+5. JSON-Export, nativer Weg, Konfiguration und Diagnose unterstützen den Modus.
+6. Alle Tests laufen ohne echte KI-Aufrufe; README und beide Handbücher sind aktualisiert.

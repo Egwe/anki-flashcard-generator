@@ -3,10 +3,11 @@
 import hashlib
 import html
 import os
+import re
 import sqlite3
 import tempfile
 import zipfile
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -15,11 +16,14 @@ import zstandard
 
 from anki_flashcards.errors import FlashcardError
 from anki_flashcards.models import Card
+from anki_flashcards.subdecks import ExistingSubdeck, SubdeckContext
 
 MODEL_ID = 1_704_219_001
 MODEL_NAME = "KI Karteikarte (Front/Back)"
 COLLECTION_FILES = ("collection.anki21b", "collection.anki21", "collection.anki2")
 ZSTD_MAGIC = b"\x28\xb5\x2f\xfd"
+SUBDECK_EXAMPLES = 5
+EXAMPLE_MAX_CHARS = 200
 
 
 @dataclass(frozen=True)
@@ -31,21 +35,25 @@ class ExportResult:
         deck: Target deck name.
         added: Number of newly written cards.
         skipped: Number of duplicate cards not written.
+        added_by_deck: Newly written cards per full deck name, including
+            subdecks such as ``Deck::Kapitel``.
     """
 
     path: Path
     deck: str
     added: int
     skipped: int
+    added_by_deck: dict[str, int] = field(default_factory=dict)
 
 
 def create_apkg(path: Path, deck_name: str, cards: list[Card]) -> ExportResult:
-    """Create a new classic APKG with a stable deck ID and note GUIDs.
+    """Create a new classic APKG with stable deck IDs and note GUIDs.
 
     Args:
         path: Destination package whose parent directories may be created.
-        deck_name: Name of the single generated deck.
-        cards: Non-empty validated cards to add to the deck.
+        deck_name: Name of the target deck; cards with a subdeck are placed
+            in ``deck_name::subdeck`` and the parent deck is always included.
+        cards: Non-empty validated cards to add.
 
     Returns:
         An export result containing the package path and added-card count.
@@ -57,9 +65,12 @@ def create_apkg(path: Path, deck_name: str, cards: list[Card]) -> ExportResult:
     if not cards:
         raise FlashcardError("Cannot create an APKG without cards")
     model = _note_model()
-    deck = genanki.Deck(deck_id=_stable_id(f"deck:{deck_name}"), name=deck_name)
+    decks = {deck_name: _genanki_deck(deck_name)}
     for card in cards:
-        deck.add_note(
+        target = _target_deck(deck_name, card)
+        if target not in decks:
+            decks[target] = _genanki_deck(target)
+        decks[target].add_note(
             genanki.Note(
                 model=model,
                 fields=[html.escape(card.front), html.escape(card.back)],
@@ -71,13 +82,19 @@ def create_apkg(path: Path, deck_name: str, cards: list[Card]) -> ExportResult:
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.parent / f".{path.name}.{os.getpid()}.tmp"
     try:
-        genanki.Package(deck).write_to_file(temporary)
+        genanki.Package(list(decks.values())).write_to_file(temporary)
         os.replace(temporary, path)
     except Exception as error:
         raise FlashcardError(f"Could not create {path}: {error}") from error
     finally:
         temporary.unlink(missing_ok=True)
-    return ExportResult(path=path, deck=deck_name, added=len(cards), skipped=0)
+    return ExportResult(
+        path=path,
+        deck=deck_name,
+        added=len(cards),
+        skipped=0,
+        added_by_deck=_count_by_deck(deck_name, cards),
+    )
 
 
 def append_apkg(path: Path, deck_name: str, cards: list[Card]) -> ExportResult:
@@ -85,11 +102,12 @@ def append_apkg(path: Path, deck_name: str, cards: list[Card]) -> ExportResult:
 
     Args:
         path: Existing classic or zstd-compressed APKG package.
-        deck_name: Existing or new target deck inside the package.
+        deck_name: Existing or new target deck inside the package; cards with
+            a subdeck are placed in ``deck_name::subdeck``.
         cards: Non-empty cards to add after duplicate filtering.
 
     Returns:
-        The number of added and skipped cards for the target deck.
+        Added and skipped counts plus added cards per deck.
 
     Raises:
         FlashcardError: If the package is unreadable, incompatible, or cannot
@@ -143,53 +161,220 @@ def inspect_apkg(path: Path) -> list[dict[str, Any]]:
             collection.close()
 
 
+def read_subdeck_context(
+    path: Path, deck_name: str, *, examples: int = SUBDECK_EXAMPLES
+) -> SubdeckContext:
+    """Read the first-level subdecks of a deck as context for the AI model.
+
+    Args:
+        path: Existing classic or zstd-compressed APKG package.
+        deck_name: Parent deck; matched case-insensitively like Anki does.
+        examples: Maximum sample questions per subdeck, taken from the
+            subdeck and its descendants.
+
+    Returns:
+        The parent deck name and its subdecks sorted by name, each with plain
+        sample questions of at most 200 characters. A missing parent deck
+        yields no subdecks. The package file is never modified.
+
+    Raises:
+        FlashcardError: If the package or its collection cannot be opened.
+    """
+    with tempfile.TemporaryDirectory(prefix="anki-flashcards-") as directory:
+        database = Path(directory) / "collection.anki2"
+        _extract_collection(path, database)
+        collection = _open_collection(database)
+        try:
+            existing = _existing_subdecks(collection, deck_name, examples)
+        finally:
+            collection.close()
+    return SubdeckContext(parent=deck_name, existing=existing)
+
+
+def _existing_subdecks(
+    collection: Any, deck_name: str, examples: int
+) -> tuple[ExistingSubdeck, ...]:
+    """Collect first-level subdecks below a parent deck with sample questions.
+
+    Args:
+        collection: Open Anki collection.
+        deck_name: Parent deck name.
+        examples: Maximum sample questions per subdeck.
+
+    Returns:
+        Existing subdecks sorted case-insensitively by name.
+    """
+    children = _child_deck_names(collection, deck_name)
+    subdecks = []
+    for name in sorted(children, key=str.casefold):
+        deck_id = collection.decks.id_for_name(children[name])
+        deck_ids = collection.decks.deck_and_child_ids(deck_id) if deck_id else []
+        subdecks.append(ExistingSubdeck(name, _sample_questions(collection, deck_ids, examples)))
+    return tuple(subdecks)
+
+
+def _child_deck_names(collection: Any, deck_name: str) -> dict[str, str]:
+    """Map first-level child names of a deck to their full deck names.
+
+    Args:
+        collection: Open Anki collection.
+        deck_name: Parent deck name, compared case-insensitively.
+
+    Returns:
+        Child name without parent prefix mapped to the full Anki deck name.
+        Deeper descendants contribute only their first-level ancestor.
+    """
+    prefix = f"{deck_name}::".casefold()
+    children: dict[str, str] = {}
+    for deck in collection.decks.all_names_and_ids(include_filtered=False):
+        if not deck.name.casefold().startswith(prefix):
+            continue
+        child = deck.name[len(prefix) :].split("::", 1)[0]
+        children.setdefault(child, deck.name[: len(prefix) + len(child)])
+    return children
+
+
+def _sample_questions(collection: Any, deck_ids: list[int], limit: int) -> tuple[str, ...]:
+    """Read the first fields of a few notes in the given decks as plain text.
+
+    Args:
+        collection: Open Anki collection.
+        deck_ids: Deck identifiers whose cards are searched.
+        limit: Maximum number of returned questions.
+
+    Returns:
+        Up to ``limit`` non-empty plain-text questions in note creation order.
+    """
+    if not deck_ids or limit <= 0:
+        return ()
+    placeholders = ",".join("?" * len(deck_ids))
+    rows = collection.db.all(
+        "SELECT DISTINCT n.id, n.flds FROM notes n JOIN cards c ON c.nid = n.id "
+        f"WHERE c.did IN ({placeholders}) ORDER BY n.id LIMIT ?",
+        *deck_ids,
+        limit,
+    )
+    questions = (_plain_text(row[1].split("\x1f", 1)[0]) for row in rows)
+    return tuple(question for question in questions if question)
+
+
+def _plain_text(field_content: str) -> str:
+    """Convert a stored note field to short plain text for prompts.
+
+    Args:
+        field_content: HTML field content from an Anki note.
+
+    Returns:
+        Text without tags and entities, with collapsed whitespace, shortened
+        to at most 200 characters.
+    """
+    text = " ".join(html.unescape(re.sub(r"<[^>]+>", " ", field_content)).split())
+    if len(text) <= EXAMPLE_MAX_CHARS:
+        return text
+    return text[: EXAMPLE_MAX_CHARS - 1].rstrip() + "…"
+
+
 def _append_to_collection(
     collection: Any,
     path: Path,
     deck_name: str,
     cards: list[Card],
 ) -> ExportResult:
-    """Add unique cards to one deck of an open Anki collection.
+    """Add unique cards to a deck and its subdecks in an open Anki collection.
 
     Args:
         collection: Open official Anki collection object.
         path: Original package path used in the returned result.
-        deck_name: Target deck name.
+        deck_name: Target deck name; missing decks and subdecks are created.
         cards: Candidate cards in their preferred insertion order.
 
     Returns:
-        Added and duplicate counts for the target deck.
+        Added and duplicate counts plus added cards per deck. Duplicates are
+        searched in the target deck, and additionally in all of its subdecks
+        when any card carries a subdeck.
 
     Raises:
         FlashcardError: If an existing generated note type has incompatible
             fields.
     """
-    model = collection.models.by_name(MODEL_NAME)
-    if model is None:
-        model = _new_anki_model(collection)
-        collection.models.add(model)
-    model = collection.models.by_name(MODEL_NAME)
-    fields = [field["name"] for field in model["flds"]]
-    if fields != ["Front", "Back"]:
-        raise FlashcardError(f"Existing note type '{MODEL_NAME}' has incompatible fields")
-
+    model = _compatible_note_type(collection)
     deck_id = collection.decks.id(deck_name)
-    rows = collection.db.all(
-        "SELECT n.id, n.flds FROM notes n JOIN cards c ON c.nid = n.id WHERE c.did = ?",
-        deck_id,
-    )
-    existing = {_normalize_front(html.unescape(row[1].split("\x1f", 1)[0])) for row in rows}
-    added = 0
+    existing = _existing_fronts(collection, _duplicate_scope(collection, deck_id, cards))
+    added_by_deck: dict[str, int] = {}
     skipped = 0
     for card in cards:
         key = _normalize_front(card.front)
         if key in existing:
             skipped += 1
             continue
-        _add_anki_note(collection, model, deck_id, deck_name, card)
+        target = _target_deck(deck_name, card)
+        _add_anki_note(collection, model, collection.decks.id(target), deck_name, card)
         existing.add(key)
-        added += 1
-    return ExportResult(path=path, deck=deck_name, added=added, skipped=skipped)
+        added_by_deck[target] = added_by_deck.get(target, 0) + 1
+    return ExportResult(
+        path=path,
+        deck=deck_name,
+        added=sum(added_by_deck.values()),
+        skipped=skipped,
+        added_by_deck=added_by_deck,
+    )
+
+
+def _compatible_note_type(collection: Any) -> dict[str, Any]:
+    """Return the application's note type, creating it when missing.
+
+    Args:
+        collection: Open Anki collection.
+
+    Returns:
+        The persisted Front/Back note type.
+
+    Raises:
+        FlashcardError: If a note type with the same name has other fields.
+    """
+    if collection.models.by_name(MODEL_NAME) is None:
+        collection.models.add(_new_anki_model(collection))
+    model = collection.models.by_name(MODEL_NAME)
+    fields = [entry["name"] for entry in model["flds"]]
+    if fields != ["Front", "Back"]:
+        raise FlashcardError(f"Existing note type '{MODEL_NAME}' has incompatible fields")
+    return model
+
+
+def _duplicate_scope(collection: Any, deck_id: int, cards: list[Card]) -> list[int]:
+    """Choose the decks whose questions count as duplicates.
+
+    Args:
+        collection: Open Anki collection.
+        deck_id: Target deck identifier.
+        cards: Candidate cards.
+
+    Returns:
+        The target deck and all of its subdecks when any card has a subdeck;
+        otherwise only the target deck, as before subdeck support.
+    """
+    if any(card.subdeck for card in cards):
+        return list(collection.decks.deck_and_child_ids(deck_id))
+    return [deck_id]
+
+
+def _existing_fronts(collection: Any, deck_ids: list[int]) -> set[str]:
+    """Read normalized questions of all notes with cards in the given decks.
+
+    Args:
+        collection: Open Anki collection.
+        deck_ids: Deck identifiers to search.
+
+    Returns:
+        Normalized, HTML-unescaped first fields regardless of note type.
+    """
+    placeholders = ",".join("?" * len(deck_ids))
+    rows = collection.db.all(
+        "SELECT n.id, n.flds FROM notes n JOIN cards c ON c.nid = n.id "
+        f"WHERE c.did IN ({placeholders})",
+        *deck_ids,
+    )
+    return {_normalize_front(html.unescape(row[1].split("\x1f", 1)[0])) for row in rows}
 
 
 def _add_anki_note(
@@ -231,8 +416,8 @@ def _new_anki_model(collection: Any) -> dict[str, Any]:
     generated = _note_model().to_json(0, 0)
     model = collection.models.new(MODEL_NAME)
     model["css"] = generated["css"]
-    for field in generated["flds"]:
-        collection.models.add_field(model, collection.models.new_field(field["name"]))
+    for field_spec in generated["flds"]:
+        collection.models.add_field(model, collection.models.new_field(field_spec["name"]))
     for template in generated["tmpls"]:
         new_template = collection.models.new_template(template["name"])
         new_template["qfmt"] = template["qfmt"]
@@ -365,6 +550,48 @@ def _note_model() -> genanki.Model:
             ".front { white-space: pre-wrap; }\n.back { white-space: pre-wrap; }"
         ),
     )
+
+
+def _genanki_deck(name: str) -> genanki.Deck:
+    """Create a genanki deck whose ID is derived from its full name.
+
+    Args:
+        name: Full deck name, possibly with ``::`` subdeck levels.
+
+    Returns:
+        An empty genanki deck with a stable identifier.
+    """
+    return genanki.Deck(deck_id=_stable_id(f"deck:{name}"), name=name)
+
+
+def _target_deck(deck_name: str, card: Card) -> str:
+    """Return the full deck name that receives a card.
+
+    Args:
+        deck_name: Target or parent deck name.
+        card: Card with an optional single-level subdeck.
+
+    Returns:
+        ``deck_name::subdeck`` for cards with a subdeck, otherwise ``deck_name``.
+    """
+    return f"{deck_name}::{card.subdeck}" if card.subdeck else deck_name
+
+
+def _count_by_deck(deck_name: str, cards: list[Card]) -> dict[str, int]:
+    """Count cards per full target deck name.
+
+    Args:
+        deck_name: Target or parent deck name.
+        cards: Cards with optional subdecks.
+
+    Returns:
+        Number of cards per full deck name in first-occurrence order.
+    """
+    counts: dict[str, int] = {}
+    for card in cards:
+        target = _target_deck(deck_name, card)
+        counts[target] = counts.get(target, 0) + 1
+    return counts
 
 
 def _stable_id(value: str) -> int:

@@ -2,7 +2,6 @@
 
 import json
 from pathlib import Path
-from typing import Any
 
 import typer
 from dotenv import find_dotenv, load_dotenv
@@ -11,18 +10,26 @@ from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.table import Table
 
 from anki_flashcards.ai import generate_cards
-from anki_flashcards.apkg import ExportResult, append_apkg, create_apkg, inspect_apkg
+from anki_flashcards.apkg import (
+    ExportResult,
+    append_apkg,
+    create_apkg,
+    inspect_apkg,
+    read_subdeck_context,
+)
 from anki_flashcards.config import PDFMode
 from anki_flashcards.documents import read_document
 from anki_flashcards.errors import FlashcardError
 from anki_flashcards.models import Card, deduplicate_cards, load_cards, save_cards
 from anki_flashcards.native_pdf import generate_native_cards
 from anki_flashcards.settings import (
+    GenerateSettings,
     configuration_diagnostics,
     load_selected_config,
     resolve_export_settings,
     resolve_generate_settings,
 )
+from anki_flashcards.subdecks import SubdeckContext
 
 MAIN_EPILOG = """
 Examples:
@@ -44,16 +51,25 @@ Without --extend, --output must name a new .apkg file. With --extend, it must
 already exist and is updated atomically. Existing cards and review states are
 preserved. If the requested deck does not exist, it is created in the package.
 
+With --subdecks, --deck is the parent deck (for example a lecture) and the AI
+assigns every card to a chapter subdeck DECK::chapter, preferably named after the
+source's own headings. With --extend, the names of existing subdecks and up to
+five sample questions each are sent to the provider so matching subdecks are
+reused; new ones are created only when needed. Duplicates are then checked across
+the deck and all of its subdecks.
+
 Examples:
   anki-flashcards generate skript.pdf -o output/biologie.apkg -m ollama/llama3.2
   anki-flashcards generate kapitel.docx -o output/deck.apkg -d Biologie --extend
   anki-flashcards generate notes.md -o output/notes.apkg -n 0 --json output/cards.json
+  anki-flashcards generate vl-02.pdf -o output/el1.apkg -d EL1 --extend --subdecks
 """
 EXPORT_EPILOG = """
 The input must be a version-1 card JSON file previously written with --json or
 created with the same schema. No AI request is made. Without --extend, --output
 must be a new .apkg file; with --extend, it must already exist. The deck is a
-required explicit target. New parent directories are created automatically.
+required explicit target. Cards with a "subdeck" field are placed in
+DECK::subdeck. New parent directories are created automatically.
 
 Example:
   anki-flashcards export output/cards.json -o output/deck.apkg -d Biologie
@@ -196,6 +212,16 @@ def generate(
             "Parent directories are created; an existing JSON file is replaced."
         ),
     ),
+    subdecks: bool | None = typer.Option(
+        None,
+        "--subdecks/--no-subdecks",
+        help=(
+            "Let the AI sort cards into chapter subdecks DECK::chapter below --deck. "
+            "With --extend, existing subdecks and sample questions are sent as "
+            "context. Default: off; overrides YAML subdecks in both directions."
+        ),
+        show_default=False,
+    ),
 ) -> None:
     """Generate cards from PDF, DOCX, HTML, Markdown, or text."""
     cli_values = _explicit_values(
@@ -212,12 +238,14 @@ def generate(
         api_base=api_base,
         timeout=timeout,
         json_output=json_output,
+        subdecks=subdecks,
     )
     config, config_path = load_selected_config(config_file)
     settings = resolve_generate_settings(
         {"input_file": input_file, **cli_values}, config, config_path
     )
     _validate_output(settings.output, settings.extend)
+    subdeck_context = _subdeck_context(settings)
     if settings.pdf_mode == PDFMode.NATIVE:
         console.print("Native PDF mode: uploading the original document to the selected provider.")
         cards = generate_native_cards(
@@ -226,9 +254,10 @@ def generate(
             limit=settings.limit,
             language=settings.language,
             instructions=settings.instructions,
+            subdecks=subdeck_context,
         )
     else:
-        cards = _generate_local_cards(settings)
+        cards = _generate_local_cards(settings, subdeck_context)
     if not cards:
         raise FlashcardError("The AI did not return any usable cards")
 
@@ -243,11 +272,40 @@ def generate(
     _print_result(result, settings.json_output)
 
 
-def _generate_local_cards(settings: Any) -> list[Card]:
+def _subdeck_context(settings: GenerateSettings) -> SubdeckContext | None:
+    """Build the subdeck context for a generation run and announce it.
+
+    Args:
+        settings: Fully resolved generation settings.
+
+    Returns:
+        None in normal mode, an empty context for a new package, or the
+        existing subdecks read from the package to extend.
+
+    Raises:
+        FlashcardError: If the package to extend cannot be read.
+    """
+    if not settings.subdecks:
+        return None
+    if not settings.extend:
+        return SubdeckContext(parent=settings.deck)
+    context = read_subdeck_context(settings.output, settings.deck)
+    console.print(
+        f"Unterdeck-Modus: {len(context.existing)} vorhandene Unterdecks von "
+        f"'{settings.deck}' werden mit Beispielfragen als Kontext übergeben."
+    )
+    return context
+
+
+def _generate_local_cards(
+    settings: GenerateSettings, subdeck_context: SubdeckContext | None
+) -> list[Card]:
     """Extract document text and generate cards with progress reporting.
 
     Args:
         settings: Fully resolved generation settings using local PDF mode.
+        subdeck_context: Parent deck and known subdecks, or None for normal
+            mode.
 
     Returns:
         Validated cards from LiteLLM, possibly empty when the provider returns
@@ -283,6 +341,7 @@ def _generate_local_cards(settings: Any) -> list[Card]:
             instructions=settings.instructions,
             chunk_size=settings.chunk_size,
             progress=update,
+            subdecks=subdeck_context,
         )
 
 
@@ -404,6 +463,7 @@ def show_config(
     api_base: str | None = typer.Option(None, "--api-base"),
     timeout: int | None = typer.Option(None, "--timeout", min=1, max=3_600),
     json_output: Path | None = typer.Option(None, "--json"),
+    subdecks: bool | None = typer.Option(None, "--subdecks/--no-subdecks"),
 ) -> None:
     """Resolve and display non-secret effective settings as JSON.
 
@@ -423,6 +483,7 @@ def show_config(
         api_base: Optional provider endpoint override.
         timeout: Optional request timeout in seconds.
         json_output: Optional JSON destination override.
+        subdecks: Optional subdeck-mode override.
 
     Returns:
         None. A JSON-safe diagnostic view is printed to standard output.
@@ -441,6 +502,7 @@ def show_config(
         api_base=api_base,
         timeout=timeout,
         json_output=json_output,
+        subdecks=subdecks,
     )
     config, config_path = load_selected_config(config_file)
     settings = resolve_generate_settings(
@@ -494,7 +556,7 @@ def _write_deck(output: Path, deck: str, cards: list[Card], extend: bool) -> Exp
 
 
 def _print_result(result: ExportResult, json_output: Path | None) -> None:
-    """Print export counts, package path, and optional JSON path.
+    """Print export counts, cards per subdeck, package path, and JSON path.
 
     Args:
         result: Completed APKG export summary.
@@ -507,6 +569,11 @@ def _print_result(result: ExportResult, json_output: Path | None) -> None:
         f"[green]Fertig:[/green] {result.added} Karten in '{result.deck}' "
         f"→ {result.path} ({result.skipped} Duplikate übersprungen)"
     )
+    subdecks = {name: count for name, count in result.added_by_deck.items() if name != result.deck}
+    if subdecks:
+        console.print("Neue Karten je Unterdeck:")
+    for name, count in subdecks.items():
+        console.print(f"  {name}: {count}")
     if json_output:
         console.print(f"JSON-Zwischendatei: {json_output}")
 

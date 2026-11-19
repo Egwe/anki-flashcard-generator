@@ -56,6 +56,8 @@ class GenerationConfig(StrictModel):
         json_output: Optional card JSON destination path.
         extend: Whether generation should extend an existing APKG by default.
         pdf_mode: Optional generation override for the profile PDF mode.
+        subdecks: Whether the AI assigns cards to chapter subdecks below the
+            target deck.
     """
 
     profile: str | None = Field(default=None, min_length=1)
@@ -68,6 +70,7 @@ class GenerationConfig(StrictModel):
     json_output: Path | None = None
     extend: bool = False
     pdf_mode: PDFMode | None = None
+    subdecks: bool = False
 
     @field_validator("profile")
     @classmethod

@@ -46,6 +46,11 @@ generation:
   json_output: null          # optionaler Pfad fuer pruefbares Karten-JSON
   extend: false              # true = bestehendes APKG erweitern
   pdf_mode: local            # optional; ersetzt pdf_mode des Profils
+  # Unterdeck-Modus (z.B. Deck = Vorlesung, Unterdecks = Kapitel):
+  # true = die KI ordnet jede Karte einem Unterdeck "Deck::Kapitel" zu und
+  # orientiert sich an Kapitelueberschriften der Quelle. Beim Erweitern werden
+  # vorhandene Unterdecks mit bis zu 5 Beispielfragen an das Modell gesendet.
+  subdecks: false
 
 models:
   # ---------------------------------------------------------------------------
