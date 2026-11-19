@@ -377,6 +377,7 @@
         <li><a href="#befehle">Alle Befehle und Optionen</a></li>
         <li><a href="#konfiguration">YAML-Konfiguration</a></li>
         <li><a href="#pdf-modi">Lokale und native PDF-Verarbeitung</a></li>
+        <li><a href="#unterdecks">Vorlesung mit KI-Unterdecks</a></li>
         <li><a href="#beispiele">Beispiele für die Praxis</a></li>
         <li><a href="#fehler">Fehler und Exit-Codes</a></li>
         <li><a href="#glossar">Begriffe einfach erklärt</a></li>
@@ -517,6 +518,11 @@ python -m pip install -e .</code></pre>
               <p><code>--no-extend</code> verlangt eine neue Zieldatei. Beide Formen überschreiben den YAML-Wert <code>extend</code>.</p>
             </div>
             <div class="option">
+              <div class="option-heading"><span class="option-name"><code>--subdecks</code> / <code>--no-subdecks</code></span><span class="option-meta">Schalter · Standard: aus</span></div>
+              <p><code>--subdecks</code> lässt das KI-Modell jede Karte einem Unterdeck zuordnen. <code>--deck</code> ist dann das übergeordnete Deck, zum Beispiel der Name einer Vorlesung. Die Karten landen in <code>Deck::Kapitel</code>. Das Modell orientiert sich an den Kapitelüberschriften im Dokument.</p>
+              <p>Mit <code>--extend</code> liest das Programm die vorhandenen Unterdecks und bis zu fünf Beispielfragen je Unterdeck. Es sendet diese Angaben an das Modell. Das Modell verwendet passende Unterdecks wieder und legt nur bei Bedarf neue an. <code>--no-subdecks</code> schaltet einen YAML-Wert <code>subdecks: true</code> ab. Siehe <a href="#unterdecks">Vorlesung mit Unterdecks</a>.</p>
+            </div>
+            <div class="option">
               <div class="option-heading"><span class="option-name"><code>--json</code></span><span class="option-meta">Pfad · optional</span></div>
               <p>Speichert die Karten zusätzlich als UTF-8-JSON-Datei. Nutze diese Datei zur Prüfung und zum erneuten Export ohne KI.</p>
               <p>Ein relativer Pfad gilt ab dem aktuellen Ordner. Fehlende Ordner werden erstellt. Eine vorhandene JSON-Datei wird ersetzt.</p>
@@ -614,6 +620,7 @@ python -m pip install -e .</code></pre>
             <div class="option">
               <div class="option-heading"><span class="option-name"><code>cards_file</code></span><span class="option-meta">Pflicht · JSON-Datei</span></div>
               <p>Gib eine Karten-JSON-Datei mit <code>schema_version: 1</code> an. Diese Datei stammt normalerweise aus <code>generate --json</code>. Ein reiner Dateiname kann durch <code>input_dir</code> aufgelöst werden.</p>
+              <p>Hat eine Karte das Feld <code>subdeck</code>, legt das Programm sie in <code>--deck::subdeck</code> ab. Du kannst die Zuordnung also vor dem Export in der JSON-Datei ändern.</p>
             </div>
             <div class="option">
               <div class="option-heading"><span class="option-name"><code>--output</code>, <code>-o</code></span><span class="option-meta">Pfad · bedingt erforderlich</span></div>
@@ -711,6 +718,7 @@ python -m pip install -e .</code></pre>
                   <tr><td><code>--api-base</code></td><td>Setzt den Provider-Endpunkt.</td></tr>
                   <tr><td><code>--timeout</code></td><td>Setzt 1 bis 3600 Sekunden Wartezeit.</td></tr>
                   <tr><td><code>--json</code></td><td>Setzt den Pfad der Karten-JSON-Datei.</td></tr>
+                  <tr><td><code>--subdecks</code> / <code>--no-subdecks</code></td><td>Zeigt, ob die KI Unterdecks bildet.</td></tr>
                   <tr><td><code>--help</code>, <code>-h</code></td><td>Zeigt die Hilfe für <code>config show</code>.</td></tr>
                 </tbody>
               </table>
@@ -789,6 +797,7 @@ cp .env.example .env</code></pre>
               <tr><td><code>json_output</code></td><td><code>--json</code></td></tr>
               <tr><td><code>extend</code></td><td><code>--extend/--no-extend</code></td></tr>
               <tr><td><code>pdf_mode</code></td><td><code>--pdf-mode</code>; ersetzt den Profilmodus</td></tr>
+              <tr><td><code>subdecks</code></td><td><code>--subdecks/--no-subdecks</code></td></tr>
             </tbody>
           </table></div>
         </article>
@@ -876,6 +885,61 @@ cp .env.example .env</code></pre>
   --profile openai-native-pdf</code></pre>
     </section>
 
+    <section id="unterdecks">
+      <div class="section-heading">
+        <p class="eyebrow">Ordnung nach Kapiteln</p>
+        <h2>Eine Vorlesung mit KI-Unterdecks aufbauen</h2>
+        <p>Ein Deck steht für eine Vorlesung. Die Unterdecks stehen für die Kapitel. Mit <code>--subdecks</code> ordnet das KI-Modell jede neue Karte einem passenden Kapitel zu.</p>
+      </div>
+      <div class="grid three">
+        <article class="card">
+          <span class="step-number">1</span>
+          <h3>Erstes Skript</h3>
+          <p>Erstelle ein neues Paket. Das Modell bildet die Unterdecks aus den Kapitelüberschriften des Dokuments.</p>
+          <pre><button class="copy-button" type="button" aria-label="Befehl kopieren">Kopieren</button><code>anki-flashcards generate vl-01.pdf \
+  -o output/el1.apkg \
+  -d "Elektrotechnik 1" \
+  --subdecks</code></pre>
+        </article>
+        <article class="card">
+          <span class="step-number">2</span>
+          <h3>Weitere Skripte</h3>
+          <p>Erweitere dasselbe Paket mit <code>--extend</code>. Das Modell kennt jetzt die vorhandenen Kapitel und verwendet passende wieder.</p>
+          <pre><button class="copy-button" type="button" aria-label="Befehl kopieren">Kopieren</button><code>anki-flashcards generate vl-02.pdf \
+  -o output/el1.apkg \
+  -d "Elektrotechnik 1" \
+  --subdecks --extend</code></pre>
+        </article>
+        <article class="card">
+          <span class="step-number">3</span>
+          <h3>Ergebnis prüfen</h3>
+          <p>Die Ausgabe nennt die neuen Karten je Unterdeck. Prüfe alle Decks mit <code>decks</code>.</p>
+          <pre><button class="copy-button" type="button" aria-label="Befehl kopieren">Kopieren</button><code>anki-flashcards decks output/el1.apkg</code></pre>
+        </article>
+      </div>
+      <details open>
+        <summary>So arbeitet der Unterdeck-Modus</summary>
+        <div class="details-body">
+          <ul class="checklist">
+            <li>Jede Karte kommt in genau ein Unterdeck <code>Deck::Kapitel</code>. Ein Unterdeckname hat eine Ebene ohne <code>::</code> und höchstens 100 Zeichen.</li>
+            <li>Beim Erweitern liest das Programm die direkten Unterdecks des Decks und bis zu fünf Beispielfragen je Unterdeck. Das Paket bleibt dabei unverändert.</li>
+            <li>Namen, die sich nur in Groß- und Kleinschreibung oder Leerzeichen unterscheiden, werden zu einem Namen zusammengeführt.</li>
+            <li>Doppelte Fragen erkennt das Programm im ganzen Deck mit allen Unterdecks. Vorhandene Karten und Lernstände bleiben erhalten.</li>
+            <li>Mit <code>--json</code> enthält jede Karte das Feld <code>subdeck</code>. Ändere das Feld bei Bedarf und exportiere mit <code>export</code> erneut.</li>
+            <li>Der Modus funktioniert lokal und mit <code>--pdf-mode native</code>.</li>
+          </ul>
+        </div>
+      </details>
+      <div class="warning">
+        <strong>Zusätzliche Daten gehen an den Provider.</strong>
+        <p>Mit <code>--subdecks --extend</code> sendet das Programm die Namen der vorhandenen Unterdecks und einige Beispielfragen an das Modell. Nutze für vertrauliche Inhalte ein lokales Modell.</p>
+      </div>
+      <div class="note">
+        <strong>Prüfe die Zuordnung.</strong>
+        <p>Das Modell kann Karten falsch einordnen oder ein Kapitel doppelt benennen. Prüfe die Unterdecks mit <code>--json</code> oder in Anki. Verschiebe Karten in Anki bei Bedarf.</p>
+      </div>
+    </section>
+
     <section id="beispiele">
       <div class="section-heading">
         <p class="eyebrow">Direkt verwenden</p>
@@ -942,6 +1006,7 @@ cp .env.example .env</code></pre>
           <tr><td>Invalid configuration</td><td>Prüfe YAML-Einrückung, Datentypen und Schlüsselnamen. Unbekannte Felder sind nicht erlaubt. Die Fehlermeldung nennt die Stelle.</td></tr>
           <tr><td>Native OpenAI PDF … requires OPENAI_API_KEY</td><td>Setze den OpenAI-Schlüssel in der Umgebung oder in <code>.env</code>. Schreibe ihn nicht in YAML.</td></tr>
           <tr><td>Options not supported by the OpenAI Responses API</td><td>Das native Profil enthält eine Option, die OpenAI dort nicht kennt. Die Meldung nennt die Option und, falls bekannt, den richtigen Namen, zum Beispiel <code>max_output_tokens</code> statt <code>max_tokens</code>. Es wurde noch nichts hochgeladen.</td></tr>
+          <tr><td>A subdeck name must be a single level without '::'</td><td>Das Modell hat im Unterdeck-Modus einen ungültigen Unterdecknamen geliefert, zum Beispiel mit dem Decknamen davor. Starte den Befehl erneut oder nutze ein anderes Modell.</td></tr>
           <tr><td>No verified native PDF adapter</td><td>Das Modell ist nicht freigegeben. Nutze ein dokumentiertes OpenAI-Modell oder <code>--pdf-mode local</code>.</td></tr>
           <tr><td>Upload konnte nicht gelöscht werden</td><td>Notiere die Datei-ID aus der Warnung. Lösche die Datei im OpenAI-Dashboard oder über die Files-API.</td></tr>
         </tbody>
@@ -963,6 +1028,7 @@ cp .env.example .env</code></pre>
       <div class="grid two">
         <article class="card"><h3>APKG</h3><p>Eine Paketdatei für Anki. Sie enthält Decks, Karten und zugehörige Daten. Du importierst sie in Anki.</p></article>
         <article class="card"><h3>Deck</h3><p>Eine Sammlung von Karteikarten in Anki. Ein Unterdeck wird mit <code>::</code> benannt.</p></article>
+        <article class="card"><h3>Unterdeck</h3><p>Ein Deck innerhalb eines anderen Decks, zum Beispiel <code>Elektrotechnik 1::Netzwerke</code>. Mit <code>--subdecks</code> bildet das KI-Modell die Unterdecks.</p></article>
         <article class="card"><h3>JSON</h3><p>Eine Textdatei mit strukturierten Daten. Hier enthält sie die Karten zur Prüfung und zum erneuten Export.</p></article>
         <article class="card"><h3>YAML</h3><p>Eine lesbare Konfigurationsdatei. Sie speichert Standardwerte und Modellprofile, aber keine API-Schlüssel.</p></article>
         <article class="card"><h3>Profil</h3><p>Ein benannter Satz von Modelleinstellungen in der YAML-Datei. Du wählst ihn mit <code>--profile</code>.</p></article>

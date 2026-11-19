@@ -268,31 +268,31 @@ Unit-Tests müssen Auswahl und Vorrang des PDF-Modus, fehlende Provider-Fähigke
 
 Ziel aus [req-4.md](./req-4.md): Ein Deck steht beispielsweise für eine Vorlesung, seine Unterdecks für deren Kapitel. Das KI-Modell soll neue Karten nicht nur anhängen, sondern inhaltlich passenden Unterdecks zuordnen. Mehrere Dokumente derselben Vorlesung werden nacheinander verarbeitet; dabei dient das vorhandene Deck als Kontext, damit passende Unterdecks wiederverwendet und nur bei Bedarf neue angelegt werden. Die Umsetzung kombiniert zusätzliche Modellanweisungen mit einem erweiterten, streng validierten Antwortformat.
 
-**R-130 – Unterdeck-Modus · muss · offen**
+**R-130 – Unterdeck-Modus · muss · umgesetzt**
 Ein ausdrücklich aktivierbarer Modus (`--subdecks/--no-subdecks`, YAML `generation.subdecks`, Standard: aus) lässt das Modell jede Karte genau einem Unterdeck zuordnen. Das mit `--deck` beziehungsweise der bestehenden Namensregel bestimmte Deck ist dann das übergeordnete Deck; Karten landen in `Deck::Unterdeck`. Ohne den Modus bleibt das bisherige Verhalten unverändert. Der CLI-Wert überschreibt YAML in beiden Richtungen.
 
-**R-131 – Unterdecks aus der Quelle · muss · offen**
+**R-131 – Unterdecks aus der Quelle · muss · umgesetzt**
 Das Modell bildet Unterdecknamen inhaltlich und orientiert sich dabei vorrangig an der Struktur der Quelle, etwa Kapitel- und Abschnittsüberschriften, Nummerierungen oder einem Inhaltsverzeichnis. Innerhalb einer Generierung über mehrere Textabschnitte werden bereits vergebene Unterdecknamen an spätere Anfragen weitergegeben, damit gleiche Kapitel gleich heißen.
 
-**R-132 – Vorhandenes Deck als Kontext · muss · offen**
+**R-132 – Vorhandenes Deck als Kontext · muss · umgesetzt**
 Beim Erweitern (`--extend`) werden die vorhandenen direkten Unterdecks des Zieldecks aus dem APKG gelesen und mit einer begrenzten Zahl von Beispielfragen an das Modell übergeben. Das Modell muss passende vorhandene Unterdecks bevorzugen und darf nur für nicht passende Inhalte neue anlegen. Das Lesen des Kontexts verändert das Paket nicht. Dadurch lassen sich mehrere Dokumente einer Vorlesung nacheinander konsistent einordnen.
 
-**R-133 – Antwortformat und Validierung · muss · offen**
+**R-133 – Antwortformat und Validierung · muss · umgesetzt**
 Im Unterdeck-Modus verlangt das Antwortschema je Karte das Pflichtfeld `subdeck`. Unterdecknamen werden mit Pydantic validiert: nicht leer, höchstens 100 Zeichen, eine Ebene ohne `::`. Ungültige Antworten sind wie bisher ein verständlicher Fehler. Namen, die sich von vorhandenen oder bereits vergebenen Unterdecks nur in Groß-/Kleinschreibung oder Leerraum unterscheiden, werden auf deren Schreibweise vereinheitlicht. Ohne aktivierten Modus werden etwaige `subdeck`-Angaben des Modells verworfen.
 
-**R-134 – Anki-Ausgabe mit Unterdecks · muss · offen**
+**R-134 – Anki-Ausgabe mit Unterdecks · muss · umgesetzt**
 Neue Pakete enthalten das übergeordnete Deck und alle verwendeten Unterdecks. Beim Erweitern werden fehlende Unterdecks über die offizielle Anki-API angelegt; vorhandene Karten, Lernstände und Unterdecks bleiben erhalten. Die Duplikatprüfung umfasst bei Karten mit Unterdeck das übergeordnete Deck einschließlich aller Unterdecks. Die Ergebnismeldung weist die hinzugefügten Karten je Unterdeck aus.
 
-**R-135 – JSON und Export · muss · offen**
+**R-135 – JSON und Export · muss · umgesetzt**
 Karten-JSON enthält das optionale Feld `subdeck`; Schema-Version 1 bleibt rückwärtskompatibel, Karten ohne Unterdeck werden unverändert geschrieben. `export` legt Karten mit `subdeck` ohne KI-Aufruf unter `--deck::subdeck` ab.
 
-**R-136 – Native PDF-Verarbeitung · soll · offen**
+**R-136 – Native PDF-Verarbeitung · soll · umgesetzt**
 Der Unterdeck-Modus funktioniert auch mit dem geprüften nativen OpenAI-Adapter und verwendet dieselben Anweisungen, dasselbe Antwortschema und dieselbe Validierung.
 
-**R-137 – Tests · muss · offen**
+**R-137 – Tests · muss · umgesetzt**
 Tests decken Prompt-Anweisungen und Kontext, Weitergabe neuer Unterdecks zwischen Abschnitten, Namensvereinheitlichung, Verwerfen von Unterdecks ohne Modus, Validierung, APKG-Erzeugung und -Erweiterung mit Unterdecks, Duplikate über Unterdecks hinweg, unveränderliches Lesen des Kontexts, JSON-Roundtrip, Export, Konfigurationspriorität, CLI-Integration und den nativen Weg ab – ohne echte KI-Aufrufe.
 
-**R-138 – Dokumentation · muss · offen**
+**R-138 – Dokumentation · muss · umgesetzt**
 README, Benutzerhandbuch, Entwicklerhandbuch, CLI-Hilfe und `config.example.yaml` beschreiben Modus, Ablauf für mehrere Dokumente, Kontextübertragung an den Provider, Grenzen und Beispiele.
 
 ## 12. Spätere Erweiterungen

@@ -28,6 +28,7 @@ Python verbindet hier drei passende Ökosysteme: Dokumentverarbeitung (`pypdf`, 
 - JSON-Zwischendatei zur Prüfung und zum erneuten Export ohne weitere KI-Kosten
 - Duplikaterkennung beim Generieren und Erweitern
 - Deckliste mit Kartenanzahl anzeigen
+- optional: KI ordnet Karten inhaltlich passenden Unterdecks zu (`Vorlesung::Kapitel`) und nutzt beim Erweitern die vorhandenen Unterdecks als Kontext
 
 ## Installation
 
@@ -119,7 +120,21 @@ anki-flashcards export output/biologie.cards.json \
 
 Auch dieser Befehl unterstützt `--extend`.
 
-### 4. Decks eines Pakets anzeigen
+### 4. Vorlesung mit KI-Unterdecks aufbauen
+
+Mit `--subdecks` ist `--deck` das übergeordnete Deck, etwa der Name einer Vorlesung. Das Modell ordnet jede Karte genau einem Unterdeck `Deck::Kapitel` zu und orientiert sich dabei an Kapitel- und Abschnittsüberschriften der Quelle. Mehrere Dokumente werden nacheinander verarbeitet:
+
+```bash
+# Erstes Skript: neues Paket, Unterdecks entstehen aus den Kapiteln
+anki-flashcards generate vl-01.pdf -o output/el1.apkg -d 'Elektrotechnik 1' --subdecks
+
+# Weitere Skripte: vorhandene Unterdecks werden erkannt und bevorzugt wiederverwendet
+anki-flashcards generate vl-02.pdf -o output/el1.apkg -d 'Elektrotechnik 1' --subdecks --extend
+```
+
+Beim Erweitern liest das Programm die vorhandenen direkten Unterdecks des Decks und je Unterdeck bis zu fünf Beispielfragen aus dem APKG und sendet sie zusammen mit dem Text an das Modell. Neue Unterdecks entstehen nur für Inhalte, die zu keinem vorhandenen passen; Namen, die sich nur in Groß-/Kleinschreibung oder Leerraum unterscheiden, werden vereinheitlicht. Doppelte Fragen werden dann im ganzen Deck einschließlich aller Unterdecks erkannt. Die Ausgabe listet die neuen Karten je Unterdeck. Ein Unterdeckname hat genau eine Ebene (kein `::`) und höchstens 100 Zeichen; verletzt das Modell diese Regel, bricht der Lauf mit einer Fehlermeldung ab. Ohne `--subdecks` bleibt alles wie bisher. In YAML entspricht das `generation.subdecks: true`; `--no-subdecks` schaltet es für einen Aufruf wieder ab. Das Karten-JSON enthält dann je Karte das Feld `subdeck`, und `export` legt diese Karten wieder unter `--deck::subdeck` ab.
+
+### 5. Decks eines Pakets anzeigen
 
 ```bash
 anki-flashcards decks output/mein-deck.apkg
@@ -247,6 +262,7 @@ Dokument → Textextraktion → Chunks → LiteLLM → validierte Karten
 - `settings.py`: Prioritäten, Profil-/Umgebungsauflösung, Pfadregeln und Diagnosedaten
 - `documents.py`: Dateiformate, Normalisierung und überlappende Textabschnitte
 - `ai.py`: Provider-Anbindung, Prompting und Antwortvalidierung
+- `subdecks.py`: Unterdeck-Modus – Regeln, Kontext im Prompt, Antwortschema und einheitliche Unterdecknamen
 - `native_pdf.py`: konservative Modellfreigabe sowie OpenAI-Upload, Responses-Parsing und Löschung
 - `models.py`: Karten- und JSON-Schema sowie Deduplizierung
 - `apkg.py`: Erstellung, Erweiterung und Inspektion von Anki-Paketen
@@ -271,6 +287,6 @@ Die Tests verwenden einen simulierten KI-Client und benötigen keine API-Schlüs
 - Gescannte PDFs benötigen derzeit eine vorherige OCR; eingebetteter Text wird direkt gelesen.
 - URLs, Bilder/Audio in Karten, Lückentext und frei wählbare Notiztypen sind noch nicht enthalten.
 - KI-Ergebnisse müssen fachlich geprüft werden. Die JSON-Datei ist dafür der empfohlene Zwischenschritt.
-- Bei Cloud-Providern werden Dokumentauszüge an den jeweiligen Anbieter übertragen. Für vertrauliche Dokumente ist ein lokales Modell wie Ollama vorzusehen.
+- Bei Cloud-Providern werden Dokumentauszüge an den jeweiligen Anbieter übertragen. Für vertrauliche Dokumente ist ein lokales Modell wie Ollama vorzusehen. Im Unterdeck-Modus mit `--extend` gehen zusätzlich die Namen vorhandener Unterdecks und einige Beispielfragen daraus an den Provider.
 - Als nächste Ausbaustufen bieten sich Quellenangaben pro Karte, eine interaktive Kartenprüfung, OCR, Cloze-Karten und ein Fortsetzen abgebrochener Generierungen an.
 - Web-UI und Linux-Container/Proxmox-Deployment sind bewusst **noch nicht** Teil dieses MVP. Die Trennung von Kern und CLI bereitet beides vor, ohne jetzt Betriebskomplexität einzuführen.
