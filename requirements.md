@@ -72,7 +72,7 @@ API-Schlüssel dürfen niemals ins Repository, in APKG-Dateien, in Karten-JSON o
 Die KI muss ausschließlich fachlich durch die Quelle gedeckte, eigenständig verständliche und nicht doppelt formulierte Karten erstellen. Jede Karte besitzt eine Vorderseite (`front`), eine Rückseite (`back`) und optional Tags (`tags`). Standard ist eine einfache Frage-Antwort-Karte; Metafragen über das Dokument und erfundene Fakten sind unzulässig.
 
 **R-024 – Strukturierte Antwort · muss · umgesetzt**
-Die KI-Antwort muss als JSON mit einem `cards`-Array angefordert und mit Pydantic validiert werden. Leere Antworten, ungültiges JSON, ungültige Felder oder fehlende Pflichtinhalte müssen als verständlicher Anwendungsfehler behandelt werden. Vorderseiten sind auf 2.000, Rückseiten auf 20.000 Zeichen begrenzt. Tags enthalten keine Leerzeichen; pro Karte sind höchstens 20 Tags zulässig.
+Die KI-Antwort muss als JSON mit einem `cards`-Array angefordert und mit Pydantic validiert werden. Leere Antworten, ungültiges JSON, ungültige Felder oder fehlende Pflichtinhalte müssen als verständlicher Anwendungsfehler behandelt werden. Vorderseiten sind auf 2.000, Rückseiten auf 20.000 Zeichen begrenzt. Tags enthalten keine Leerzeichen (Mehrwort-Tags aus Antworten und Karten-JSON siehe R-177); pro Karte sind höchstens 20 Tags zulässig.
 
 **R-025 – Parameter · muss · umgesetzt**
 Folgende Generierungsparameter müssen steuerbar sein:
@@ -88,7 +88,7 @@ Folgende Generierungsparameter müssen steuerbar sein:
 Das Standardlimit beträgt 50 Karten. Das Programm darf nicht mehr als das angeforderte Limit exportieren. `--limit 0` aktiviert den ausdrücklich gewählten Unlimited-Modus: Jeder Textabschnitt wird einmal verarbeitet und die KI soll so viele sinnvolle Karten erzeugen, wie die Quelle hergibt. Das Unlimited-Verhalten muss dokumentiert bleiben; standardmäßig ist ein Limit zu verwenden.
 
 **R-027 – Provider-Fehler · muss · umgesetzt**
-Anfragen verwenden einen Timeout von standardmäßig 180 Sekunden und bis zu zwei Wiederholversuche durch LiteLLM. Fehler müssen mit dem betroffenen Dokumentabschnitt gemeldet werden. Nicht jedes Modell unterstützt jede strukturierte Ausgabe gleichermaßen; solche Einschränkungen dürfen nicht als erfolgreiche Generierung ausgegeben werden.
+Anfragen verwenden einen Timeout von standardmäßig 180 Sekunden und bis zu zwei Wiederholversuche durch LiteLLM. Diese Wiederholversuche brauchen das Paket `tenacity`, das LiteLLM nicht selbst deklariert; seit 0.2.1 ist es eine direkte Abhängigkeit (in frischen Umgebungen scheiterte sonst jede Anfrage). Fehler müssen mit dem betroffenen Dokumentabschnitt gemeldet werden. Nicht jedes Modell unterstützt jede strukturierte Ausgabe gleichermaßen; solche Einschränkungen dürfen nicht als erfolgreiche Generierung ausgegeben werden.
 
 **R-028 – Datenschutz · muss · umgesetzt**
 Bei Cloud-Providern werden verarbeitete Dokumentauszüge an den Anbieter übertragen. Dies muss dokumentiert sein. Für vertrauliche Dokumente soll ein lokales Modell verwendet werden. Ein späterer Datei-Upload muss noch deutlicher und erst nach ausdrücklicher Aktivierung erfolgen.
@@ -407,6 +407,9 @@ Zusätzlich zur APKG-Datei kann eine vom Aufrufer geöffnete Anki-Sammlung (offi
 
 **R-175 – Versionierte Schnittstelle · muss · umgesetzt**
 Die von Anki Studio genutzten Funktionen und Klassen sind im Entwicklerhandbuch als öffentliche Schnittstelle beschrieben. Der Stand, der sie erstmals bereitstellt, erhält die Paketversion 0.2.0 und den Git-Tag `v0.2.0`. Spätere inkompatible Änderungen dieser Schnittstelle erhöhen die Version und werden in der Übergabedatei vermerkt.
+
+**R-177 – Mehrwort-Tags zusammenziehen · muss · umgesetzt**
+Liefert ein Modell Tags mit Leerraum (etwa `Ohmsches Gesetz`), werden die Wörter vor der Prüfung mit Unterstrichen zu einem Tag verbunden (`Ohmsches_Gesetz`), statt die Antwort des ganzen Abschnitts zu verwerfen. Das gilt für KI-Antworten in allen Modi und für Karten-JSON; die Regel aus R-024, dass ein gespeicherter Tag keine Leerzeichen enthält, bleibt erfüllt. Anlass: Ein lokales Modell (gemma3:4b über Ollama) lieferte in Anki Studio solche Tags, und der Lauf brach ab. Version 0.2.1.
 
 **R-176 – Übergabe an Anki Studio · muss · umgesetzt**
 [docs/anki-studio-uebergabe.md](./docs/anki-studio-uebergabe.md) bündelt Ziel, Entscheidungen, Infrastruktur, Architektur, Anforderungen an Anki Studio, Risiken und die konkreten Schnittstellen dieses Pakets. Sie wird aktualisiert, sobald R-170 bis R-175 umgesetzt sind.
