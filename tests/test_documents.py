@@ -102,3 +102,38 @@ def test_chunks_long_text_with_overlap() -> None:
     assert chunks[0].startswith("Absatz 0")
     assert chunks[-1].endswith("x" * 100)
     assert "Absatz 49" in chunks[-1]
+
+
+@pytest.mark.parametrize(
+    ("max_chars", "expected_overlap"),
+    [(1_000, 250), (1_001, 250), (1_999, 499), (2_000, 500), (24_000, 500)],
+)
+def test_default_overlap_is_500_but_at_most_a_quarter_chunk(
+    max_chars: int, expected_overlap: int
+) -> None:
+    """Verify the default overlap fits every allowed chunk size.
+
+    Args:
+        max_chars: Chunk size from the allowed CLI range 1,000..100,000.
+        expected_overlap: Overlap the default must choose for that size.
+
+    Returns:
+        None. Text without breaks makes the chunk offsets exact.
+    """
+    text = "".join(str(index % 10) for index in range(3 * max_chars))
+
+    chunks = chunk_text(text, max_chars=max_chars)
+
+    second_start = max_chars - expected_overlap
+    assert chunks[0] == text[:max_chars]
+    assert chunks[1] == text[second_start : second_start + max_chars]
+
+
+def test_explicit_overlap_is_still_validated() -> None:
+    """Verify an explicit overlap of half the chunk size is still rejected.
+
+    Returns:
+        None. The assertion expects the existing ValueError.
+    """
+    with pytest.raises(ValueError, match="Overlap"):
+        chunk_text("x" * 2_000, max_chars=1_000, overlap=500)

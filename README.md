@@ -24,7 +24,7 @@ Python verbindet hier drei passende Ökosysteme: Dokumentverarbeitung (`pypdf`, 
 - klassische und zstd-komprimierte Anki-Sammlungen lesen
 - KI-Anbieter über ein einheitliches `provider/modell`-Format
 - OpenAI, Anthropic, Google Gemini, Moonshot, Ollama und weitere LiteLLM-Provider
-- Kartenlimit, Sprache, zusätzliche Anweisungen und konfigurierbare Textaufteilung
+- Kartenlimit, Sprache, zusätzliche Anweisungen und konfigurierbare Textaufteilung (`--chunk-size` 1.000–100.000 Zeichen; 500 Zeichen Überlappung, höchstens ein Viertel des Abschnitts)
 - JSON-Zwischendatei zur Prüfung und zum erneuten Export ohne weitere KI-Kosten
 - Duplikaterkennung beim Generieren und Erweitern
 - Deckliste mit Kartenanzahl anzeigen

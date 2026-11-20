@@ -566,7 +566,7 @@
               <text class="t-title" x="94" y="876">read_document()</text><text class="t-sub" x="94" y="897">≤ 100 MiB · Endung · extrahieren · normalisieren</text></g></a>
             <path class="edge" d="M255 910 V936" marker-end="url(#arr-flow)"/>
             <a href="#schritt-7"><g class="n-doc"><rect class="box" x="40" y="940" width="430" height="60" rx="10"/>
-              <text class="t-title" x="60" y="966">chunk_text()</text><text class="t-sub" x="60" y="987">≤ chunk_size Zeichen · 500 Zeichen Überlappung</text></g></a>
+              <text class="t-title" x="60" y="966">chunk_text()</text><text class="t-sub" x="60" y="987">≤ chunk_size Zeichen · Überlappung 500, höchstens ¼</text></g></a>
             <path class="edge" d="M255 1000 V1026" marker-end="url(#arr-flow)"/>
             <rect class="frame ai" x="40" y="1030" width="430" height="214" rx="12"/>
             <text class="t-label" x="56" y="1052">ai.generate_cards() · je Chunk</text>
@@ -885,7 +885,7 @@
         <dl class="facts">
           <dt>Importiert</dt><dd><code>errors</code> · pypdf, python-docx, BeautifulSoup</dd>
           <dt>Verwendet von</dt><dd><code>cli</code> (<code>read_document</code>), <code>ai</code> (<code>SourceDocument</code>, <code>chunk_text</code>)</dd>
-          <dt>Tests</dt><dd><code>tests/test_documents.py</code> (5 Tests)</dd>
+          <dt>Tests</dt><dd><code>tests/test_documents.py</code> (11 Tests)</dd>
         </dl>
         <details open>
           <summary>Öffentliche Schnittstelle</summary>
@@ -899,8 +899,12 @@
               <p>Pipeline aus vier Schritten: <code>_validate_document_path</code> → <code>_extract_text</code> → <code>_normalize_text</code> → Prüfung auf leeren Text („No extractable text found“).</p>
             </div>
             <div class="option">
-              <div class="option-heading"><span class="option-name"><code>chunk_text(text, max_chars=24_000, overlap=500) → list[str]</code></span><span class="option-meta">rein funktional</span></div>
-              <p>Teilt Text in Abschnitte von höchstens <code>max_chars</code> Zeichen; benachbarte Abschnitte überlappen um <code>overlap</code> Zeichen. Kurzer Text ergibt genau einen Abschnitt. <code>ValueError</code> bei <code>max_chars &lt; 1000</code> oder <code>overlap ≥ max_chars // 2</code>. → <a href="#ki-generierung">Diagramm</a></p>
+              <div class="option-heading"><span class="option-name"><code>chunk_text(text, max_chars=24_000, overlap=None) → list[str]</code></span><span class="option-meta">rein funktional</span></div>
+              <p>Teilt Text in Abschnitte von höchstens <code>max_chars</code> Zeichen; benachbarte Abschnitte überlappen um <code>overlap</code> Zeichen. Ohne Angabe gilt <code>default_overlap(max_chars)</code>. Kurzer Text ergibt genau einen Abschnitt. <code>ValueError</code> bei <code>max_chars &lt; 1000</code> oder einem ausdrücklichen <code>overlap ≥ max_chars // 2</code>. → <a href="#ki-generierung">Diagramm</a></p>
+            </div>
+            <div class="option">
+              <div class="option-heading"><span class="option-name"><code>default_overlap(max_chars) → int</code></span><span class="option-meta">rein funktional</span></div>
+              <p>Standardüberlappung: <code>DEFAULT_OVERLAP = 500</code> Zeichen, höchstens <code>max_chars // 4</code>. Unter 2000 Zeichen sinkt sie also (1000 → 250). Damit funktioniert jede Abschnittsgröße, die CLI und YAML erlauben, und jeder neue Abschnitt rückt um mindestens ein Viertel vor.</p>
             </div>
           </div>
         </details>
@@ -1269,20 +1273,20 @@
         <div class="diagram-scroll">
           <svg viewBox="0 0 1000 250" aria-labelledby="chunk-title chunk-desc">
             <title id="chunk-title">Aufteilung des Textes in überlappende Abschnitte</title>
-            <desc id="chunk-desc">Der normalisierte Text wird in drei Abschnitte geteilt. Benachbarte Abschnitte überlappen um 500 Zeichen. Der Schnitt liegt bevorzugt an einer Leerzeile, sonst an einem Leerzeichen, immer in der zweiten Fensterhälfte.</desc>
+            <desc id="chunk-desc">Der normalisierte Text wird in drei Abschnitte geteilt. Benachbarte Abschnitte überlappen um 500 Zeichen, höchstens um ein Viertel der Abschnittsgröße. Der Schnitt liegt bevorzugt an einer Leerzeile, sonst an einem Leerzeichen, immer in der zweiten Fensterhälfte.</desc>
             <text class="t-label" x="40" y="26">Quelltext · Beispiel mit drei Abschnitten (schematisch)</text>
             <g class="n-doc"><rect class="box" x="40" y="38" width="920" height="36" rx="8"/><text class="t-head" x="56" y="61">normalisierter Dokumenttext aus read_document()</text></g>
             <rect x="400" y="100" width="30" height="96" fill="#e2a63d" opacity=".35"/>
             <rect x="750" y="146" width="30" height="96" fill="#e2a63d" opacity=".35"/>
             <g class="n-ai"><rect class="box" x="40" y="106" width="390" height="36" rx="8"/><text class="t-title" x="56" y="129">Chunk 1 · ≤ chunk_size</text></g>
-            <text class="t-edge" x="444" y="129">← 500 Zeichen Überlappung (overlap)</text>
+            <text class="t-edge" x="444" y="129">← Überlappung: 500 Zeichen, höchstens ¼ chunk_size</text>
             <g class="n-ai"><rect class="box" x="400" y="152" width="380" height="36" rx="8"/><text class="t-title" x="440" y="175">Chunk 2 · ≤ chunk_size</text></g>
             <text class="t-edge" x="794" y="175">← Überlappung</text>
             <g class="n-ai"><rect class="box" x="750" y="198" width="210" height="36" rx="8"/><text class="t-title" x="790" y="221">Chunk 3 · Rest</text></g>
             <text class="t-sub" x="40" y="221">Schnitt bevorzugt an einer Leerzeile, sonst an einem Leerzeichen – immer in der 2. Fensterhälfte</text>
           </svg>
         </div>
-        <figcaption><code>chunk_text()</code> startet den nächsten Abschnitt bei <code>max(ende − overlap, start + 1)</code>. Dadurch geht an den Grenzen kein Zusammenhang verloren und die Schleife kommt garantiert voran.</figcaption>
+        <figcaption><code>chunk_text()</code> startet den nächsten Abschnitt bei <code>max(ende − overlap, start + 1)</code>. Dadurch geht an den Grenzen kein Zusammenhang verloren. Weil der Schnitt in der zweiten Fensterhälfte liegt und die Standardüberlappung höchstens ein Viertel beträgt, rückt jeder Abschnitt um mindestens ein Viertel der Abschnittsgröße vor.</figcaption>
       </figure>
 
       <div class="grid two" style="margin-top:1rem">
@@ -1747,7 +1751,7 @@ Known subdecks; reuse them when the content fits:
       <div class="section-heading">
         <p class="eyebrow">tests/</p>
         <h2>Teststrategie und Test-Nahtstellen</h2>
-        <p>91 Tests in neun Dateien, eine Datei pro Modul (<code>cli</code> deckt <code>__main__</code> mit ab). Der Standardlauf braucht weder API-Schlüssel noch Netzwerk: KI-Antworten werden simuliert, der einzige HTTP-Test läuft gegen einen lokalen Server auf <code>127.0.0.1</code>.</p>
+        <p>99 Tests in neun Dateien, eine Datei pro Modul (<code>cli</code> deckt <code>__main__</code> mit ab). Der Standardlauf braucht weder API-Schlüssel noch Netzwerk: KI-Antworten werden simuliert, der einzige HTTP-Test läuft gegen einen lokalen Server auf <code>127.0.0.1</code>.</p>
       </div>
       <pre><button class="copy-button" type="button" aria-label="Befehle kopieren">Kopieren</button><code>.venv/bin/python -m ruff check src tests
 .venv/bin/python -m ruff format --check src tests
@@ -1757,7 +1761,7 @@ Known subdecks; reuse them when the content fits:
         <table>
           <thead><tr><th>Datei</th><th>Tests</th><th>Schwerpunkte</th></tr></thead>
           <tbody>
-            <tr><td><code>test_documents.py</code></td><td>5</td><td>HTML ohne Skripte, DOCX mit Tabellen, leere und nicht unterstützte Dateien, beschädigte PDF, Überlappung beim Aufteilen</td></tr>
+            <tr><td><code>test_documents.py</code></td><td>11</td><td>HTML ohne Skripte, DOCX mit Tabellen, leere und nicht unterstützte Dateien, beschädigte PDF, Überlappung beim Aufteilen, Standardüberlappung für Abschnittsgrößen von 1000 bis 24000 (parametrisiert), Prüfung einer ausdrücklichen Überlappung</td></tr>
             <tr><td><code>test_models.py</code></td><td>6</td><td>JSON-Roundtrip, ungültiges JSON, Tags ohne Leerzeichen, Deduplizierung, Unterdeck-Validierung, JSON mit optionalem <code>subdeck</code></td></tr>
             <tr><td><code>test_ai.py</code></td><td>5</td><td>Limit über Abschnitte, Unlimited-Prompt ohne erfundenes Limit, ungültige KI-Antwort, Unterdeck-Schema und neue Unterdecks über Chunks hinweg, Verwerfen im normalen Modus</td></tr>
             <tr><td><code>test_subdecks.py</code></td><td>4</td><td>Neutraler Normalmodus, Regeln und Kontextabschnitt, Namensvereinheitlichung und Merken neuer Unterdecks, leerer Kontext</td></tr>
@@ -1765,7 +1769,7 @@ Known subdecks; reuse them when the content fits:
             <tr><td><code>test_config.py</code></td><td>15</td><td>fehlende/leere/explizite Datei, ungültiges Schema und Secrets (parametrisiert), Profile, atomares Speichern, Gültigkeit von <code>config.example.yaml</code></td></tr>
             <tr><td><code>test_settings.py</code></td><td>9</td><td>Unterdeck-Priorität, YAML-Pfade, Prioritäten, Altvariablen ohne Wirkung, Profil-Fallbacks, Export-Defaults, <code>ANKI_CONFIG</code>, Diagnose ohne Secrets</td></tr>
             <tr><td><code>test_apkg.py</code></td><td>9</td><td>Unterdecks neu und erweitert, Duplikate im Decks-Baum, unveränderter Normalmodus, Kontext lesen ohne Änderung, Neu/Erweitern/Inspizieren, Lernstand bleibt, echter moderner Anki-Export mit zstd, HTML-Escaping, Medien bleiben</td></tr>
-            <tr><td><code>test_cli.py</code></td><td>21</td><td>Unterdeck-Kontext bei <code>--extend</code>, Export mit Unterdecks, <code>config show</code>, Hilfeseiten, Exit-Codes, alle Befehle, YAML-Integration, nativ ohne lokale Extraktion und umgekehrt, <code>.env</code>, Subprozess ohne Traceback</td></tr>
+            <tr><td><code>test_cli.py</code></td><td>23</td><td><code>--chunk-size 1000</code> und <code>1001</code> bis zur simulierten KI, Unterdeck-Kontext bei <code>--extend</code>, Export mit Unterdecks, <code>config show</code>, Hilfeseiten, Exit-Codes, alle Befehle, YAML-Integration, nativ ohne lokale Extraktion und umgekehrt, <code>.env</code>, Subprozess ohne Traceback</td></tr>
           </tbody>
         </table>
       </div>
@@ -1919,11 +1923,6 @@ print(result.added, result.skipped)</code></pre>
           <span class="tag apkg">Randfall</span>
           <h3>Platzhalter in modernen Exporten</h3>
           <p>Moderne Anki-Exporte enthalten <code>collection.anki2</code> (Platzhalter für alte Versionen) und <code>collection.anki21b</code>. <code>_replace_collection()</code> verwirft alle <code>collection.*</code>-Einträge und schreibt nur den bearbeiteten zurück. Nach dem Erweitern fehlt der Platzhalter; aktuelle Anki-Versionen lesen <code>anki21b</code> unverändert.</p>
-        </article>
-        <article class="card searchable" data-module="documents ai cli">
-          <span class="tag err">Abweichung</span>
-          <h3><code>--chunk-size 1000</code> endet mit Traceback</h3>
-          <p>Die CLI erlaubt <code>--chunk-size</code> ab 1000. <code>chunk_text()</code> verlangt aber eine Überlappung kleiner als die halbe Abschnittsgröße; bei festen 500 Zeichen scheitern daher 1000 und 1001 mit <code>ValueError: Overlap must be … less than half the chunk size</code>. Die Ausnahme ist keine <code>FlashcardError</code> und erscheint als Python-Traceback, bevor eine KI-Anfrage stattfindet.</p>
         </article>
         <article class="card searchable" data-module="native_pdf">
           <span class="tag ext">Abhängigkeit</span>

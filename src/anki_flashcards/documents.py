@@ -16,6 +16,7 @@ from anki_flashcards.errors import FlashcardError
 
 SUPPORTED_SUFFIXES = {".pdf", ".docx", ".html", ".htm", ".md", ".markdown", ".txt"}
 MAX_FILE_SIZE = 100 * 1024 * 1024
+DEFAULT_OVERLAP = 500
 
 
 @dataclass(frozen=True)
@@ -205,14 +206,31 @@ def _normalize_text(text: str) -> str:
     return re.sub(r"\n{3,}", "\n\n", "\n".join(lines)).strip()
 
 
-def chunk_text(text: str, max_chars: int = 24_000, overlap: int = 500) -> list[str]:
+def default_overlap(max_chars: int) -> int:
+    """Return the standard overlap for a chunk size.
+
+    The overlap is 500 characters but at most a quarter of the chunk size, so
+    every allowed size works and each new chunk advances by at least a
+    quarter of the chunk size.
+
+    Args:
+        max_chars: Maximum characters per chunk; at least 1,000.
+
+    Returns:
+        ``DEFAULT_OVERLAP`` for chunk sizes from 2,000, otherwise
+        ``max_chars // 4`` (250 for 1,000).
+    """
+    return min(DEFAULT_OVERLAP, max_chars // 4)
+
+
+def chunk_text(text: str, max_chars: int = 24_000, overlap: int | None = None) -> list[str]:
     """Split text into overlapping chunks for model requests.
 
     Args:
         text: Normalized source text to cover completely.
         max_chars: Maximum characters per chunk; at least 1,000.
         overlap: Repeated characters between adjacent chunks, less than half
-            the chunk size.
+            the chunk size. None selects ``default_overlap(max_chars)``.
 
     Returns:
         Non-empty chunks covering the source text, preferring paragraph and
@@ -223,6 +241,8 @@ def chunk_text(text: str, max_chars: int = 24_000, overlap: int = 500) -> list[s
     """
     if max_chars < 1_000:
         raise ValueError("Chunk size must be at least 1000 characters")
+    if overlap is None:
+        overlap = default_overlap(max_chars)
     if overlap < 0 or overlap >= max_chars // 2:
         raise ValueError("Overlap must be non-negative and less than half the chunk size")
     if len(text) <= max_chars:

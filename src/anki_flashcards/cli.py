@@ -184,7 +184,8 @@ def generate(
         max=100_000,
         help=(
             "Maximum source characters per AI request, 1000..100000. "
-            "Default: 24000; adjacent chunks overlap by 500 characters."
+            "Default: 24000; adjacent chunks overlap by 500 characters, "
+            "at most a quarter of the chunk size."
         ),
         show_default=False,
     ),

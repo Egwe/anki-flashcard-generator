@@ -179,6 +179,66 @@ def test_generate_command_uses_document_and_writes_json(tmp_path: Path, monkeypa
     assert cards_file.is_file()
 
 
+@pytest.mark.parametrize("chunk_size", ["1000", "1001"])
+def test_generate_accepts_smallest_chunk_sizes(
+    tmp_path: Path, monkeypatch, chunk_size: str
+) -> None:
+    """Verify the smallest allowed chunk sizes reach the model without a crash.
+
+    Args:
+        tmp_path: Pytest-provided isolated directory.
+        monkeypatch: Pytest fixture used to replace the provider call.
+        chunk_size: Allowed ``--chunk-size`` value at the lower range limit.
+
+    Returns:
+        None. Assertions inspect the exit code and the number of requests.
+    """
+    from types import SimpleNamespace
+
+    source = tmp_path / "notes.md"
+    source.write_text(
+        "\n\n".join(f"Absatz {index}: " + "Fakt " * 40 for index in range(20)),
+        encoding="utf-8",
+    )
+    prompts: list[str] = []
+
+    def fake_completion(**kwargs):
+        """Record one chunk request and return a single valid card.
+
+        Args:
+            **kwargs: LiteLLM options built by the application.
+
+        Returns:
+            A LiteLLM-shaped response with one card per chunk.
+        """
+        prompts.append(kwargs["messages"][-1]["content"])
+        payload = {"cards": [{"front": f"Frage {len(prompts)}?", "back": "Antwort"}]}
+        message = SimpleNamespace(content=json.dumps(payload))
+        return SimpleNamespace(choices=[SimpleNamespace(message=message)])
+
+    monkeypatch.setattr("anki_flashcards.ai._completion", fake_completion)
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            str(source),
+            "--output",
+            str(tmp_path / "deck.apkg"),
+            "--model",
+            "ollama/test",
+            "--chunk-size",
+            chunk_size,
+            "--limit",
+            "0",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert result.exception is None
+    assert len(prompts) > 1
+    assert "Absatz 19" in prompts[-1]
+
+
 def test_generate_uses_yaml_profile_paths_and_cli_overrides(tmp_path: Path, monkeypatch) -> None:
     """Verify the command resolves YAML defaults and explicit CLI precedence.
 

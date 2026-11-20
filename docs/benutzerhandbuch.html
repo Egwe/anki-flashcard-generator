@@ -572,7 +572,7 @@ python -m pip install -e .</code></pre>
             <div class="option">
               <div class="option-heading"><span class="option-name"><code>--chunk-size</code></span><span class="option-meta">Zeichen · 1000 bis 100000 · Standard: 24000</span></div>
               <p>Begrenzt die Menge des lokal extrahierten Textes pro KI-Anfrage. Große Dokumente werden auf mehrere Anfragen verteilt.</p>
-              <p>Benachbarte Abschnitte teilen 500 Zeichen. Dadurch geht weniger Zusammenhang an den Grenzen verloren. Der Wert beeinflusst nicht die native PDF-Verarbeitung.</p>
+              <p>Benachbarte Abschnitte teilen 500 Zeichen, höchstens aber ein Viertel der Abschnittsgröße. Bei <code>--chunk-size 1000</code> sind es also 250 Zeichen, ab 2000 immer 500. Dadurch geht weniger Zusammenhang an den Grenzen verloren. Der Wert beeinflusst nicht die native PDF-Verarbeitung.</p>
             </div>
           </div>
         </details>
