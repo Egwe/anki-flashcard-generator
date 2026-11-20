@@ -323,6 +323,7 @@
       <button class="filter-button" type="button" data-filter="export" aria-pressed="false">export</button>
       <button class="filter-button" type="button" data-filter="decks" aria-pressed="false">decks</button>
       <button class="filter-button" type="button" data-filter="config" aria-pressed="false">config show</button>
+      <button class="filter-button" type="button" data-filter="models" aria-pressed="false">models download</button>
     </div>
     <p class="search-status" id="search-status" role="status" aria-live="polite"></p>
 
@@ -359,7 +360,7 @@
           <ul class="checklist">
             <li>Das Programm ändert nicht direkt deine persönliche Anki-Sammlung. Es bearbeitet nur die angegebene <code>.apkg</code>-Datei.</li>
             <li>Das Programm lädt keine Internetadressen als Quelle. Nutze eine lokale Datei.</li>
-            <li>Das Programm liest keine gescannten PDFs ohne Text. Führe vorher eine Texterkennung (OCR) aus oder nutze eine geeignete native PDF-Verarbeitung.</li>
+            <li>Im Standardmodus liest das Programm nur den eingebetteten Text einer PDF. Für gescannte Seiten, Text in Bildern, Tabellen, Formeln und Abbildungen nutze die <a href="#strukturiert">strukturierte PDF-Aufbereitung</a>.</li>
             <li>Eine Web-Oberfläche und ein Container für Proxmox sind noch nicht vorhanden.</li>
           </ul>
         </div>
@@ -376,7 +377,8 @@
         <li><a href="#grundregeln">Dateien, Decks und Prioritäten</a></li>
         <li><a href="#befehle">Alle Befehle und Optionen</a></li>
         <li><a href="#konfiguration">YAML-Konfiguration</a></li>
-        <li><a href="#pdf-modi">Lokale und native PDF-Verarbeitung</a></li>
+        <li><a href="#pdf-modi">Die drei PDF-Modi</a></li>
+        <li><a href="#strukturiert">PDF lokal vollständig aufbereiten</a></li>
         <li><a href="#unterdecks">Vorlesung mit KI-Unterdecks</a></li>
         <li><a href="#beispiele">Beispiele für die Praxis</a></li>
         <li><a href="#fehler">Fehler und Exit-Codes</a></li>
@@ -589,6 +591,11 @@ python -m pip install -e .</code></pre>
               <p>Liest den Text der PDF auf deinem Computer. Nur dieser Text wird an das Modell gesendet. Diese Option ist die sichere Standardwahl für lokale Modelle.</p>
             </div>
             <div class="option">
+              <div class="option-heading"><span class="option-name"><code>--pdf-mode structured</code></span><span class="option-meta">Ausdrückliche Aktivierung · Extra <code>pdf</code></span></div>
+              <p>Bereitet die PDF lokal mit Docling auf: Texterkennung für Bilder und Scans, Tabellen als Markdown-Tabellen, Formeln als LaTeX und Abbildungen als markierte Beschreibungen. An das Kartenmodell geht danach nur Text.</p>
+              <p>Nur <code>.pdf</code>-Dateien sind erlaubt. Der Modus braucht eine GPU; ohne GPU bricht er ab und empfiehlt <code>native</code> oder <code>local</code>. Ohne das installierte Extra <code>pdf</code> nennt das Programm den Installationsbefehl. Einzelheiten stehen im Abschnitt <a href="#strukturiert">PDF lokal vollständig aufbereiten</a>.</p>
+            </div>
+            <div class="option">
               <div class="option-heading"><span class="option-name"><code>--pdf-mode native</code></span><span class="option-meta">Ausdrückliche Aktivierung</span></div>
               <p>Lädt die vollständige Original-PDF zu einem freigegebenen OpenAI-Modell hoch. Die lokale PDF-Textextraktion wird übersprungen.</p>
               <p>Andere Dateiformate und nicht freigegebene Modelle werden abgelehnt. Es gibt keinen automatischen Wechsel zurück zur lokalen Verarbeitung.</p>
@@ -596,6 +603,43 @@ python -m pip install -e .</code></pre>
             <div class="option">
               <div class="option-heading"><span class="option-name"><code>--help</code>, <code>-h</code></span><span class="option-meta">Schalter</span></div>
               <p>Zeigt die Hilfe für <code>generate</code> an. Das Programm erzeugt keine Karten.</p>
+            </div>
+          </div>
+        </details>
+        <details open>
+          <summary>Optionen für die strukturierte PDF-Aufbereitung</summary>
+          <div class="details-body">
+            <p>Diese Optionen wirken nur mit <code>--pdf-mode structured</code>. Jede überschreibt den gleichnamigen Wert in <code>pdf_conversion</code> der YAML-Datei.</p>
+            <div class="option">
+              <div class="option-heading"><span class="option-name"><code>--formulas</code> / <code>--no-formulas</code></span><span class="option-meta">Schalter · Standard: an</span></div>
+              <p>Erkennt Formeln als LaTeX, zum Beispiel <code>\varphi(\omega) = \varphi_{out} - \varphi_{in}</code>. Auf einer CPU dauert das auf formelreichen Seiten bis etwa zwei Minuten pro Seite.</p>
+              <p><code>--no-formulas</code> spart diese Zeit. Formeln erscheinen dann als <code>[Formel S. N – nicht ausgewertet]</code>.</p>
+            </div>
+            <div class="option">
+              <div class="option-heading"><span class="option-name"><code>--force-ocr</code> / <code>--no-force-ocr</code></span><span class="option-meta">Schalter · Standard: aus</span></div>
+              <p>Liest jede Seite per Texterkennung statt über die eingebettete Textebene. Nutze das bei fehlerhafter oder unlesbarer Textebene. Bildbereiche und Scans werden auch ohne diese Option erkannt.</p>
+            </div>
+            <div class="option">
+              <div class="option-heading"><span class="option-name"><code>--allow-unreadable</code> / <code>--no-allow-unreadable</code></span><span class="option-meta">Schalter · Standard: Abbruch</span></div>
+              <p>Ohne diese Option bricht der Lauf ab, wenn eine Formel, eine Abbildung oder eine Seite nicht gelesen werden kann. Das passiert vor jeder KI-Anfrage. Die Meldung nennt die Stellen.</p>
+              <p><code>--allow-unreadable</code> setzt stattdessen gemeldete Platzhalter wie <code>[nicht lesbar: Formel S. 3]</code>.</p>
+            </div>
+            <div class="option">
+              <div class="option-heading"><span class="option-name"><code>--allow-cpu</code> / <code>--no-allow-cpu</code></span><span class="option-meta">Schalter · Standard: aus</span></div>
+              <p>Ohne GPU bricht der strukturierte Modus vor jeder Arbeit ab. <code>--allow-cpu</code> erlaubt den Betrieb auf dem Prozessor trotzdem. Rechne dann mit sehr langen Laufzeiten; nutze das nur für kurze Dokumente oder zusammen mit <code>--no-formulas</code>.</p>
+            </div>
+            <div class="option">
+              <div class="option-heading"><span class="option-name"><code>--picture-backend</code></span><span class="option-meta"><code>local</code> | <code>profile</code> | <code>none</code> · Standard: <code>local</code></span></div>
+              <p>Wählt, welches Modell Abbildungen beschreibt. <code>local</code> nutzt ein Bildmodell auf deinem Computer. <code>profile</code> nutzt ein Modellprofil und sendet dafür Bildausschnitte an dessen Provider. <code>none</code> beschreibt nichts und behält Abbildungen als Platzhalter mit dem darin erkannten Text.</p>
+            </div>
+            <div class="option">
+              <div class="option-heading"><span class="option-name"><code>--picture-profile</code></span><span class="option-meta">Profilname · optional</span></div>
+              <p>Profil für <code>--picture-backend profile</code>. Ohne Angabe gilt <code>pdf_conversion.pictures.profile</code>, sonst das Profil der Kartenerzeugung. Das Profil muss <code>image_input: true</code> setzen.</p>
+            </div>
+            <div class="option">
+              <div class="option-heading"><span class="option-name"><code>--source-text</code></span><span class="option-meta">Pfad · optional · neue Datei</span></div>
+              <p>Speichert den aufbereiteten Text als Markdown. Prüfe damit die Vollständigkeit. Eine vorhandene Datei wird nie überschrieben; der Lauf bricht dann vor der Aufbereitung ab.</p>
+              <p>Die gespeicherte Datei kannst du mit <code>--pdf-mode local</code> erneut verarbeiten. Die langsame Aufbereitung entfällt dann.</p>
             </div>
           </div>
         </details>
@@ -709,7 +753,7 @@ python -m pip install -e .</code></pre>
                   <tr><td><code>--extend</code> / <code>--no-extend</code></td><td>Zeigt, ob eine Datei erweitert oder neu erstellt wird.</td></tr>
                   <tr><td><code>--config</code></td><td>Wählt die YAML-Datei. Alternativ gilt <code>ANKI_CONFIG</code>.</td></tr>
                   <tr><td><code>--profile</code></td><td>Wählt das YAML-Modellprofil.</td></tr>
-                  <tr><td><code>--pdf-mode</code></td><td>Wählt <code>local</code> oder <code>native</code>.</td></tr>
+                  <tr><td><code>--pdf-mode</code></td><td>Wählt <code>local</code>, <code>structured</code> oder <code>native</code>.</td></tr>
                   <tr><td><code>--model</code>, <code>-m</code></td><td>Setzt das Modell für die Vorschau.</td></tr>
                   <tr><td><code>--limit</code>, <code>-n</code></td><td>Setzt das Kartenlimit. Null bedeutet unbegrenzt.</td></tr>
                   <tr><td><code>--language</code>, <code>-l</code></td><td>Setzt die Sprache der Karten.</td></tr>
@@ -719,6 +763,9 @@ python -m pip install -e .</code></pre>
                   <tr><td><code>--timeout</code></td><td>Setzt 1 bis 3600 Sekunden Wartezeit.</td></tr>
                   <tr><td><code>--json</code></td><td>Setzt den Pfad der Karten-JSON-Datei.</td></tr>
                   <tr><td><code>--subdecks</code> / <code>--no-subdecks</code></td><td>Zeigt, ob die KI Unterdecks bildet.</td></tr>
+                  <tr><td><code>--formulas</code>, <code>--force-ocr</code>, <code>--allow-unreadable</code>, <code>--allow-cpu</code> (jeweils mit <code>--no-</code>-Form)</td><td>Zeigen die Werte der strukturierten Aufbereitung im Block <code>pdf_conversion</code>.</td></tr>
+                  <tr><td><code>--picture-backend</code>, <code>--picture-profile</code></td><td>Zeigen das gewählte Bildmodell. Ein Schlüssel des Bildprofils erscheint nur als <code>set (hidden)</code> oder <code>not set</code>.</td></tr>
+                  <tr><td><code>--source-text</code></td><td>Zeigt, wohin der aufbereitete Text gespeichert würde.</td></tr>
                   <tr><td><code>--help</code>, <code>-h</code></td><td>Zeigt die Hilfe für <code>config show</code>.</td></tr>
                 </tbody>
               </table>
@@ -728,6 +775,39 @@ python -m pip install -e .</code></pre>
         <pre><button class="copy-button" type="button" aria-label="Beispiel kopieren">Kopieren</button><code>anki-flashcards config show skript.pdf \
   --config config.yaml \
   --output output/deck.apkg</code></pre>
+        <p class="back-top"><a href="#befehle">↑ Zur Befehlsübersicht</a></p>
+      </article>
+
+      <article class="card command-section searchable" data-command="models" id="models-download">
+        <div class="command-header">
+          <h3 class="command-title"><code>models download</code></h3>
+          <span class="tag">Modelle vorab laden</span>
+        </div>
+        <p>Lädt alle Modelle, die die strukturierte PDF-Aufbereitung braucht, in den Modellordner des Projekts. Danach arbeitet der Modus ohne Internet. Ohne diesen Befehl lädt der erste strukturierte Lauf die Modelle selbst und kündigt das an.</p>
+        <p>Geladen werden die Docling-Modelle für Layout, Tabellen, Texterkennung und Bildklassen, das Formelmodell und bei <code>local</code> das Bildmodell. Alles landet in <code>pdf_conversion.models_dir</code>, standardmäßig <code>models/</code> neben der YAML-Datei. Nichts wird in <code>~/.cache</code> geschrieben.</p>
+        <pre><button class="copy-button" type="button" aria-label="Befehl kopieren">Kopieren</button><code>anki-flashcards models download [OPTIONEN]</code></pre>
+        <details open>
+          <summary>Alle Optionen</summary>
+          <div class="details-body">
+            <div class="option">
+              <div class="option-heading"><span class="option-name"><code>--config</code></span><span class="option-meta">Pfad · optional</span></div>
+              <p>Wählt die YAML-Datei. Ihr Ordner bestimmt den relativen Modellordner. Alternativ gilt <code>ANKI_CONFIG</code>.</p>
+            </div>
+            <div class="option">
+              <div class="option-heading"><span class="option-name"><code>--formulas</code> / <code>--no-formulas</code></span><span class="option-meta">Schalter · Standard: YAML, sonst an</span></div>
+              <p>Lädt das Formelmodell mit oder ohne. Ohne Angabe gilt <code>pdf_conversion.formulas</code>.</p>
+            </div>
+            <div class="option">
+              <div class="option-heading"><span class="option-name"><code>--picture-backend</code></span><span class="option-meta"><code>local</code> | <code>profile</code> | <code>none</code></span></div>
+              <p>Nur bei <code>local</code> wird das Bildmodell geladen. Ohne Angabe gilt der YAML-Wert.</p>
+            </div>
+            <div class="option">
+              <div class="option-heading"><span class="option-name"><code>--help</code>, <code>-h</code></span><span class="option-meta">Schalter</span></div>
+              <p>Zeigt die Hilfe für <code>models download</code>.</p>
+            </div>
+          </div>
+        </details>
+        <pre><button class="copy-button" type="button" aria-label="Beispiel kopieren">Kopieren</button><code>anki-flashcards models download --config config.yaml</code></pre>
         <p class="back-top"><a href="#befehle">↑ Zur Befehlsübersicht</a></p>
       </article>
 
@@ -778,6 +858,7 @@ cp .env.example .env</code></pre>
               <tr><td><code>output_dir</code></td><td>Ordner für erzeugte Dateien.</td></tr>
               <tr><td><code>default_profile</code></td><td>Name des Standard-Modellprofils.</td></tr>
               <tr><td><code>generation</code></td><td>Standardwerte für Karten und Ausgabe.</td></tr>
+              <tr><td><code>pdf_conversion</code></td><td>Einstellungen der <a href="#strukturiert">strukturierten PDF-Aufbereitung</a>.</td></tr>
               <tr><td><code>models</code></td><td>Benannte Modellprofile.</td></tr>
             </tbody>
           </table></div>
@@ -803,6 +884,26 @@ cp .env.example .env</code></pre>
         </article>
       </div>
       <details open>
+        <summary>Werte in pdf_conversion</summary>
+        <div class="details-body">
+          <div class="table-wrap"><table>
+            <thead><tr><th>Schlüssel</th><th>Bedeutung</th><th>Option</th></tr></thead>
+            <tbody>
+              <tr><td><code>models_dir</code></td><td>Ein Ordner für alle Modelle und Caches. Relativ zur YAML-Datei. Standard: <code>./models</code>.</td><td>–</td></tr>
+              <tr><td><code>ocr_languages</code></td><td>Sprachen der Texterkennung als ISO-Codes, zum Beispiel <code>[de, en]</code>. Der erste Code ist die Hauptsprache.</td><td>–</td></tr>
+              <tr><td><code>force_ocr</code></td><td>Jede Seite per Texterkennung lesen. Standard: <code>false</code>.</td><td><code>--force-ocr</code></td></tr>
+              <tr><td><code>formulas</code></td><td>Formeln als LaTeX erkennen. Standard: <code>true</code>.</td><td><code>--formulas</code></td></tr>
+              <tr><td><code>allow_unreadable</code></td><td>Platzhalter statt Abbruch. Standard: <code>false</code>.</td><td><code>--allow-unreadable</code></td></tr>
+              <tr><td><code>allow_cpu</code></td><td>Ohne GPU auf dem Prozessor arbeiten. Standard: <code>false</code>.</td><td><code>--allow-cpu</code></td></tr>
+              <tr><td><code>source_text_dir</code></td><td>Ordner, in dem der aufbereitete Text als <code>&lt;eingabename&gt;.md</code> gespeichert wird.</td><td><code>--source-text</code> (Datei)</td></tr>
+              <tr><td><code>pictures.backend</code></td><td><code>local</code>, <code>profile</code> oder <code>none</code>.</td><td><code>--picture-backend</code></td></tr>
+              <tr><td><code>pictures.model</code></td><td>Hugging-Face-Kennung des lokalen Bildmodells. Standard: <code>HuggingFaceTB/SmolVLM-256M-Instruct</code>.</td><td>–</td></tr>
+              <tr><td><code>pictures.profile</code></td><td>Profil für <code>profile</code>; leer bedeutet: Profil der Kartenerzeugung.</td><td><code>--picture-profile</code></td></tr>
+            </tbody>
+          </table></div>
+        </div>
+      </details>
+      <details open>
         <summary>Felder eines Modellprofils</summary>
         <div class="details-body">
           <div class="table-wrap"><table>
@@ -812,7 +913,8 @@ cp .env.example .env</code></pre>
               <tr><td><code>api_base</code></td><td>Optionaler Endpunkt. Er kann weggelassen werden.</td></tr>
               <tr><td><code>api_key_env</code></td><td>Name der Umgebungsvariablen mit dem Schlüssel, zum Beispiel <code>OPENAI_API_KEY</code>. Nicht den Schlüssel selbst eintragen.</td></tr>
               <tr><td><code>timeout</code></td><td>Wartezeit in Sekunden, 1 bis 3600.</td></tr>
-              <tr><td><code>pdf_mode</code></td><td><code>local</code> oder <code>native</code>.</td></tr>
+              <tr><td><code>pdf_mode</code></td><td><code>local</code>, <code>structured</code> oder <code>native</code>.</td></tr>
+              <tr><td><code>image_input</code></td><td><code>true</code> bestätigt, dass das Modell Bilder annimmt. Nur dann darf es im strukturierten Modus Abbildungen beschreiben. Standard: <code>false</code>.</td></tr>
               <tr><td><code>options</code></td><td>Zusätzliche erlaubte Provider-Einstellungen. Keine Schlüssel oder geheimen Werte eintragen.</td></tr>
             </tbody>
           </table></div>
@@ -848,6 +950,7 @@ cp .env.example .env</code></pre>
               <tr><td><code>anthropic-default</code></td><td><code>https://api.anthropic.com</code></td><td><code>temperature</code>, <code>top_p</code>, <code>max_tokens</code>, <code>stop_sequences</code>, <code>top_k</code>, <code>reasoning_effort</code></td></tr>
               <tr><td><code>gemini-default</code></td><td><code>https://generativelanguage.googleapis.com</code></td><td><code>temperature</code>, <code>top_p</code>, <code>max_tokens</code>, <code>max_completion_tokens</code>, <code>stop</code>, <code>reasoning_effort</code></td></tr>
               <tr><td><code>moonshot-default</code></td><td><code>https://api.moonshot.ai/v1</code>; China: <code>https://api.moonshot.cn/v1</code></td><td><code>temperature</code> von 0 bis 1, <code>top_p</code>, <code>max_tokens</code>, <code>presence_penalty</code>, <code>frequency_penalty</code>, <code>stop</code>, <code>n</code></td></tr>
+              <tr><td><code>ollama-vision</code></td><td><code>http://localhost:11434</code></td><td><code>image_input: true</code>, <code>temperature</code>. Beschreibt Abbildungen im strukturierten Modus mit <code>pictures.backend: profile</code>.</td></tr>
               <tr><td><code>custom-openai-compatible</code></td><td>Beispiel: <code>http://localhost:8000/v1</code></td><td><code>temperature</code>, <code>top_p</code>, <code>max_tokens</code>; weitere Werte abhängig vom Server.</td></tr>
             </tbody>
           </table></div>
@@ -859,14 +962,19 @@ cp .env.example .env</code></pre>
     <section id="pdf-modi">
       <div class="section-heading">
         <p class="eyebrow">Wichtig für deine Daten</p>
-        <h2>Lokal oder native PDF-Verarbeitung?</h2>
+        <h2>Drei Wege, eine PDF zu lesen</h2>
       </div>
-      <div class="grid two">
+      <div class="grid three">
         <article class="card">
           <h3><code>local</code> – Standard</h3>
-          <p>Das Programm liest den PDF-Text auf deinem Computer. Es sendet Textabschnitte an das gewählte Modell.</p>
+          <p>Das Programm liest den eingebetteten PDF-Text auf deinem Computer. Es sendet Textabschnitte an das gewählte Modell.</p>
           <p>Bei Ollama bleibt die Verarbeitung auf deinem Computer. Bei einem Cloud-Provider verlassen die Textabschnitte deinen Computer.</p>
-          <p>Eine gescannte PDF ohne Text benötigt vorher OCR.</p>
+          <p>Text in Bildern, Scans, Tabellenstrukturen und Formeln gehen dabei verloren oder kommen verstümmelt an.</p>
+        </article>
+        <article class="card">
+          <h3><code>structured</code> – lokal und vollständig</h3>
+          <p>Docling bereitet die PDF auf deinem Computer auf: Texterkennung, Tabellen, Formeln und Abbildungsbeschreibungen. Danach geht nur Text an das Kartenmodell.</p>
+          <p>Das funktioniert mit jedem Kartenmodell. Es braucht das Extra <code>pdf</code> und eine GPU. → <a href="#strukturiert">Anleitung</a></p>
         </article>
         <article class="card">
           <h3><code>native</code> – ausdrücklich wählen</h3>
@@ -883,6 +991,101 @@ cp .env.example .env</code></pre>
       <pre><button class="copy-button" type="button" aria-label="Beispiel kopieren">Kopieren</button><code>anki-flashcards generate dokument.pdf \
   --config config.yaml \
   --profile openai-native-pdf</code></pre>
+    </section>
+
+    <section id="strukturiert">
+      <div class="section-heading">
+        <p class="eyebrow">Bilder, Tabellen und Formeln nicht verlieren</p>
+        <h2>PDF lokal vollständig aufbereiten</h2>
+        <p>Vorlesungsfolien enthalten oft Diagramme, Schaltbilder, Tabellen und Formeln. Der Standardmodus liest davon nur den eingebetteten Text. Der Modus <code>structured</code> wandelt die PDF auf deinem Computer mit Docling in Text um. Dabei arbeiten mehrere lokale KI-Modelle zusammen.</p>
+      </div>
+      <div class="warning">
+        <strong>Dieser Modus braucht eine GPU.</strong>
+        <p>Geeignet sind NVIDIA (CUDA), AMD mit ROCm-Unterstützung, Apple Silicon (MPS) und Intel (XPU). Auf dem Prozessor allein ist die Aufbereitung sehr langsam: Eine 15-seitige Vorlesung mit Formeln war nach über 50 Minuten noch nicht fertig. Das Programm prüft die GPU vor jeder Arbeit und bricht ohne GPU ab.</p>
+        <p>Ohne GPU hast du zwei Wege: <code>--pdf-mode native</code> lässt das KI-Modell des Providers die PDF lesen (Upload). <code>--pdf-mode local</code> nutzt nur den eingebetteten Text. Mit <code>--allow-cpu</code> erzwingst du den langsamen Betrieb trotzdem.</p>
+      </div>
+      <div class="grid three">
+        <article class="card">
+          <span class="step-number">1</span>
+          <h3>Einmal installieren</h3>
+          <p>Installiere PyTorch passend zu deiner GPU. Den genauen Befehl zeigt die Auswahl auf pytorch.org. Installiere danach das Extra <code>pdf</code> in die Projektumgebung.</p>
+          <pre><button class="copy-button" type="button" aria-label="Befehl kopieren">Kopieren</button><code>.venv/bin/python -m pip install --no-cache-dir torch torchvision
+.venv/bin/python -m pip install --no-cache-dir -e '.[pdf]'</code></pre>
+        </article>
+        <article class="card">
+          <span class="step-number">2</span>
+          <h3>Modelle laden</h3>
+          <p>Lade die Modelle vorab in den Ordner <code>models/</code> des Projekts. Danach geht es ohne Internet. Ohne diesen Schritt lädt der erste Lauf die Modelle.</p>
+          <pre><button class="copy-button" type="button" aria-label="Befehl kopieren">Kopieren</button><code>anki-flashcards models download</code></pre>
+        </article>
+        <article class="card">
+          <span class="step-number">3</span>
+          <h3>Vorlesung aufbereiten</h3>
+          <p>Wähle <code>--pdf-mode structured</code>. Speichere den aufbereiteten Text mit <code>--source-text</code>, um ihn zu prüfen.</p>
+          <pre><button class="copy-button" type="button" aria-label="Befehl kopieren">Kopieren</button><code>anki-flashcards generate input/EL1_WS26_V03.pdf \
+  --output output/el1.apkg --deck EL1 --subdecks \
+  --pdf-mode structured \
+  --source-text output/texte/EL1_WS26_V03.md</code></pre>
+        </article>
+      </div>
+      <details open>
+        <summary>Was die Aufbereitung erkennt</summary>
+        <div class="details-body">
+          <div class="table-wrap"><table>
+            <thead><tr><th>Inhalt</th><th>Ergebnis im Text</th></tr></thead>
+            <tbody>
+              <tr><td>Seiten</td><td>Jede Seite beginnt mit <code>[Seite N]</code>, auch eine leere.</td></tr>
+              <tr><td>Überschriften, Listen, mehrspaltiger Text</td><td>Markdown in natürlicher Lesereihenfolge.</td></tr>
+              <tr><td>Text in Bildern und gescannte Seiten</td><td>Texterkennung (OCR) für Deutsch und Englisch.</td></tr>
+              <tr><td>Tabellen</td><td>Markdown-Tabellen mit Zeilen und Spalten.</td></tr>
+              <tr><td>Formeln</td><td>LaTeX, zum Beispiel <code>$$A(\omega) = |\underline{F}(\omega)|$$</code>. Mit <code>--no-formulas</code>: <code>[Formel S. N – nicht ausgewertet]</code>.</td></tr>
+              <tr><td>Abbildungen</td><td><code>[Abbildung S. N – Beschreibung: …; Bildunterschrift: …; Text im Bild: …]</code></td></tr>
+              <tr><td>Logos, Icons, wiederkehrende Bilder, Kopf- und Fußzeilen</td><td>Werden ausgelassen und gezählt.</td></tr>
+            </tbody>
+          </table></div>
+          <p>Nach der Aufbereitung zeigt das Programm eine Übersicht, zum Beispiel: <code>Aufbereitung: 15 Seiten, 0 mit OCR, 2 Tabellen, 12 Formeln, 9 Abbildungen beschrieben, 31 dekorative ausgelassen.</code></p>
+          <p>Das Kartenmodell erfährt, dass Abbildungsbeschreibungen maschinell erstellt sind. Es darf daraus keine weiteren Fakten erfinden.</p>
+        </div>
+      </details>
+      <details open>
+        <summary>Bildmodelle: lokal, über ein Profil oder keines</summary>
+        <div class="details-body">
+          <div class="table-wrap"><table>
+            <thead><tr><th>Wahl</th><th>Was passiert</th><th>Deine Daten</th></tr></thead>
+            <tbody>
+              <tr><td><code>local</code> (Standard)</td><td>Ein kleines Bildmodell läuft im Programm. Standard ist <code>SmolVLM-256M</code>; ein anderes stellst du mit <code>pdf_conversion.pictures.model</code> ein.</td><td>Bleiben auf deinem Computer.</td></tr>
+              <tr><td><code>profile</code></td><td>Ein Modellprofil beschreibt die Abbildungen, zum Beispiel ein Vision-Modell in Ollama auf deinem Server. Das Profil braucht <code>image_input: true</code>.</td><td>Bildausschnitte gehen an den Provider dieses Profils. Die PDF selbst wird nie übertragen. Das Programm kündigt das an.</td></tr>
+              <tr><td><code>none</code></td><td>Keine Beschreibung. Die Abbildung bleibt als Platzhalter mit ihrem erkannten Text erhalten.</td><td>Bleiben auf deinem Computer.</td></tr>
+            </tbody>
+          </table></div>
+          <div class="warning">
+            <strong>Kleine lokale Bildmodelle beschreiben technische Abbildungen unzuverlässig.</strong>
+            <p>Im Test mit Vorlesungsfolien hat SmolVLM-256M Schaltbilder und Diagramme oft falsch beschrieben und Inhalte erfunden. Der Text in Abbildungen wird trotzdem per OCR übernommen. Für gute Beschreibungen nutze <code>--picture-backend profile</code> mit einem größeren Vision-Modell auf einem eigenen Server. Ohne ein solches Modell ist <code>--picture-backend none</code> die vorsichtigere Wahl.</p>
+          </div>
+          <pre><button class="copy-button" type="button" aria-label="Beispiel kopieren">Kopieren</button><code>anki-flashcards generate input/ET2_04_FH_WS26_leer.pdf \
+  --output output/et2.apkg --pdf-mode structured \
+  --picture-backend profile --picture-profile ollama-vision</code></pre>
+        </div>
+      </details>
+      <details>
+        <summary>Speicherort, Laufzeit und Arbeitsspeicher</summary>
+        <div class="details-body">
+          <p>Alles, was der Modus herunterlädt oder zwischenspeichert, liegt in einem Ordner: <code>pdf_conversion.models_dir</code>, standardmäßig <code>models/</code> neben der YAML-Datei. Das Programm schreibt nichts in <code>~/.cache</code>. Der Ordner ist von Git ausgeschlossen. Modelle, die Ollama verwaltet, bleiben in der Ablage von Ollama.</p>
+          <p>Die folgenden Werte zeigen, warum eine GPU nötig ist. Gemessen wurde auf einem Laptop ohne nutzbare GPU (12 CPU-Threads, 14 GB Arbeitsspeicher):</p>
+          <ul class="checklist">
+            <li>Installation: etwa 2,2 GB in <code>.venv</code>; Modelle etwa 1,9 GB in <code>models/</code>.</li>
+            <li>Text, Layout, Tabellen und OCR ohne Formeln: etwa 8 bis 12 Sekunden pro Seite.</li>
+            <li>Formeln: auf formelreichen Seiten etwa zwei Minuten pro Seite.</li>
+            <li>Lokale Bildbeschreibung: etwa 15 bis 25 Sekunden pro Abbildung.</li>
+            <li>Arbeitsspeicher: etwa 2,5 bis 3 GB.</li>
+          </ul>
+          <p>Eine integrierte AMD-Radeon-Vega-GPU hilft dabei nicht: ROCm unterstützt sie nicht offiziell, und sie hat sehr wenig eigenen Speicher.</p>
+        </div>
+      </details>
+      <div class="note">
+        <strong>Nichts geht stillschweigend verloren.</strong>
+        <p>Kann eine Formel, eine Abbildung oder eine Seite nicht gelesen werden, bricht der Lauf vor jeder KI-Anfrage ab und nennt die Stellen. Mit <code>--allow-unreadable</code> erscheinen stattdessen gemeldete Platzhalter. Fehlen Docling oder eine GPU, nennt das Programm, was zu tun ist. Es wechselt nie selbst zu <code>local</code> oder <code>native</code>.</p>
+      </div>
     </section>
 
     <section id="unterdecks">
@@ -1001,7 +1204,13 @@ cp .env.example .env</code></pre>
           <tr><td>Cannot extend missing APKG</td><td><code>--extend</code> benötigt eine vorhandene Datei. Prüfe den Pfad oder entferne diese Option.</td></tr>
           <tr><td>No AI model configured</td><td>Setze <code>--model</code> oder wähle ein YAML-Profil. Ein alter Eintrag <code>ANKI_MODEL</code> in <code>.env</code> wird nicht verwendet.</td></tr>
           <tr><td>Unsupported file type</td><td>Nutze eine unterstützte Endung. Bei Textdateien verwende UTF-8.</td></tr>
-          <tr><td>No extractable text found</td><td>Die PDF enthält möglicherweise nur Bilder. Führe OCR aus oder nutze ein freigegebenes natives OpenAI-Modell.</td></tr>
+          <tr><td>No extractable text found</td><td>Die PDF enthält möglicherweise nur Bilder. Nutze <code>--pdf-mode structured</code> mit Texterkennung.</td></tr>
+          <tr><td>The structured PDF mode needs the optional Docling extra</td><td>Installiere das Extra <code>pdf</code> mit dem angezeigten Befehl. Siehe <a href="#strukturiert">Einmal installieren</a>.</td></tr>
+          <tr><td>The structured PDF mode only accepts .pdf files</td><td>Der Modus gilt nur für PDFs. Für Markdown, Text oder einen gespeicherten aufbereiteten Text nutze <code>--pdf-mode local</code>.</td></tr>
+          <tr><td>PDF elements could not be read</td><td>Die Meldung nennt Formeln, Abbildungen oder Seiten. Es wurde noch keine KI-Anfrage gestellt. Wiederhole den Lauf mit <code>--allow-unreadable</code>, um gemeldete Platzhalter zu verwenden.</td></tr>
+          <tr><td>must set image_input: true to describe figures</td><td>Das gewählte Bildprofil bestätigt keine Bildeingabe. Setze <code>image_input: true</code> nur, wenn das Modell Bilder verarbeiten kann, oder wähle ein anderes Profil.</td></tr>
+          <tr><td>The structured PDF mode needs a GPU accelerator</td><td>PyTorch findet keine nutzbare GPU. Nutze <code>--pdf-mode native</code> (das KI-Modell liest die PDF) oder <code>--pdf-mode local</code> (nur Text). Mit <code>--allow-cpu</code> läuft der Modus trotzdem, aber sehr langsam.</td></tr>
+          <tr><td>Source text file already exists</td><td>Die Datei für <code>--source-text</code> existiert schon. Wähle einen neuen Namen. Die Aufbereitung hat noch nicht begonnen.</td></tr>
           <tr><td>Unknown model profile</td><td>Prüfe den Namen nach <code>--profile</code> und den Schlüssel unter <code>models</code> in der YAML-Datei.</td></tr>
           <tr><td>Invalid configuration</td><td>Prüfe YAML-Einrückung, Datentypen und Schlüsselnamen. Unbekannte Felder sind nicht erlaubt. Die Fehlermeldung nennt die Stelle.</td></tr>
           <tr><td>Native OpenAI PDF … requires OPENAI_API_KEY</td><td>Setze den OpenAI-Schlüssel in der Umgebung oder in <code>.env</code>. Schreibe ihn nicht in YAML.</td></tr>
@@ -1035,6 +1244,9 @@ cp .env.example .env</code></pre>
         <article class="card"><h3>Provider</h3><p>Der Dienst, der das KI-Modell bereitstellt. Beispiele sind Ollama, OpenAI, Anthropic, Gemini und Moonshot.</p></article>
         <article class="card"><h3>Chunk</h3><p>Ein Abschnitt des extrahierten Textes. Große Dokumente werden in mehrere solcher Abschnitte aufgeteilt.</p></article>
         <article class="card"><h3>Native PDF-Verarbeitung</h3><p>Der Upload der Original-PDF an ein geeignetes OpenAI-Modell. Die lokale Textextraktion entfällt.</p></article>
+        <article class="card"><h3>Docling</h3><p>Ein Open-Source-Werkzeug, das PDFs mit lokalen KI-Modellen in strukturierten Text umwandelt. Es läuft im Modus <code>structured</code>.</p></article>
+        <article class="card"><h3>OCR</h3><p>Texterkennung. Sie liest Text aus Bildern und gescannten Seiten.</p></article>
+        <article class="card"><h3>Bildmodell</h3><p>Ein KI-Modell, das Bilder versteht. Es beschreibt Abbildungen in Worten, damit ein reines Textmodell sie nutzen kann.</p></article>
       </div>
       <div class="note">
         <strong>Zum Sprachstil dieses Handbuchs</strong>
@@ -1095,7 +1307,7 @@ cp .env.example .env</code></pre>
           activeFilter = activeFilter === selected ? '' : selected;
           filterButtons.forEach((item) => item.setAttribute('aria-pressed', String(item.dataset.filter === activeFilter)));
           applyFilters();
-          if (activeFilter) document.getElementById(activeFilter === 'config' ? 'config-show' : activeFilter).scrollIntoView({ behavior: 'instant', block: 'start' });
+          if (activeFilter) document.getElementById({ config: 'config-show', models: 'models-download' }[activeFilter] || activeFilter).scrollIntoView({ behavior: 'instant', block: 'start' });
         });
       });
 

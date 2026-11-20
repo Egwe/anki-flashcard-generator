@@ -316,6 +316,10 @@
       <button class="filter-button" type="button" data-filter="ai" aria-pressed="false">ai</button>
       <button class="filter-button" type="button" data-filter="native_pdf" aria-pressed="false">native_pdf</button>
       <button class="filter-button" type="button" data-filter="subdecks" aria-pressed="false">subdecks</button>
+      <button class="filter-button" type="button" data-filter="docling_pdf" aria-pressed="false">docling_pdf</button>
+      <button class="filter-button" type="button" data-filter="structured_pdf" aria-pressed="false">structured_pdf</button>
+      <button class="filter-button" type="button" data-filter="pictures" aria-pressed="false">pictures</button>
+      <button class="filter-button" type="button" data-filter="model_storage" aria-pressed="false">model_storage</button>
       <button class="filter-button" type="button" data-filter="models" aria-pressed="false">models</button>
       <button class="filter-button" type="button" data-filter="apkg" aria-pressed="false">apkg</button>
       <button class="filter-button" type="button" data-filter="errors" aria-pressed="false">errors</button>
@@ -327,13 +331,13 @@
       <div class="section-heading">
         <p class="eyebrow">Das große Bild</p>
         <h2>Wie ist das Projekt aufgebaut?</h2>
-        <p>Das Projekt ist ein Python-Paket <code>anki_flashcards</code> im <code>src</code>-Layout. Es hat genau einen Einstiegspunkt: Der Konsolenbefehl <code>anki-flashcards</code> ist in <code>pyproject.toml</code> auf <code>anki_flashcards.cli:run</code> abgebildet. Zwölf Dateien mit zusammen rund 3.500 Zeilen (inklusive Docstrings) bilden vier klar getrennte Schichten.</p>
+        <p>Das Projekt ist ein Python-Paket <code>anki_flashcards</code> im <code>src</code>-Layout. Es hat genau einen Einstiegspunkt: Der Konsolenbefehl <code>anki-flashcards</code> ist in <code>pyproject.toml</code> auf <code>anki_flashcards.cli:run</code> abgebildet. Sechzehn Dateien mit zusammen rund 5.500 Zeilen (inklusive Docstrings) bilden vier klar getrennte Schichten.</p>
       </div>
       <div class="grid three">
-        <article class="card searchable" data-module="documents native_pdf">
+        <article class="card searchable" data-module="documents native_pdf docling_pdf structured_pdf pictures">
           <span class="step-number">1</span>
           <h3>Eingabe verstehen</h3>
-          <p><code>documents.py</code> liest PDF, DOCX, HTML, Markdown und Text lokal und zerlegt den Text in überlappende Abschnitte. Alternativ übergibt <code>native_pdf.py</code> die Original-PDF direkt an OpenAI.</p>
+          <p><code>documents.py</code> liest PDF, DOCX, HTML, Markdown und Text lokal und zerlegt den Text in überlappende Abschnitte. Für PDFs mit Bildern, Tabellen und Formeln bereitet <code>docling_pdf.py</code> die Datei lokal mit Docling auf; <code>structured_pdf.py</code> und <code>pictures.py</code> machen daraus markierten Text. Alternativ übergibt <code>native_pdf.py</code> die Original-PDF direkt an OpenAI.</p>
         </article>
         <article class="card searchable" data-module="ai native_pdf models subdecks">
           <span class="step-number">2</span>
@@ -359,9 +363,9 @@
           <li><span class="swatch sw-err"></span>Fehlerkonzept</li>
         </ul>
         <div class="diagram-scroll">
-          <svg viewBox="0 0 1000 560" aria-labelledby="arch-title arch-desc">
+          <svg viewBox="0 0 1000 640" aria-labelledby="arch-title arch-desc">
             <title id="arch-title">Schichtenarchitektur des Anki Flashcard Generators</title>
-            <desc id="arch-desc">Vier Schichten: Präsentation mit cli.py, Konfiguration mit settings.py und config.py, Fachkern mit documents, ai, native_pdf, models und apkg, darunter externe Bibliotheken. errors.py liegt quer zu allen Schichten. Klick auf ein Modul springt zur Beschreibung.</desc>
+            <desc id="arch-desc">Vier Schichten: Präsentation mit cli.py, Konfiguration mit settings.py und config.py, Fachkern mit documents, ai, native_pdf, subdecks, models und apkg sowie der strukturierten PDF-Aufbereitung mit docling_pdf, structured_pdf, pictures und model_storage, darunter externe Bibliotheken. errors.py liegt quer zu allen Schichten. Klick auf ein Modul springt zur Beschreibung.</desc>
             <defs>
               <marker id="arr-arch" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#6b7f8c"/></marker>
             </defs>
@@ -370,10 +374,10 @@
             <text class="t-label" x="26" y="34">Präsentation</text>
             <rect class="band" x="10" y="124" width="980" height="96" rx="12"/>
             <text class="t-label" x="26" y="148">Konfiguration</text>
-            <rect class="band" x="10" y="238" width="980" height="172" rx="12"/>
+            <rect class="band" x="10" y="238" width="980" height="252" rx="12"/>
             <text class="t-label" x="26" y="262">Fachkern</text>
-            <rect class="band" x="10" y="428" width="980" height="122" rx="12"/>
-            <text class="t-label" x="26" y="452">Externe Grenzen</text>
+            <rect class="band" x="10" y="508" width="980" height="122" rx="12"/>
+            <text class="t-label" x="26" y="532">Externe Grenzen</text>
             <!-- Präsentation -->
             <a href="#mod-main"><g class="n-cli"><rect class="box" x="170" y="34" width="170" height="60" rx="10"/>
               <text class="t-title" x="186" y="58">__main__.py</text><text class="t-sub" x="186" y="80">python -m …</text></g></a>
@@ -401,29 +405,41 @@
               <text class="t-title" x="724" y="295">models</text><text class="t-sub" x="724" y="316">Card · Batch</text><text class="t-sub" x="724" y="332">JSON · Dedupe</text></g></a>
             <a href="#mod-apkg"><g class="n-apkg"><rect class="box" x="850" y="270" width="126" height="70" rx="10"/>
               <text class="t-title" x="860" y="295">apkg</text><text class="t-sub" x="860" y="316">neu: genanki</text><text class="t-sub" x="860" y="332">erw.: Anki-API</text></g></a>
-            <a href="#mod-errors"><g class="n-err"><rect class="box" x="170" y="352" width="806" height="44" rx="10"/>
-              <text class="t-title" x="186" y="379">errors.py</text><text class="t-sub" x="290" y="379">FlashcardError – in allen Modulen an Bibliotheksgrenzen erzeugt, nur in cli.run() gefangen</text></g></a>
+            <a href="#mod-docling_pdf"><g class="n-doc"><rect class="box" x="170" y="350" width="126" height="70" rx="10"/>
+              <text class="t-title" x="180" y="375">docling_pdf</text><text class="t-sub" x="180" y="396">Docling lokal</text><text class="t-sub" x="180" y="412">Downloads</text></g></a>
+            <a href="#mod-structured_pdf"><g class="n-doc"><rect class="box" x="306" y="350" width="126" height="70" rx="10"/>
+              <text class="t-title sm" x="316" y="375">structured_pdf</text><text class="t-sub" x="316" y="396">Marker, Filter</text><text class="t-sub" x="316" y="412">Unlesbares</text></g></a>
+            <a href="#mod-pictures"><g class="n-ai"><rect class="box" x="442" y="350" width="126" height="70" rx="10"/>
+              <text class="t-title" x="452" y="375">pictures</text><text class="t-sub" x="452" y="396">Bildmodelle</text><text class="t-sub" x="452" y="412">local · profile</text></g></a>
+            <a href="#mod-model_storage"><g class="n-cfg"><rect class="box" x="578" y="350" width="126" height="70" rx="10"/>
+              <text class="t-title sm" x="588" y="375">model_storage</text><text class="t-sub" x="588" y="396">models/-Ordner</text><text class="t-sub" x="588" y="412">Caches</text></g></a>
+            <text class="t-sub" x="720" y="380">req-5: pdf_mode structured</text>
+            <text class="t-sub" x="720" y="400">nur mit Extra „pdf“ lauffähig</text>
+            <a href="#mod-errors"><g class="n-err"><rect class="box" x="170" y="432" width="806" height="44" rx="10"/>
+              <text class="t-title" x="186" y="459">errors.py</text><text class="t-sub" x="290" y="459">FlashcardError – in allen Modulen an Bibliotheksgrenzen erzeugt, nur in cli.run() gefangen</text></g></a>
             <path class="edge" d="M420 94 V114 H150 V305 H166" marker-end="url(#arr-arch)"/>
             <text class="t-edge" x="34" y="300">2 · Kern</text>
             <text class="t-edge" x="34" y="316">direkt</text>
             <text class="t-edge" x="34" y="332">aufrufen</text>
             <!-- Externe Grenzen -->
-            <g class="n-ext"><rect class="box" x="170" y="462" width="126" height="74" rx="10"/>
-              <text class="t-sub" x="180" y="486">pypdf</text><text class="t-sub" x="180" y="504">python-docx</text><text class="t-sub" x="180" y="522">BeautifulSoup</text></g>
-            <g class="n-ext"><rect class="box" x="306" y="462" width="126" height="74" rx="10"/>
-              <text class="t-sub" x="316" y="486">LiteLLM →</text><text class="t-sub" x="316" y="504">Ollama, OpenAI,</text><text class="t-sub" x="316" y="522">Anthropic …</text></g>
-            <g class="n-ext"><rect class="box" x="442" y="462" width="126" height="74" rx="10"/>
-              <text class="t-sub" x="452" y="486">openai-SDK →</text><text class="t-sub" x="452" y="504">Files API</text><text class="t-sub" x="452" y="522">Responses API</text></g>
-            <g class="n-ext"><rect class="box" x="714" y="462" width="126" height="74" rx="10"/>
-              <text class="t-sub" x="724" y="486">Pydantic</text><text class="t-sub" x="724" y="504">json, tempfile</text><text class="t-sub" x="724" y="522">os.replace</text></g>
-            <g class="n-ext"><rect class="box" x="850" y="462" width="126" height="74" rx="10"/>
-              <text class="t-sub" x="860" y="486">genanki, anki</text><text class="t-sub" x="860" y="504">SQLite, zip</text><text class="t-sub" x="860" y="522">zstandard</text></g>
-            <text class="t-sub" x="588" y="504">reines Python</text>
-            <path class="edge" d="M233 396 V458" marker-end="url(#arr-arch)"/>
-            <path class="edge" d="M369 396 V458" marker-end="url(#arr-arch)"/>
-            <path class="edge" d="M505 396 V458" marker-end="url(#arr-arch)"/>
-            <path class="edge" d="M777 396 V458" marker-end="url(#arr-arch)"/>
-            <path class="edge" d="M913 396 V458" marker-end="url(#arr-arch)"/>
+            <g class="n-ext"><rect class="box" x="170" y="542" width="126" height="74" rx="10"/>
+              <text class="t-sub" x="180" y="566">pypdf</text><text class="t-sub" x="180" y="584">python-docx</text><text class="t-sub" x="180" y="602">BeautifulSoup</text></g>
+            <g class="n-ext"><rect class="box" x="306" y="542" width="126" height="74" rx="10"/>
+              <text class="t-sub" x="316" y="566">LiteLLM →</text><text class="t-sub" x="316" y="584">Ollama, OpenAI,</text><text class="t-sub" x="316" y="602">Anthropic …</text></g>
+            <g class="n-ext"><rect class="box" x="442" y="542" width="126" height="74" rx="10"/>
+              <text class="t-sub" x="452" y="566">openai-SDK →</text><text class="t-sub" x="452" y="584">Files API</text><text class="t-sub" x="452" y="602">Responses API</text></g>
+            <g class="n-ext"><rect class="box" x="578" y="542" width="126" height="74" rx="10"/>
+              <text class="t-sub" x="588" y="566">Docling, PyTorch</text><text class="t-sub" x="588" y="584">Transformers</text><text class="t-sub" x="588" y="602">HF Hub (optional)</text></g>
+            <g class="n-ext"><rect class="box" x="714" y="542" width="126" height="74" rx="10"/>
+              <text class="t-sub" x="724" y="566">Pydantic</text><text class="t-sub" x="724" y="584">json, tempfile</text><text class="t-sub" x="724" y="602">os.replace</text></g>
+            <g class="n-ext"><rect class="box" x="850" y="542" width="126" height="74" rx="10"/>
+              <text class="t-sub" x="860" y="566">genanki, anki</text><text class="t-sub" x="860" y="584">SQLite, zip</text><text class="t-sub" x="860" y="602">zstandard</text></g>
+            <path class="edge" d="M233 476 V538" marker-end="url(#arr-arch)"/>
+            <path class="edge" d="M369 476 V538" marker-end="url(#arr-arch)"/>
+            <path class="edge" d="M505 476 V538" marker-end="url(#arr-arch)"/>
+            <path class="edge" d="M641 476 V538" marker-end="url(#arr-arch)"/>
+            <path class="edge" d="M777 476 V538" marker-end="url(#arr-arch)"/>
+            <path class="edge" d="M913 476 V538" marker-end="url(#arr-arch)"/>
           </svg>
         </div>
         <figcaption>Schichtenmodell. Abhängigkeiten zeigen nur nach unten: Der Fachkern kennt weder Typer noch Rich. Klicke auf ein Modul, um zu seiner Beschreibung zu springen.</figcaption>
@@ -472,6 +488,7 @@
         <li><a href="#ki-generierung">KI-Generierung: Chunks, Kontingent, Prompt</a></li>
         <li><a href="#unterdecks">KI-Unterdecks: Kapitel automatisch zuordnen</a></li>
         <li><a href="#apkg-intern">Anki-Pakete erzeugen und erweitern</a></li>
+        <li><a href="#strukturiert">Strukturierte PDF-Aufbereitung mit Docling</a></li>
         <li><a href="#native">Native PDF-Verarbeitung</a></li>
         <li><a href="#datenformate">Datenformate und Laufzeitobjekte</a></li>
         <li><a href="#fehler">Fehlerkonzept und Exit-Codes</a></li>
@@ -511,7 +528,7 @@
         <div class="diagram-scroll">
           <svg viewBox="0 0 1000 1860" aria-labelledby="flow-title flow-desc">
             <title id="flow-title">Ablauf eines generate-Aufrufs</title>
-            <desc id="flow-desc">Von cli.run über Typer, Konfiguration und Ausgabeprüfung zur Verzweigung nach pdf_mode. Lokal: read_document, chunk_text und eine LiteLLM-Anfrage je Chunk. Nativ: Prüfungen, Upload, responses.parse und Löschen bei OpenAI. Danach Ergebnisprüfung, optionales JSON, Verzweigung nach extend in create_apkg oder append_apkg und Ergebnisausgabe. Jede FlashcardError führt zurück zu cli.run und Exit-Code 1.</desc>
+            <desc id="flow-desc">Von cli.run über Typer, Konfiguration und Ausgabeprüfung zur Verzweigung nach pdf_mode. Lokal: read_document (local) oder convert_pdf mit Docling (structured), dann chunk_text und eine LiteLLM-Anfrage je Chunk. Nativ: Prüfungen, Upload, responses.parse und Löschen bei OpenAI. Danach Ergebnisprüfung, optionales JSON, Verzweigung nach extend in create_apkg oder append_apkg und Ergebnisausgabe. Jede FlashcardError führt zurück zu cli.run und Exit-Code 1.</desc>
             <defs>
               <marker id="arr-flow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#6b7f8c"/></marker>
               <marker id="arr-err" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#a23b34"/></marker>
@@ -557,13 +574,13 @@
 
             <g class="n-cli"><polygon class="box" points="500,724 600,764 500,804 400,764"/><text class="t-title" x="500" y="769" text-anchor="middle">pdf_mode?</text></g>
             <path class="edge" d="M400 764 H255 V846" marker-end="url(#arr-flow)"/>
-            <text class="t-edge" x="268" y="754">local (Standard)</text>
+            <text class="t-edge" x="236" y="754">local (Standard) · structured</text>
             <path class="edge" d="M600 764 H745 V846" marker-end="url(#arr-flow)"/>
             <text class="t-edge" x="612" y="754">native (nur ausdrücklich)</text>
 
             <!-- Lokaler Zweig -->
             <a href="#schritt-7"><g class="n-doc"><rect class="box" x="40" y="850" width="430" height="60" rx="10"/><circle class="dot" cx="68" cy="880" r="16"/><text class="t-num" x="68" y="884.5">7a</text>
-              <text class="t-title" x="94" y="876">read_document()</text><text class="t-sub" x="94" y="897">≤ 100 MiB · Endung · extrahieren · normalisieren</text></g></a>
+              <text class="t-title" x="94" y="876">read_document() · convert_pdf()</text><text class="t-sub" x="94" y="897">local: Textebene · structured: Docling, OCR, Formeln, Bilder</text></g></a>
             <path class="edge" d="M255 910 V936" marker-end="url(#arr-flow)"/>
             <a href="#schritt-7"><g class="n-doc"><rect class="box" x="40" y="940" width="430" height="60" rx="10"/>
               <text class="t-title" x="60" y="966">chunk_text()</text><text class="t-sub" x="60" y="987">≤ chunk_size Zeichen · Überlappung 500, höchstens ¼</text></g></a>
@@ -677,10 +694,11 @@
           <p>Nur mit <code>--subdecks</code> (oder <code>generation.subdecks: true</code>). <code>cli._subdeck_context()</code> liefert ohne <code>--extend</code> einen leeren <code>SubdeckContext</code> für das Zieldeck. Mit <code>--extend</code> liest <code>apkg.read_subdeck_context()</code> die direkten Unterdecks des Decks und je Unterdeck bis zu fünf Beispielfragen aus einer Temp-Kopie des Pakets; die CLI kündigt diese Übertragung an.</p>
           <p>Ohne Unterdeck-Modus ist der Kontext <code>None</code>, und alle folgenden Schritte verhalten sich wie vor req-4. → <a href="#unterdecks">KI-Unterdecks</a></p>
         </article>
-        <article class="card searchable" data-module="documents ai native_pdf subdecks" id="schritt-7">
+        <article class="card searchable" data-module="documents ai native_pdf subdecks docling_pdf structured_pdf pictures" id="schritt-7">
           <span class="step-number">7</span>
-          <h3>Karten erzeugen: lokal oder nativ</h3>
+          <h3>Karten erzeugen: lokal, strukturiert oder nativ</h3>
           <p><strong>7a · lokal (Standard, alle Formate):</strong> <code>read_document()</code> prüft Größe und Endung, extrahiert Text je Format und normalisiert Leerraum. Ein Rich-Spinner startet; <code>ai.generate_cards()</code> teilt den Text mit <code>chunk_text()</code> auf und sendet je Chunk eine Anfrage über LiteLLM. Jede Antwort wird gegen <code>CardBatch</code> validiert und mit <code>deduplicate_cards(cards, limit)</code> bereinigt. Ist das Limit erreicht, werden restliche Chunks nicht mehr angefragt. → <a href="#ki-generierung">KI-Generierung</a></p>
+          <p><strong>7c · strukturiert (nur PDF):</strong> <code>_generate_structured_cards()</code> prüft Endung und <code>--source-text</code>, verlangt Docling und eine GPU (<code>require_accelerator</code>, sonst Abbruch mit Hinweis auf <code>native</code>/<code>local</code>, außer bei <code>--allow-cpu</code>), legt den Modellordner an und wählt das Bildmodell (<code>create_describer</code>). <code>convert_pdf()</code> lädt fehlende Modelle, konvertiert mit Docling, beschreibt Abbildungen und setzt Marker. Unlesbares bricht hier ab – vor jeder KI-Anfrage. Danach läuft derselbe Weg wie in 7a ab <code>generate_cards()</code>. → <a href="#strukturiert">Strukturierte PDF-Aufbereitung</a></p>
           <p><strong>7b · nativ:</strong> Die CLI meldet den Upload. <code>generate_native_cards()</code> akzeptiert nur <code>.pdf</code> und ruft <code>read_document()</code> nie auf. Allowlist, Größe, API-Schlüssel und Profiloptionen werden vor dem Upload geprüft. Es gibt genau eine Modellanfrage; <code>chunk_size</code> wirkt hier nicht. → <a href="#native">Native PDF</a></p>
           <p><strong>Unterdeck-Modus:</strong> Beide Wege erhalten über <code>SubdeckAssigner</code> zusätzliche Regeln im Systemprompt, den Kontextabschnitt im Benutzer-Prompt und das Schema <code>SubdeckCardBatch</code>. <code>assign()</code> vereinheitlicht die Namen und gibt neue Unterdecks an spätere Chunks weiter.</p>
         </article>
@@ -783,24 +801,28 @@
       </div>
 
       <h3>Wer importiert wen?</h3>
-      <div class="table-wrap searchable" data-module="cli settings config documents ai native_pdf subdecks models apkg errors">
+      <div class="table-wrap searchable" data-module="cli settings config documents ai native_pdf subdecks models apkg errors docling_pdf structured_pdf pictures model_storage">
         <table>
           <thead><tr><th>Modul</th><th>importiert aus dem Paket</th><th>wird verwendet von</th></tr></thead>
           <tbody>
-            <tr><td><code>cli</code></td><td><code>ai</code>, <code>apkg</code>, <code>config</code>, <code>documents</code>, <code>errors</code>, <code>models</code>, <code>native_pdf</code>, <code>settings</code>, <code>subdecks</code></td><td><code>__main__</code>, Konsolenbefehl</td></tr>
-            <tr><td><code>settings</code></td><td><code>ai</code> (<code>AISettings</code>), <code>config</code>, <code>errors</code></td><td><code>cli</code></td></tr>
-            <tr><td><code>config</code></td><td><code>errors</code></td><td><code>settings</code>, <code>cli</code> (<code>PDFMode</code>)</td></tr>
+            <tr><td><code>cli</code></td><td><code>ai</code>, <code>apkg</code>, <code>config</code>, <code>docling_pdf</code>, <code>documents</code>, <code>errors</code>, <code>model_storage</code>, <code>models</code>, <code>native_pdf</code>, <code>settings</code>, <code>structured_pdf</code>, <code>subdecks</code></td><td><code>__main__</code>, Konsolenbefehl</td></tr>
+            <tr><td><code>settings</code></td><td><code>ai</code> (<code>AISettings</code>), <code>config</code>, <code>errors</code>, <code>structured_pdf</code> (<code>ConversionOptions</code>)</td><td><code>cli</code></td></tr>
+            <tr><td><code>config</code></td><td><code>errors</code></td><td><code>settings</code>, <code>docling_pdf</code> (<code>PictureBackend</code>), <code>cli</code> (<code>PDFMode</code>, <code>PictureBackend</code>)</td></tr>
+            <tr><td><code>docling_pdf</code></td><td><code>ai</code> (<code>AISettings</code>), <code>config</code>, <code>errors</code>, <code>model_storage</code>, <code>pictures</code>, <code>structured_pdf</code></td><td><code>cli</code></td></tr>
+            <tr><td><code>structured_pdf</code></td><td><code>ai</code> (<code>FIGURE_MARKER</code>), <code>documents</code> (<code>SourceDocument</code>), <code>errors</code>, <code>pictures</code></td><td><code>docling_pdf</code>, <code>settings</code>, <code>cli</code></td></tr>
+            <tr><td><code>pictures</code></td><td><code>ai</code> (<code>AISettings</code>, <code>connection_options</code>), <code>errors</code></td><td><code>structured_pdf</code>, <code>docling_pdf</code></td></tr>
+            <tr><td><code>model_storage</code></td><td><code>errors</code></td><td><code>docling_pdf</code>, <code>cli</code></td></tr>
             <tr><td><code>native_pdf</code></td><td><code>ai</code> (<code>SYSTEM_PROMPT</code>, <code>AISettings</code>), <code>errors</code>, <code>models</code>, <code>subdecks</code></td><td><code>cli</code></td></tr>
-            <tr><td><code>ai</code></td><td><code>documents</code> (<code>SourceDocument</code>, <code>chunk_text</code>), <code>errors</code>, <code>models</code>, <code>subdecks</code></td><td><code>cli</code>, <code>settings</code>, <code>native_pdf</code></td></tr>
+            <tr><td><code>ai</code></td><td><code>documents</code> (<code>SourceDocument</code>, <code>chunk_text</code>), <code>errors</code>, <code>models</code>, <code>subdecks</code></td><td><code>cli</code>, <code>settings</code>, <code>native_pdf</code>, <code>pictures</code>, <code>structured_pdf</code>, <code>docling_pdf</code></td></tr>
             <tr><td><code>subdecks</code></td><td><code>models</code></td><td><code>ai</code>, <code>native_pdf</code>, <code>apkg</code>, <code>cli</code></td></tr>
             <tr><td><code>apkg</code></td><td><code>errors</code>, <code>models</code> (<code>Card</code>), <code>subdecks</code> (<code>SubdeckContext</code>)</td><td><code>cli</code></td></tr>
-            <tr><td><code>documents</code></td><td><code>errors</code></td><td><code>cli</code>, <code>ai</code></td></tr>
+            <tr><td><code>documents</code></td><td><code>errors</code></td><td><code>cli</code>, <code>ai</code>, <code>structured_pdf</code></td></tr>
             <tr><td><code>models</code></td><td><code>errors</code></td><td><code>cli</code>, <code>ai</code>, <code>native_pdf</code>, <code>subdecks</code>, <code>apkg</code></td></tr>
             <tr><td><code>errors</code></td><td>–</td><td>alle Module</td></tr>
           </tbody>
         </table>
       </div>
-      <p class="small muted">Der Graph ist zyklenfrei. <code>models</code>, <code>documents</code> und <code>errors</code> sind Blätter und lassen sich ohne den Rest testen.</p>
+      <p class="small muted">Der Graph ist zyklenfrei. <code>models</code>, <code>documents</code>, <code>model_storage</code> und <code>errors</code> sind Blätter und lassen sich ohne den Rest testen. Nur <code>docling_pdf</code> und <code>pictures</code> berühren Docling, Transformers und Hugging Face – und importieren sie erst innerhalb ihrer Funktionen.</p>
 
       <!-- errors.py -->
       <article class="card command-section module-card searchable" data-module="errors" id="mod-errors">
@@ -929,7 +951,7 @@
         <p>Providerunabhängige Kartengenerierung aus Text. Baut je Abschnitt einen Prompt, ruft LiteLLM mit strukturierter Ausgabe auf, validiert die Antwort und führt alle Abschnitte zu einer deduplizierten, begrenzten Liste zusammen.</p>
         <dl class="facts">
           <dt>Importiert</dt><dd><code>documents</code>, <code>errors</code>, <code>models</code>, <code>subdecks</code> · LiteLLM (verzögert)</dd>
-          <dt>Verwendet von</dt><dd><code>cli</code> (<code>generate_cards</code>), <code>settings</code> (<code>AISettings</code>), <code>native_pdf</code> (<code>SYSTEM_PROMPT</code>, <code>AISettings</code>)</dd>
+          <dt>Verwendet von</dt><dd><code>cli</code> (<code>generate_cards</code>), <code>settings</code> (<code>AISettings</code>), <code>native_pdf</code> (<code>SYSTEM_PROMPT</code>, <code>AISettings</code>), <code>pictures</code> (<code>connection_options</code>), <code>structured_pdf</code> (<code>FIGURE_MARKER</code>)</dd>
           <dt>Tests</dt><dd><code>tests/test_ai.py</code> (5 Tests, <code>_completion</code> simuliert)</dd>
         </dl>
         <details open>
@@ -953,10 +975,11 @@
         <details>
           <summary>Interne Bausteine</summary>
           <div class="details-body">
-            <div class="option"><div class="option-heading"><span class="option-name"><code>_request_batch(prompt, settings, chunk_number, assigner) → CardBatch</code></span></div><p>Ruft <code>_completion()</code> mit <code>messages=[system, user]</code> (System: <code>assigner.system_prompt(SYSTEM_PROMPT)</code>), <code>response_format=assigner.response_model</code>, <code>timeout</code>, <code>num_retries=2</code>, <code>drop_params=True</code>, den Profil-<code>options</code> und <code>_provider_options()</code>. Die Antwort wird mit <code>assigner.response_model.model_validate_json</code> geprüft. <code>ValidationError</code>/<code>ValueError</code>/<code>TypeError</code> → „invalid card data for document chunk N“, jede andere Ausnahme → „request failed for document chunk N“ (bewusste Bibliotheksgrenze).</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>system_prompt_for(text)</code> · <code>FIGURE_RULES</code></span></div><p>Enthält der Dokumenttext Marker der strukturierten Aufbereitung (<code>[Abbildung S. </code>, <code>[Formel S. </code>, <code>[nicht lesbar: </code>), wird <code>FIGURE_RULES</code> angehängt: Abbildungsbeschreibungen sind maschinell, nichts darüber hinaus erfinden, keine Fragen zu Lücken-Markern. Datengetrieben – gilt auch beim erneuten Verarbeiten einer gespeicherten <code>.md</code>.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>_request_batch(prompt, settings, chunk_number, assigner, base_prompt=SYSTEM_PROMPT) → CardBatch</code></span></div><p>Ruft <code>_completion()</code> mit <code>messages=[system, user]</code> (System: <code>assigner.system_prompt(base_prompt)</code>), <code>response_format=assigner.response_model</code>, <code>timeout</code>, <code>num_retries=2</code>, <code>drop_params=True</code>, den Profil-<code>options</code> und <code>connection_options()</code>. Die Antwort wird mit <code>assigner.response_model.model_validate_json</code> geprüft. <code>ValidationError</code>/<code>ValueError</code>/<code>TypeError</code> → „invalid card data for document chunk N“, jede andere Ausnahme → „request failed for document chunk N“ (bewusste Bibliotheksgrenze).</p></div>
             <div class="option"><div class="option-heading"><span class="option-name"><code>_allocation(limit, produced, remaining)</code></span></div><p>Verteilt das restliche Kartenbudget gleichmäßig auf die offenen Abschnitte; <code>None</code> im Unlimited-Modus.</p></div>
             <div class="option"><div class="option-heading"><span class="option-name"><code>_build_prompt(text, *, allocation, language, instructions, subdeck_section="")</code></span></div><p>„Create at most N cards“ oder – im Unlimited-Modus – „as many useful cards as the source supports“, Sprache, optionale Zusatzanweisungen und der Quelltext in <code>&lt;source_document&gt;…&lt;/source_document&gt;</code>. Im Unterdeck-Modus steht der Kontextabschnitt (<code>&lt;parent_deck&gt;</code>, <code>&lt;known_subdecks&gt;</code>) vor dem Quelltext. Die Begrenzer kennzeichnen den Text als Daten, nicht als Anweisung.</p></div>
-            <div class="option"><div class="option-heading"><span class="option-name"><code>_provider_options(settings)</code></span></div><p>Gibt <code>api_key</code> und <code>api_base</code> nur zurück, wenn sie gesetzt sind. Ohne Schlüssel liest LiteLLM die providerspezifische Variable selbst (z. B. <code>OPENAI_API_KEY</code>).</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>connection_options(settings)</code></span></div><p>Öffentlich, weil auch <code>pictures</code> sie nutzt. Gibt <code>api_key</code> und <code>api_base</code> nur zurück, wenn sie gesetzt sind. Ohne Schlüssel liest LiteLLM die providerspezifische Variable selbst (z. B. <code>OPENAI_API_KEY</code>).</p></div>
             <div class="option"><div class="option-heading"><span class="option-name"><code>_completion(**kwargs)</code></span></div><p>Einzige Stelle, die <code>litellm</code> importiert – verzögert. Tests ersetzen genau diese Funktion.</p></div>
             <div class="option"><div class="option-heading"><span class="option-name"><code>_response_content(response)</code> / <code>_strip_code_fence(content)</code></span></div><p>Liest <code>choices[0].message.content</code>, lehnt leere Antworten ab und entfernt einen umschließenden Markdown-Codeblock (<code>```json … ```</code>), den manche Modelle trotz JSON-Modus liefern.</p></div>
           </div>
@@ -1036,24 +1059,123 @@
         </details>
       </article>
 
+      <!-- docling_pdf.py -->
+      <article class="card command-section module-card searchable" data-module="docling_pdf" id="mod-docling_pdf">
+        <div class="command-header"><h3 class="command-title"><code>docling_pdf.py</code></h3><span class="tag doc">Fachkern · Docling-Adapter (req-5)</span></div>
+        <p>Die einzige Stelle, die Docling kennt. Sie lädt fehlende Modelle in den Projektordner, konvertiert eine PDF lokal, macht aus dem Docling-Dokument eine konverterneutrale Struktur (<code>ExtractedPdf</code>) und wählt das Bildmodell. Docling, <code>docling_core</code> und <code>huggingface_hub</code> werden erst innerhalb der Funktionen importiert – ohne das Extra <code>pdf</code> lädt das Modul trotzdem.</p>
+        <dl class="facts">
+          <dt>Importiert</dt><dd><code>ai</code>, <code>config</code>, <code>errors</code>, <code>model_storage</code>, <code>pictures</code>, <code>structured_pdf</code> · Docling 2.151, docling-core, huggingface_hub (verzögert)</dd>
+          <dt>Verwendet von</dt><dd><code>cli</code></dd>
+          <dt>Tests</dt><dd><code>tests/test_docling_pdf.py</code> (7 Tests, mit gefälschten Modulen statt Docling) und der strukturierte CLI-Test</dd>
+        </dl>
+        <details open>
+          <summary>Öffentliche Schnittstelle</summary>
+          <div class="details-body">
+            <div class="option"><div class="option-heading"><span class="option-name"><code>convert_pdf(path, options, storage, *, describer, announce, progress=None, device=None, extractor=None) → StructuredPdf</code></span><span class="option-meta">Einstieg</span></div><p>Prüft die Endung, verlangt Docling und – ohne übergebenes <code>device</code> – eine GPU, lädt fehlende Modelle (<code>ensure_conversion_models</code>), ruft den Extraktor auf und übergibt an <code>structured_pdf.render_document()</code>. Mit <code>extractor</code> ersetzen Tests Docling vollständig; dann wird auch nichts geladen.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>validate_pdf_input(path)</code> · <code>require_docling()</code></span><span class="option-meta">Guards</span></div><p>Nur <code>.pdf</code>; sonst Hinweis auf <code>--pdf-mode local</code>. <code>require_docling()</code> prüft per <code>importlib.util.find_spec</code> und nennt den Installationsbefehl (<code>INSTALL_HINT</code>).</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>available_accelerator()</code> · <code>require_accelerator(allow_cpu)</code></span><span class="option-meta">GPU-Pflicht (R-158)</span></div><p>Erkennt über PyTorch <code>cuda</code> (auch ROCm-Builds), <code>xpu</code> oder <code>mps</code>. Ohne GPU wirft <code>require_accelerator</code> eine <code>FlashcardError</code> (<code>NO_GPU_HINT</code>) mit den Alternativen <code>--pdf-mode native</code> und <code>--pdf-mode local</code>; mit <code>allow_cpu</code> liefert es <code>cpu</code>. Ein fehlendes PyTorch gilt als „keine GPU“.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>create_describer(backend, storage, *, picture_model, picture_ai, announce, device="cpu")</code></span><span class="option-meta">Fabrik</span></div><p><code>none</code> → <code>None</code>; <code>profile</code> → kündigt die Übertragung der Bildausschnitte an und liefert <code>ProfilePictureDescriber</code>; <code>local</code> → lädt das Modell bei Bedarf und liefert <code>LocalPictureDescriber</code>.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>ensure_conversion_models(storage, *, formulas, announce)</code> · <code>ensure_picture_model(storage, repo_id, announce)</code></span><span class="option-meta">Downloads</span></div><p>Vergleichen die benötigten Komponenten (<code>layout</code>, <code>tableformer</code>, <code>picture_classifier</code>, <code>rapidocr</code>, optional <code>code_formula</code>, <code>picture:&lt;id&gt;</code>) mit dem Manifest. Nur Fehlendes wird geladen – Docling über <code>download_models(output_dir=models/docling, with_easyocr=False)</code>, Bildmodelle über <code>snapshot_download(local_dir=models/pictures/…, ignore_patterns=[onnx …])</code>. Danach kein Netzwerk mehr.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>extract_pdf(path, options, storage, device="cpu", progress=None) → ExtractedPdf</code></span><span class="option-meta">Docling-Lauf</span></div><p>Baut den Konverter, ruft <code>convert(raises_on_error=False, progress_callback=…)</code> auf und übersetzt Bibliotheksfehler in <code>FlashcardError</code>.</p></div>
+          </div>
+        </details>
+        <details>
+          <summary>Interne Bausteine</summary>
+          <div class="details-body">
+            <div class="option"><div class="option-heading"><span class="option-name"><code>_converter(options, storage, device)</code></span></div><p><code>PdfPipelineOptions(artifacts_path=models/docling, do_ocr, RapidOcrOptions(lang=[iso:&lt;erste Sprache&gt;], force_full_page_ocr, backend="torch"), do_table_structure, do_formula_enrichment, do_picture_classification, generate_picture_images, images_scale=2.0, enable_remote_services=False)</code> und <code>AcceleratorOptions(num_threads=os.cpu_count(), device=device)</code>. Setzt außerdem <code>docling.datamodel.settings.cache_dir</code> in den Modellordner. EasyOCR wird nie gewählt, weil es nach <code>~/.EasyOCR</code> schreiben würde.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>_extracted(result)</code> · <code>_page_markdown(document, page, tokens)</code> · <code>_token_picture_serializer(tokens)</code></span></div><p>Serialisiert jede Seite einzeln mit <code>MarkdownDocSerializer(params=MarkdownParams(pages={n}, escape_html=False, escape_underscores=False))</code>. Eine Unterklasse von <code>MarkdownPictureSerializer</code> ersetzt nur den Bildteil durch ein Token <code>⟦picture:i⟧</code>; Bildunterschriften bleiben Docling-Standard. Seiten bis <code>input.page_count</code> werden immer erzeugt.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>_pictures</code> · <code>_picture_kind</code> · <code>_area_ratio</code> · <code>_layout_key</code> · <code>_inner_text</code></span></div><p>Je Abbildung: Seite, Klasse aus <code>meta.classification</code>, Flächenanteil, auf 5 pt gerundete Lage, Bildunterschrift, Text der Kind-Elemente (<code>traverse_pictures=True</code>) und der Bildausschnitt <code>get_image()</code>.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>_ocr_pages</code> · <code>_decoded_formulas</code> · <code>_failed_pages</code> · <code>_progress_adapter</code></span></div><p>OCR-Seiten über <code>from_ocr</code> der Zellen in <code>page.assembled.elements</code> (Docling verwirft <code>parsed_page</code> nach der Konvertierung), Formeln mit Text, Seiten aus <code>result.errors[].page_no</code>. Fortschritt: <code>page_completed</code> und <code>enrichment_progress</code> werden zu <code>progress(label, fertig, gesamt)</code>.</p></div>
+          </div>
+        </details>
+      </article>
+
+      <!-- structured_pdf.py -->
+      <article class="card command-section module-card searchable" data-module="structured_pdf" id="mod-structured_pdf">
+        <div class="command-header"><h3 class="command-title"><code>structured_pdf.py</code></h3><span class="tag doc">Fachkern · Marker &amp; Vollständigkeit (req-5)</span></div>
+        <p>Konverterneutraler, rein funktionaler Teil: Er bekommt Seiten-Markdown mit Tokens und Abbildungsdaten und macht daraus den endgültigen Text. Dabei entscheidet er, was dekorativ ist, lässt Abbildungen beschreiben, ersetzt Formel-Platzhalter, entfernt Wiederholungen und prüft auf Unlesbares. Kein Docling-Import.</p>
+        <dl class="facts">
+          <dt>Importiert</dt><dd><code>ai</code> (<code>FIGURE_MARKER</code>), <code>documents</code>, <code>errors</code>, <code>pictures</code></dd>
+          <dt>Verwendet von</dt><dd><code>docling_pdf</code>, <code>settings</code> (<code>ConversionOptions</code>), <code>cli</code></dd>
+          <dt>Tests</dt><dd><code>tests/test_structured_pdf.py</code> (14 Tests inklusive Parametrisierung)</dd>
+        </dl>
+        <details open>
+          <summary>Öffentliche Schnittstelle</summary>
+          <div class="details-body">
+            <div class="option"><div class="option-heading"><span class="option-name"><code>ConversionOptions</code> · <code>PictureInfo</code> · <code>ExtractedPage</code> · <code>ExtractedPdf</code> · <code>ConversionStats</code> · <code>StructuredPdf</code></span><span class="option-meta">Datentypen</span></div><p>Optionen (OCR-Sprachen, <code>force_ocr</code>, <code>formulas</code>, <code>allow_unreadable</code>, Beschreibungssprache), die Konverterausgabe und das Ergebnis mit Statistik. → <a href="#datenformate">Datenformate</a></p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>render_document(path, extracted, options, describer, progress=None) → StructuredPdf</code></span><span class="option-meta">Kern</span></div><p>Reihenfolge: Abbildungs-Marker bilden → Seiten rendern (Tokens ersetzen, Formel-Platzhalter, CJK-Rauschen) → wiederkehrende Zeilen entfernen → <code>[Seite N]</code> voranstellen → fehlgeschlagene Seiten melden → <code>_check_unreadable</code> → leeres Ergebnis ablehnen.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>is_decorative(picture)</code> · <code>figure_marker(picture, description)</code></span></div><p>Dekorativ sind die Klassen <code>logo</code>, <code>icon</code>, <code>signature</code>, <code>stamp</code>, <code>qr_code</code>, <code>bar_code</code>, <code>page_thumbnail</code> und Flächen unter 1 % der Seite; zusätzlich Lagen, die auf mindestens drei Seiten wiederkehren. Der Marker ist immer einzeilig: <code>[Abbildung S. N – Beschreibung: …; Bildunterschrift: …; Text im Bild: …]</code>.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>save_source_text(path, text)</code></span><span class="option-meta">Datei</span></div><p>Schreibt atomar in eine neue Datei; eine vorhandene Datei ist ein Fehler.</p></div>
+          </div>
+        </details>
+        <details>
+          <summary>Interne Bausteine</summary>
+          <div class="details-body">
+            <div class="option"><div class="option-heading"><span class="option-name"><code>_picture_markers</code> · <code>_repeated_layout_keys</code> · <code>_describe</code></span></div><p>Ohne Describer: <code>nicht beschrieben</code>. Leere Beschreibung oder fehlender Bildausschnitt: <code>[nicht lesbar: Abbildung S. N]</code> und Eintrag in <code>stats.unreadable</code>. Fortschritt „Abbildungen beschreiben“.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>_render_body</code> · <code>_replace_formulas</code> · <code>_remove_repeated_lines</code></span></div><p><code>&lt;!-- formula-not-decoded --&gt;</code> wird bei <code>formulas=False</code> zu <code>[Formel S. N – nicht ausgewertet]</code>, sonst zu einem unlesbaren Element. Zeilen nur aus CJK-Zeichen fallen weg, solange keine CJK-OCR-Sprache gewählt ist. Zeilen, die auf mindestens drei Seiten und 40 % aller Seiten vorkommen, werden entfernt – Überschriften, Marker, Tabellenzeilen und Formeln nie.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>_check_unreadable(unreadable, allowed)</code></span></div><p>Listet bis zu zehn Elemente und verweist auf <code>--allow-unreadable</code>.</p></div>
+          </div>
+        </details>
+      </article>
+
+      <!-- pictures.py -->
+      <article class="card command-section module-card searchable" data-module="pictures" id="mod-pictures">
+        <div class="command-header"><h3 class="command-title"><code>pictures.py</code></h3><span class="tag ai">Fachkern · Bildmodelle (req-5)</span></div>
+        <p>Austauschbare Bildmodelle hinter dem Protocol <code>PictureDescriber</code>. Alle Backends bekommen dieselbe Anweisung (<code>DESCRIPTION_PROMPT</code>) mit Bildunterschrift und erkanntem Text als Hinweis.</p>
+        <dl class="facts">
+          <dt>Importiert</dt><dd><code>ai</code> (<code>AISettings</code>, <code>connection_options</code>), <code>errors</code> · Transformers bzw. LiteLLM (verzögert)</dd>
+          <dt>Verwendet von</dt><dd><code>structured_pdf</code> (<code>PictureContext</code>), <code>docling_pdf</code></dd>
+          <dt>Tests</dt><dd><code>tests/test_pictures.py</code> (5 Tests)</dd>
+        </dl>
+        <details open>
+          <summary>Öffentliche Schnittstelle</summary>
+          <div class="details-body">
+            <div class="option"><div class="option-heading"><span class="option-name"><code>PictureContext(page, caption, text, language)</code> · <code>PictureDescriber.describe(image, context) → str</code></span><span class="option-meta">Protocol</span></div><p>Leerer Text bedeutet „unlesbar“. Neue Backends implementieren nur diese eine Methode.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>description_prompt(context, language=None)</code></span></div><p>Sachlich beschreiben, Beschriftungen, Achsen, Einheiten, Werte und Beziehungen nennen, Formeln abschreiben, nichts raten, höchstens 120 Wörter.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>LocalPictureDescriber(model_dir, *, max_new_tokens=220, device="cpu", loader=None)</code></span><span class="option-meta">Backend local</span></div><p>Lädt das Modell erst bei der ersten Abbildung auf dem Gerät <code>device</code> mit <code>AutoProcessor</code>/<code>AutoModelForImageTextToText</code> und <code>local_files_only=True</code>. <code>_disable_image_splitting()</code> verarbeitet jedes Bild als eine Kachel – bei SmolVLM rund zehnmal schneller. Beschreibt auf Englisch, weil kleine Modelle das am zuverlässigsten können; <code>loader</code> ist die Test-Nahtstelle.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>ProfilePictureDescriber(settings)</code></span><span class="option-meta">Backend profile</span></div><p>Eine LiteLLM-Anfrage je Abbildung: Text plus <code>image_url</code> als PNG-Data-URL, Profil-<code>options</code> und <code>connection_options()</code>. Jeder Providerfehler wird zu „Picture model request failed for page N“.</p></div>
+          </div>
+        </details>
+      </article>
+
+      <!-- model_storage.py -->
+      <article class="card command-section module-card searchable" data-module="model_storage" id="mod-model_storage">
+        <div class="command-header"><h3 class="command-title"><code>model_storage.py</code></h3><span class="tag cfg">Querschnitt · Projektlokaler Modellordner (R-157)</span></div>
+        <p>Sorgt dafür, dass alle Downloads und Caches in genau einem Projektordner landen und dass bekannte Downloads offline wiederverwendet werden.</p>
+        <dl class="facts">
+          <dt>Importiert</dt><dd><code>errors</code></dd>
+          <dt>Verwendet von</dt><dd><code>docling_pdf</code>, <code>cli</code></dd>
+          <dt>Tests</dt><dd>in <code>tests/test_docling_pdf.py</code></dd>
+        </dl>
+        <details open>
+          <summary>Öffentliche Schnittstelle</summary>
+          <div class="details-body">
+            <div class="option"><div class="option-heading"><span class="option-name"><code>ModelStorage(root)</code></span><span class="option-meta">frozen dataclass</span></div><p><code>docling</code> → <code>root/docling</code>, <code>pictures</code> → <code>root/pictures</code>, <code>picture_model(id)</code> → <code>root/pictures/owner--name</code>, <code>manifest</code> → <code>root/downloaded.json</code>.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>configure_model_storage(root) → ModelStorage</code></span></div><p>Legt den Ordner an und setzt für den eigenen Prozess <code>HF_HOME</code>, <code>TORCH_HOME</code>, <code>XDG_CACHE_HOME</code>, <code>DOCLING_CACHE_DIR</code> in Unterordner sowie <code>HF_HUB_DISABLE_TELEMETRY=1</code>. Muss vor dem ersten Import von Docling oder Hugging Face laufen.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>downloaded_components(storage)</code> · <code>record_components(storage, names)</code></span></div><p>Lesen und ergänzen das Manifest. Ein kaputtes Manifest gilt als leer – dann wird nachgeladen, nicht abgebrochen.</p></div>
+          </div>
+        </details>
+      </article>
+
       <!-- config.py -->
       <article class="card command-section module-card searchable" data-module="config" id="mod-config">
         <div class="command-header"><h3 class="command-title"><code>config.py</code></h3><span class="tag cfg">Konfiguration · Schema &amp; Persistenz</span></div>
         <p>UI-unabhängiger Konfigurationsdienst: das versionierte YAML-Schema als Pydantic-Modelle, die eingebauten Defaults, Laden mit klaren Fehlermeldungen und atomares Speichern. Kein CLI-Wissen, keine Prioritätslogik – das macht <code>settings.py</code>.</p>
         <dl class="facts">
           <dt>Importiert</dt><dd><code>errors</code> · PyYAML, Pydantic</dd>
-          <dt>Verwendet von</dt><dd><code>settings</code>, <code>cli</code> (nur <code>PDFMode</code>)</dd>
+          <dt>Verwendet von</dt><dd><code>settings</code>, <code>docling_pdf</code> und <code>cli</code> (<code>PDFMode</code>, <code>PictureBackend</code>)</dd>
           <dt>Tests</dt><dd><code>tests/test_config.py</code> (15 Tests inklusive Parametrisierung)</dd>
         </dl>
         <details open>
           <summary>Schema und Konstanten</summary>
           <div class="details-body">
-            <div class="option"><div class="option-heading"><span class="option-name">Eingebaute Defaults</span><span class="option-meta">Modulkonstanten</span></div><p><code>CONFIG_SCHEMA_VERSION = 1</code>, <code>DEFAULT_CONFIG_PATH = config.yaml</code>, <code>DEFAULT_LIMIT = 50</code>, <code>DEFAULT_LANGUAGE = "Deutsch"</code>, <code>DEFAULT_CHUNK_SIZE = 24_000</code>, <code>DEFAULT_TIMEOUT = 180</code>. Diese Werte sind die unterste Prioritätsschicht.</p></div>
-            <div class="option"><div class="option-heading"><span class="option-name"><code>PDFMode(StrEnum)</code></span></div><p><code>local</code> oder <code>native</code>. Typer nutzt dasselbe Enum direkt für <code>--pdf-mode</code>.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name">Eingebaute Defaults</span><span class="option-meta">Modulkonstanten</span></div><p><code>CONFIG_SCHEMA_VERSION = 1</code>, <code>DEFAULT_CONFIG_PATH = config.yaml</code>, <code>DEFAULT_LIMIT = 50</code>, <code>DEFAULT_LANGUAGE = "Deutsch"</code>, <code>DEFAULT_CHUNK_SIZE = 24_000</code>, <code>DEFAULT_TIMEOUT = 180</code>, <code>DEFAULT_MODELS_DIR = models</code>, <code>DEFAULT_PICTURE_MODEL = HuggingFaceTB/SmolVLM-256M-Instruct</code>, <code>DEFAULT_OCR_LANGUAGES = ("de", "en")</code>. Diese Werte sind die unterste Prioritätsschicht.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>PDFMode(StrEnum)</code> · <code>PictureBackend(StrEnum)</code></span></div><p><code>local</code>, <code>structured</code> oder <code>native</code> beziehungsweise <code>local</code>, <code>profile</code> oder <code>none</code>. Typer nutzt dieselben Enums direkt für <code>--pdf-mode</code> und <code>--picture-backend</code>.</p></div>
             <div class="option"><div class="option-heading"><span class="option-name"><code>StrictModel</code></span></div><p>Basisklasse mit <code>extra="forbid"</code> und <code>str_strip_whitespace=True</code>. Ein Tippfehler in einem YAML-Schlüssel wird so sofort mit Fehlerort gemeldet statt ignoriert.</p></div>
             <div class="option"><div class="option-heading"><span class="option-name"><code>GenerationConfig</code></span></div><p>Defaults für die Generierung: <code>profile</code>, <code>deck</code>, <code>limit ≥ 0</code>, <code>language</code>, <code>instructions</code>, <code>chunk_size 1000..100000</code>, <code>timeout 1..3600 | None</code>, <code>json_output</code>, <code>extend</code>, <code>pdf_mode | None</code>, <code>subdecks</code> (Standard <code>false</code>). Der Profilname <code>cli</code> ist reserviert.</p></div>
-            <div class="option"><div class="option-heading"><span class="option-name"><code>ModelProfile</code></span></div><p><code>model</code> muss dem Muster <code>provider/modell</code> entsprechen. <code>api_key_env</code> muss ein gültiger Variablenname sein – ein eingefügter Schlüssel fällt dadurch auf. <code>options</code> verbietet <code>api_key</code>, <code>api_base</code>, <code>model</code>, <code>messages</code>, <code>response_format</code> sowie geheim wirkende Schlüssel (<code>secret</code>, <code>password</code>, <code>credential</code>, <code>apikey</code>, <code>token</code>, <code>*_token</code>, <code>token_*</code>) – auch verschachtelt. <code>max_tokens</code> bleibt erlaubt.</p></div>
-            <div class="option"><div class="option-heading"><span class="option-name"><code>AppConfig</code></span></div><p>Wurzel des Schemas: <code>schema_version</code> (nur <code>1</code>), <code>default_profile</code>, <code>input_dir</code>, <code>output_dir</code>, <code>generation</code>, <code>models</code>. Der Modell-Validator prüft, dass referenzierte Profile existieren und dass nicht gleichzeitig <code>default_profile</code> und <code>generation.profile</code> gesetzt sind. <code>selected_profile_name()</code> liefert den einen konfigurierten Profilnamen.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>ModelProfile</code></span></div><p><code>model</code> muss dem Muster <code>provider/modell</code> entsprechen. <code>api_key_env</code> muss ein gültiger Variablenname sein – ein eingefügter Schlüssel fällt dadurch auf. <code>options</code> verbietet <code>api_key</code>, <code>api_base</code>, <code>model</code>, <code>messages</code>, <code>response_format</code> sowie geheim wirkende Schlüssel (<code>secret</code>, <code>password</code>, <code>credential</code>, <code>apikey</code>, <code>token</code>, <code>*_token</code>, <code>token_*</code>) – auch verschachtelt. <code>max_tokens</code> bleibt erlaubt. <code>image_input</code> (Standard <code>false</code>) bestätigt ausdrücklich, dass das Modell Bilder annimmt.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>PDFConversionConfig</code> · <code>PictureConfig</code></span></div><p>Block <code>pdf_conversion</code>: <code>models_dir</code>, <code>ocr_languages</code> (mindestens ein ISO-639-1-Code, kleingeschrieben), <code>force_ocr</code>, <code>formulas</code> (Standard <code>true</code>), <code>allow_unreadable</code>, <code>allow_cpu</code> (Standard <code>false</code>), <code>source_text_dir</code> und <code>pictures</code> mit <code>backend</code>, <code>model</code> (Muster <code>owner/name</code>) und <code>profile</code>.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>AppConfig</code></span></div><p>Wurzel des Schemas: <code>schema_version</code> (nur <code>1</code>), <code>default_profile</code>, <code>input_dir</code>, <code>output_dir</code>, <code>generation</code>, <code>pdf_conversion</code>, <code>models</code>. Der Modell-Validator prüft, dass referenzierte Profile existieren (auch <code>pdf_conversion.pictures.profile</code>) und dass nicht gleichzeitig <code>default_profile</code> und <code>generation.profile</code> gesetzt sind. <code>selected_profile_name()</code> liefert den einen konfigurierten Profilnamen.</p></div>
           </div>
         </details>
         <details>
@@ -1078,7 +1200,8 @@
           <summary>Öffentliche Schnittstelle</summary>
           <div class="details-body">
             <div class="option"><div class="option-heading"><span class="option-name"><code>ValueSource</code> · <code>SourcedValue(value, source)</code></span></div><p>Herkunftsschicht eines Wertes: <code>built-in</code>, <code>config</code>, <code>cli</code>. Bewusst ohne „env“ – die Umgebung liefert nur Schlüssel, keine Einstellungen.</p></div>
-            <div class="option"><div class="option-heading"><span class="option-name"><code>GenerateSettings</code> · <code>ExportSettings</code></span><span class="option-meta">frozen dataclasses</span></div><p>Vollständig aufgelöste Werte für einen Lauf inklusive <code>origins</code> (Herkunft je Wert). <code>GenerateSettings.ai</code> ist das fertige <code>AISettings</code>; <code>GenerateSettings.subdecks</code> schaltet den Unterdeck-Modus.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>GenerateSettings</code> · <code>ExportSettings</code></span><span class="option-meta">frozen dataclasses</span></div><p>Vollständig aufgelöste Werte für einen Lauf inklusive <code>origins</code> (Herkunft je Wert). <code>GenerateSettings.ai</code> ist das fertige <code>AISettings</code>; <code>GenerateSettings.subdecks</code> schaltet den Unterdeck-Modus; <code>GenerateSettings.conversion</code> ist ein <code>ConversionSettings</code> mit <code>ConversionOptions</code>, absolutem <code>models_dir</code>, Bildmodell-Backend, -Modell, -Profil und dessen <code>AISettings</code> sowie dem Pfad für <code>--source-text</code>.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>resolve_models_dir(config, config_path)</code></span></div><p>Modellordner relativ zur YAML-Datei, ohne YAML relativ zum Arbeitsordner. Gemeinsam genutzt von <code>generate</code> und <code>models download</code>.</p></div>
             <div class="option"><div class="option-heading"><span class="option-name"><code>load_selected_config(path) → (AppConfig, Path | None)</code></span></div><p>Wählt explizite Datei → <code>ANKI_CONFIG</code> → optionale <code>./config.yaml</code> und liefert zusätzlich den absoluten Pfad als Basis für relative YAML-Pfade.</p></div>
             <div class="option"><div class="option-heading"><span class="option-name"><code>resolve_generate_settings(cli, config, config_path) → GenerateSettings</code></span></div><p><code>cli</code> ist ein einfaches Mapping, das nur explizit gesetzte Werte enthält. Damit ist die Funktion auch aus einer Web-Schicht nutzbar.</p></div>
             <div class="option"><div class="option-heading"><span class="option-name"><code>resolve_export_settings(cli, config, config_path) → ExportSettings</code></span></div><p>Wie oben für <code>export</code>; zusätzlich Pflicht: Deck aus CLI oder <code>generation.deck</code>.</p></div>
@@ -1099,6 +1222,7 @@
                 <tr><td><code>_resolve_deck</code></td><td><code>--deck</code> → <code>generation.deck</code> → Eingabedateiname ohne Endung.</td></tr>
                 <tr><td><code>_resolve_model</code> / <code>_resolve_api_base</code></td><td>CLI → Profil → leer bzw. <code>None</code> (Provider-Standard).</td></tr>
                 <tr><td><code>_resolve_timeout</code> / <code>_resolve_pdf_mode</code></td><td>Vierstufig: CLI → <code>generation.*</code> → Profil → Default.</td></tr>
+                <tr><td><code>_resolve_conversion</code> / <code>_picture_ai</code> / <code>_resolve_source_text</code></td><td>CLI → <code>pdf_conversion.*</code> → Default. Das Bildprofil (CLI → <code>pictures.profile</code> → Kartenprofil) wird nur bei <code>structured</code> mit Backend <code>profile</code> aufgelöst und muss <code>image_input: true</code> haben – sonst Abbruch vor jeder Arbeit.</td></tr>
                 <tr><td><code>_profile_api_key</code></td><td><code>os.getenv(profile.api_key_env)</code> – die einzige Stelle, an der ein Schlüssel gelesen wird.</td></tr>
                 <tr><td><code>_source_for_option</code> / <code>_pdf_mode_origin</code> / <code>_generate_origins</code></td><td>Bauen die Herkunftslabels für die Diagnose.</td></tr>
               </tbody>
@@ -1153,8 +1277,9 @@
         <details open>
           <summary>Befehle und Objekte</summary>
           <div class="details-body">
-            <div class="option"><div class="option-heading"><span class="option-name"><code>app</code> · <code>config_app</code></span></div><p>Typer-Hauptapp (<code>no_args_is_help</code>, <code>-h</code>/<code>--help</code>) und die Unter-App <code>config</code>. <code>console</code> schreibt auf stdout, <code>error_console</code> auf stderr.</p></div>
-            <div class="option"><div class="option-heading"><span class="option-name"><code>generate(...)</code></span></div><p>Der Ablauf aus <a href="#anfrage">Schritt 3 bis 11</a>. Lokale Generierung steckt in <code>_generate_local_cards()</code> mit Rich-Spinner und innerem Callback <code>update()</code>. <code>_subdeck_context()</code> baut im Unterdeck-Modus den Kontext (Schritt 6b) und kündigt bei <code>--extend</code> die Übertragung an.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>app</code> · <code>config_app</code></span></div><p>Typer-Hauptapp (<code>no_args_is_help</code>, <code>-h</code>/<code>--help</code>) und die Unter-Apps <code>config</code> und <code>models</code> (<code>models_app</code>). <code>console</code> schreibt auf stdout, <code>error_console</code> auf stderr.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>generate(...)</code></span></div><p>Der Ablauf aus <a href="#anfrage">Schritt 3 bis 11</a>. Lokale Generierung steckt in <code>_generate_local_cards()</code> mit Rich-Spinner und innerem Callback <code>update()</code>. <code>_subdeck_context()</code> baut im Unterdeck-Modus den Kontext (Schritt 6b) und kündigt bei <code>--extend</code> die Übertragung an. <code>_generate_structured_cards()</code> führt den strukturierten Weg (Schritt 7c) mit <code>_progress()</code> und <code>_print_conversion()</code>; beide Wege enden in <code>_generate_from_document()</code>.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>download_models(...)</code></span><span class="option-meta"><code>models download</code></span></div><p>Lädt Docling-Komponenten (mit Formelmodell gemäß <code>--formulas</code>/YAML) und bei Backend <code>local</code> das Bildmodell in den Modellordner.</p></div>
             <div class="option"><div class="option-heading"><span class="option-name"><code>export_cards(...)</code> · <code>list_decks(...)</code> · <code>show_config(...)</code></span></div><p>Die Befehle <code>export</code>, <code>decks</code> und <code>config show</code>. → <a href="#weitere-ablaeufe">Abläufe</a></p></div>
             <div class="option"><div class="option-heading"><span class="option-name"><code>_explicit_values</code> · <code>_validate_output</code> · <code>_write_deck</code> · <code>_print_result</code></span></div><p>Gemeinsame Bausteine aller schreibenden Befehle. <code>_print_result</code> listet zusätzlich „Neue Karten je Unterdeck“, sobald <code>added_by_deck</code> andere Decks als das Zieldeck enthält.</p></div>
             <div class="option"><div class="option-heading"><span class="option-name"><code>run()</code></span></div><p>Einstiegspunkt: <code>.env</code> laden, App starten, <code>FlashcardError</code> in stderr-Meldung und Exit-Code 1 übersetzen.</p></div>
@@ -1230,6 +1355,10 @@
             <tr><td><code>api_base</code></td><td><code>--api-base</code> → <code>profile.api_base</code> → <code>None</code> (Provider-Standard)</td><td><code>_resolve_api_base</code></td></tr>
             <tr><td><code>timeout</code></td><td><code>--timeout</code> → <code>generation.timeout</code> → <code>profile.timeout</code> (Feld-Default 180) → 180</td><td><code>_resolve_timeout</code></td></tr>
             <tr><td><code>subdecks</code></td><td><code>--subdecks/--no-subdecks</code> → <code>generation.subdecks</code> → <code>false</code></td><td><code>cli.get("subdecks", config.generation.subdecks)</code></td></tr>
+            <tr><td><code>formulas</code>, <code>force_ocr</code>, <code>allow_unreadable</code>, <code>allow_cpu</code>, <code>picture_backend</code></td><td>CLI → <code>pdf_conversion.*</code> (bzw. <code>pictures.backend</code>) → Feld-Default</td><td><code>_resolve_conversion</code></td></tr>
+            <tr><td>Bildprofil</td><td><code>--picture-profile</code> → <code>pdf_conversion.pictures.profile</code> → Kartenprofil; muss <code>image_input: true</code> haben</td><td><code>_picture_ai</code> (nur bei <code>structured</code> + <code>profile</code>)</td></tr>
+            <tr><td><code>models_dir</code></td><td><code>pdf_conversion.models_dir</code> relativ zur YAML-Datei → <code>models/</code> im Arbeitsordner</td><td><code>resolve_models_dir</code></td></tr>
+            <tr><td><code>source_text</code></td><td><code>--source-text</code> (Datei, relativ zum Arbeitsordner) → <code>source_text_dir/&lt;eingabe&gt;.md</code> → nicht speichern</td><td><code>_resolve_source_text</code></td></tr>
             <tr><td><code>pdf_mode</code></td><td><code>--pdf-mode</code> → <code>generation.pdf_mode</code> → <code>profile.pdf_mode</code> (Feld-Default <code>local</code>) → <code>local</code></td><td><code>_resolve_pdf_mode</code></td></tr>
             <tr><td><code>api_key</code></td><td>nur <code>os.getenv(profile.api_key_env)</code>; ohne Profil <code>None</code> – dann liest LiteLLM die Providervariable selbst</td><td><code>_profile_api_key</code></td></tr>
             <tr><td><code>options</code></td><td>nur <code>profile.options</code> (Kopie); keine CLI-Option</td><td><code>resolve_generate_settings</code></td></tr>
@@ -1337,7 +1466,7 @@ Additional user instructions: Bevorzuge kurze Verständnisfragen.
     num_retries=2,                   # Wiederholung durch LiteLLM
     drop_params=True,                # nicht unterstützte Parameter verwerfen
     **settings.options,              # aus dem YAML-Profil
-    **_provider_options(settings),   # api_key / api_base, nur wenn gesetzt
+    **connection_options(settings),  # api_key / api_base, nur wenn gesetzt
 )</code></pre>
           <p class="small muted">Wie gut ein Provider <code>response_format</code> umsetzt, ist unterschiedlich. Deshalb wird jede Antwort zusätzlich mit <code>CardBatch.model_validate_json()</code> geprüft – egal, was der Provider verspricht.</p>
         </article>
@@ -1529,6 +1658,70 @@ Known subdecks; reuse them when the content fits:
       </div>
     </section>
 
+    <!-- ============================================================ STRUKTURIERT -->
+    <section id="strukturiert">
+      <div class="section-heading">
+        <p class="eyebrow">docling_pdf · structured_pdf · pictures · model_storage · req-5 (R-140 bis R-157)</p>
+        <h2>Strukturierte PDF-Aufbereitung mit Docling</h2>
+        <p>Mit <code>pdf_mode: structured</code> wandelt Docling die PDF lokal in Markdown um, bevor ein Kartenmodell sie sieht. Das löst, was <code>local</code> verliert: Text in Bildern und Scans, Tabellenstrukturen, Formeln und grafische Inhalte. Die Trennung ist bewusst: <code>docling_pdf</code> kapselt die Bibliothek, <code>structured_pdf</code> ist reine Logik ohne Docling und deshalb vollständig ohne Modelle testbar, <code>pictures</code> enthält austauschbare Bildmodelle.</p>
+      </div>
+      <figure class="diagram wide">
+        <div class="diagram-scroll">
+          <svg viewBox="0 0 1000 400" aria-labelledby="str-title str-desc">
+            <title id="str-title">Datenfluss der strukturierten PDF-Aufbereitung</title>
+            <desc id="str-desc">Vorbereitung: GPU prüfen, Modellordner konfigurieren, fehlende Modelle laden, Bildmodell wählen. Docling erkennt Layout, OCR, Tabellen, Formeln und Bildklassen und liefert Seiten-Markdown mit Bild-Tokens sowie Abbildungen. render_document lässt Abbildungen beschreiben, ersetzt Tokens und Formel-Platzhalter, entfernt Wiederholungen und prüft auf Unlesbares. Das Ergebnis ist ein SourceDocument, das wie im lokalen Modus an generate_cards geht.</desc>
+            <defs>
+              <marker id="arr-str" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#6b7f8c"/></marker>
+            </defs>
+            <text class="t-label" x="40" y="28">Vorbereitung · vor jeder Arbeit</text>
+            <g class="n-cfg"><rect class="box" x="40" y="40" width="212" height="74" rx="10"/><text class="t-title sm" x="56" y="66">require_accelerator</text><text class="t-sub" x="56" y="87">GPU prüfen, sonst Abbruch;</text><text class="t-sub" x="56" y="104">dann models/ + Caches</text></g>
+            <g class="n-doc"><rect class="box" x="276" y="40" width="212" height="74" rx="10"/><text class="t-title sm" x="292" y="66">ensure_*_models</text><text class="t-sub" x="292" y="87">Manifest prüfen, nur</text><text class="t-sub" x="292" y="104">Fehlendes laden</text></g>
+            <g class="n-ai"><rect class="box" x="512" y="40" width="212" height="74" rx="10"/><text class="t-title" x="528" y="66">create_describer</text><text class="t-sub" x="528" y="87">local · profile · none</text><text class="t-sub" x="528" y="104">profile: Übertragung melden</text></g>
+            <g class="n-ext"><rect class="box" x="748" y="40" width="212" height="74" rx="10"/><text class="t-title" x="764" y="66">vorlesung.pdf</text><text class="t-sub" x="764" y="87">nur .pdf;</text><text class="t-sub" x="764" y="104">bleibt auf dem Rechner</text></g>
+            <path class="edge" d="M252 77 H272" marker-end="url(#arr-str)"/>
+            <path class="edge" d="M488 77 H508" marker-end="url(#arr-str)"/>
+            <path class="edge" d="M854 114 V136 H146 V156" marker-end="url(#arr-str)"/>
+            <text class="t-label" x="300" y="152">extract_pdf · Docling lokal</text>
+            <g class="n-ext"><rect class="box" x="40" y="160" width="212" height="92" rx="10"/><text class="t-head" x="56" y="186">Docling-Pipeline</text><text class="t-sub" x="56" y="207">Layout (Heron) · RapidOCR</text><text class="t-sub" x="56" y="224">TableFormer · CodeFormula</text><text class="t-sub" x="56" y="241">Bildklassen · Bildausschnitte</text></g>
+            <g class="n-doc"><rect class="box" x="276" y="160" width="212" height="92" rx="10"/><text class="t-title" x="292" y="186">ExtractedPdf</text><text class="t-sub" x="292" y="207">Seiten-Markdown mit</text><text class="t-sub" x="292" y="224">⟦picture:i⟧ · Formel-Platzh.</text><text class="t-sub" x="292" y="241">PictureInfo · Statistik</text></g>
+            <g class="n-ai"><rect class="box" x="512" y="160" width="212" height="92" rx="10"/><text class="t-title" x="528" y="186">PictureDescriber</text><text class="t-sub" x="528" y="207">nur Inhaltsabbildungen;</text><text class="t-sub" x="528" y="224">Logos, Icons, wieder-</text><text class="t-sub" x="528" y="241">kehrende Bilder entfallen</text></g>
+            <g class="n-doc"><rect class="box" x="748" y="160" width="212" height="92" rx="10"/><text class="t-title" x="764" y="186">render_document</text><text class="t-sub" x="764" y="207">Marker, [Seite N],</text><text class="t-sub" x="764" y="224">Kopf-/Fußzeilen weg,</text><text class="t-sub" x="764" y="241">Unlesbares → Abbruch</text></g>
+            <path class="edge" d="M252 206 H272" marker-end="url(#arr-str)"/>
+            <path class="edge" d="M488 206 H508" marker-end="url(#arr-str)"/>
+            <path class="edge" d="M724 206 H744" marker-end="url(#arr-str)"/>
+            <path class="edge" d="M854 252 V272 H146 V292" marker-end="url(#arr-str)"/>
+            <text class="t-label" x="300" y="288">Weiter wie im lokalen Modus</text>
+            <g class="n-doc"><rect class="box" x="40" y="296" width="212" height="74" rx="10"/><text class="t-title" x="56" y="322">SourceDocument</text><text class="t-sub" x="56" y="343">markierter Markdown-</text><text class="t-sub" x="56" y="360">Text + ConversionStats</text></g>
+            <g class="n-model"><rect class="box" x="276" y="296" width="212" height="74" rx="10"/><text class="t-title" x="292" y="322">save_source_text</text><text class="t-sub" x="292" y="343">optional: neue .md,</text><text class="t-sub" x="292" y="360">atomar</text></g>
+            <g class="n-ai"><rect class="box" x="512" y="296" width="212" height="74" rx="10"/><text class="t-title" x="528" y="322">generate_cards</text><text class="t-sub" x="528" y="343">+ FIGURE_RULES, Chunks,</text><text class="t-sub" x="528" y="360">jedes Kartenmodell</text></g>
+            <g class="n-apkg"><rect class="box" x="748" y="296" width="212" height="74" rx="10"/><text class="t-head" x="764" y="322">APKG schreiben</text><text class="t-sub" x="764" y="343">identisch zu local,</text><text class="t-sub" x="764" y="360">auch mit Unterdecks</text></g>
+            <path class="edge" d="M252 333 H272" marker-end="url(#arr-str)"/>
+            <path class="edge" d="M488 333 H508" marker-end="url(#arr-str)"/>
+            <path class="edge" d="M724 333 H744" marker-end="url(#arr-str)"/>
+          </svg>
+        </div>
+        <figcaption>Nur <code>docling_pdf</code> berührt Docling; <code>render_document</code> erhält konverterneutrale Daten. Tests ersetzen den Docling-Teil über <code>convert_pdf(extractor=…)</code>.</figcaption>
+      </figure>
+      <div class="grid two">
+        <article class="card searchable" data-module="structured_pdf docling_pdf">
+          <h3>Warum Tokens statt Docling-Bildbeschreibung?</h3>
+          <p>Docling kann Abbildungen selbst beschreiben, aber nur mit eigenen Modellen oder OpenAI-kompatiblen Endpunkten. Das Programm lässt Docling deshalb nur Bildausschnitte erzeugen und setzt Tokens an ihre Stelle. Die Beschreibung macht ein eigenes <code>PictureDescriber</code>-Backend. So funktionieren dieselben Profile wie für Karten (alle LiteLLM-Provider), und die Marker haben überall dasselbe Format.</p>
+        </article>
+        <article class="card searchable" data-module="structured_pdf">
+          <h3>Vollständigkeit statt stiller Lücken</h3>
+          <p>Jede Seite bekommt <code>[Seite N]</code>. Nicht ausgewertete Formeln, nicht beschriebene Abbildungen und Docling-Fehlerseiten erscheinen sichtbar im Text und in <code>ConversionStats</code>. Unlesbares bricht ab, solange <code>allow_unreadable</code> nicht gesetzt ist – nach der Aufbereitung, aber vor der ersten KI-Anfrage.</p>
+        </article>
+        <article class="card searchable" data-module="docling_pdf model_storage">
+          <h3>Offline und projektlokal</h3>
+          <p>Docling bekommt <code>artifacts_path=models/docling</code> und lädt dann nichts selbst nach. Bildmodelle lädt <code>LocalPictureDescriber</code> mit <code>local_files_only=True</code>. Downloads gibt es nur in <code>ensure_*</code>, gesteuert über das Manifest <code>models/downloaded.json</code>.</p>
+        </article>
+        <article class="card searchable" data-module="pictures">
+          <h3>Gemessene Grenzen und GPU-Pflicht</h3>
+          <p>Deshalb verlangt der Modus eine GPU (R-158). CPU-Laptop, 12 Threads, 14 GB RAM: eine 15-seitige Vorlesung mit Formeln nach über 50 Minuten nicht fertig; Docling ohne Formeln wenige Sekunden pro Seite; Formelerkennung bis etwa 2 Minuten auf formelreichen Seiten; SmolVLM-256M 15–25 s pro Abbildung, aber unzuverlässig bei technischen Abbildungen. Modelle mit etwa 2B Parametern lösten Swapping aus. Bessere Beschreibungen liefert das Backend <code>profile</code> mit einem größeren Vision-Modell.</p>
+        </article>
+      </div>
+    </section>
+
     <!-- ============================================================ NATIVE -->
     <section id="native">
       <div class="section-heading">
@@ -1647,7 +1840,27 @@ Known subdecks; reuse them when the content fits:
         </article>
       </div>
       <h3 style="margin-top:1.5rem">Laufzeitobjekte</h3>
-      <div class="table-wrap searchable" data-module="cli settings config documents ai native_pdf models apkg">
+      <div class="grid two" style="margin-bottom:1rem">
+        <article class="card searchable" data-module="structured_pdf ai">
+          <h3>Marker im aufbereiteten Text</h3>
+          <p>Einzeilig, damit die Textaufteilung sie nicht zerschneidet. <code>ai.system_prompt_for()</code> erkennt sie und ergänzt <code>FIGURE_RULES</code>.</p>
+          <pre><button class="copy-button" type="button" aria-label="Beispiel kopieren">Kopieren</button><code>[Seite 12]
+## Amplituden- und Phasengang
+$$A ( \omega ) = \left | \underline { F } ( \omega ) \right |$$
+[Abbildung S. 12 – Beschreibung: …; Bildunterschrift: …; Text im Bild: Re jIm]
+[Formel S. 13 – nicht ausgewertet]
+[nicht lesbar: Abbildung S. 14]</code></pre>
+        </article>
+        <article class="card searchable" data-module="model_storage">
+          <h3>Modellordner und Manifest</h3>
+          <pre><button class="copy-button" type="button" aria-label="Struktur kopieren">Kopieren</button><code>models/
+├─ downloaded.json   {"components": ["layout", "picture:…", …]}
+├─ docling/          Layout, TableFormer, CodeFormula, RapidOcr, Bildklassen
+├─ pictures/         HuggingFaceTB--SmolVLM-256M-Instruct/ …
+├─ huggingface/ · torch/ · cache/ · docling-cache/   Caches</code></pre>
+        </article>
+      </div>
+      <div class="table-wrap searchable" data-module="cli settings config documents ai native_pdf models apkg structured_pdf docling_pdf pictures model_storage">
         <table>
           <thead><tr><th>Objekt</th><th>Modul</th><th>Erzeugt von</th><th>Verwendet von</th></tr></thead>
           <tbody>
@@ -1661,6 +1874,12 @@ Known subdecks; reuse them when the content fits:
             <tr><td><code>SubdeckContext</code> / <code>ExistingSubdeck</code></td><td><code>subdecks</code></td><td><code>cli._subdeck_context()</code>, <code>apkg.read_subdeck_context()</code></td><td><code>generate_cards()</code>, <code>generate_native_cards()</code></td></tr>
             <tr><td><code>SubdeckAssigner</code></td><td><code>subdecks</code></td><td><code>generate_cards()</code>, <code>generate_native_cards()</code></td><td><code>_request_batch()</code>, nativer Adapter</td></tr>
             <tr><td><code>ExportResult</code></td><td><code>apkg</code></td><td><code>create_apkg()</code>, <code>append_apkg()</code></td><td><code>cli._print_result()</code></td></tr>
+            <tr><td><code>ConversionSettings</code></td><td><code>settings</code></td><td><code>resolve_generate_settings()</code></td><td><code>cli._generate_structured_cards()</code></td></tr>
+            <tr><td><code>ConversionOptions</code></td><td><code>structured_pdf</code></td><td><code>_resolve_conversion()</code></td><td><code>convert_pdf()</code>, <code>render_document()</code></td></tr>
+            <tr><td><code>ExtractedPdf</code> / <code>ExtractedPage</code> / <code>PictureInfo</code></td><td><code>structured_pdf</code></td><td><code>docling_pdf.extract_pdf()</code> oder ein Test-Extraktor</td><td><code>render_document()</code></td></tr>
+            <tr><td><code>StructuredPdf</code> / <code>ConversionStats</code></td><td><code>structured_pdf</code></td><td><code>render_document()</code></td><td><code>cli</code> (Text an <code>generate_cards()</code>, Statistik an <code>_print_conversion()</code>)</td></tr>
+            <tr><td><code>PictureContext</code></td><td><code>pictures</code></td><td><code>structured_pdf._describe()</code></td><td>jedes <code>PictureDescriber</code>-Backend</td></tr>
+            <tr><td><code>ModelStorage</code></td><td><code>model_storage</code></td><td><code>configure_model_storage()</code></td><td><code>docling_pdf</code>, <code>cli</code></td></tr>
           </tbody>
         </table>
       </div>
@@ -1693,6 +1912,14 @@ Known subdecks; reuse them when the content fits:
             <tr><td><code>apkg.create_apkg</code></td><td>alle (genanki-Grenze)</td><td>Could not create</td></tr>
             <tr><td><code>apkg._open_collection</code> · <code>append_apkg</code></td><td>alle (Anki-Grenze)</td><td>Anki could not open the collection · Could not extend</td></tr>
             <tr><td><code>apkg._extract_collection</code> · <code>_replace_collection</code></td><td><code>OSError</code>, <code>BadZipFile</code>, <code>ZstdError</code></td><td>Could not read APKG · Could not save extended APKG</td></tr>
+            <tr><td><code>docling_pdf.require_docling</code> · <code>validate_pdf_input</code></td><td>– (prüfen vor jeder Arbeit)</td><td>The structured PDF mode needs the optional Docling extra … · The structured PDF mode only accepts .pdf files</td></tr>
+            <tr><td><code>docling_pdf.require_accelerator</code></td><td>– (prüft vor Downloads und Aufbereitung)</td><td>The structured PDF mode needs a GPU accelerator … --pdf-mode native … --pdf-mode local … --allow-cpu</td></tr>
+            <tr><td><code>docling_pdf.ensure_conversion_models</code> · <code>ensure_picture_model</code></td><td><code>OSError</code>, <code>ValueError</code>, <code>RuntimeError</code></td><td>Could not download Docling models · Could not download picture model</td></tr>
+            <tr><td><code>docling_pdf.extract_pdf</code></td><td><code>OSError</code>, <code>ValueError</code>, <code>RuntimeError</code> · leeres Ergebnis</td><td>Docling could not convert</td></tr>
+            <tr><td><code>structured_pdf._check_unreadable</code></td><td>– (zählt Lücken)</td><td>N PDF elements could not be read … Use --allow-unreadable</td></tr>
+            <tr><td><code>settings._picture_ai</code></td><td>– (prüft das Bildprofil)</td><td>The picture backend 'profile' needs a model profile · Model profile '…' must set image_input: true</td></tr>
+            <tr><td><code>pictures.LocalPictureDescriber</code> · <code>ProfilePictureDescriber</code></td><td><code>RuntimeError</code>, <code>ValueError</code>, <code>TypeError</code> · alle (Providergrenze)</td><td>Local picture model failed on page N · Picture model request failed for page N</td></tr>
+            <tr><td><code>structured_pdf.save_source_text</code></td><td>vorhandene Datei · <code>OSError</code></td><td>Source text file already exists · Could not save source text</td></tr>
             <tr><td><code>cli.run</code></td><td><code>FlashcardError</code></td><td><code>Fehler:</code> auf stderr, Exit-Code 1</td></tr>
           </tbody>
         </table>
@@ -1731,6 +1958,8 @@ Known subdecks; reuse them when the content fits:
             <li>Unterdeck-Modus mit <code>--extend</code>: Unterdecknamen und je bis zu fünf Beispielfragen gehen zusätzlich an den Provider; die CLI kündigt das an.</li>
             <li>Kein stiller Fallback auf lokale Extraktion oder ein anderes Modell.</li>
             <li>Quelltext steht im Prompt zwischen <code>&lt;source_document&gt;</code>-Begrenzern.</li>
+            <li><code>structured</code>: Docling läuft mit <code>enable_remote_services=False</code>; die PDF verlässt den Rechner nie. Nur das Bildmodell-Backend <code>profile</code> sendet Bildausschnitte, nach Prüfung von <code>image_input</code> und mit Ankündigung.</li>
+            <li>Downloads und Caches landen ausschließlich im Modellordner; Telemetrie von Hugging Face ist abgeschaltet.</li>
           </ul>
         </article>
         <article class="card searchable" data-module="apkg models config cli">
@@ -1751,30 +1980,34 @@ Known subdecks; reuse them when the content fits:
       <div class="section-heading">
         <p class="eyebrow">tests/</p>
         <h2>Teststrategie und Test-Nahtstellen</h2>
-        <p>99 Tests in neun Dateien, eine Datei pro Modul (<code>cli</code> deckt <code>__main__</code> mit ab). Der Standardlauf braucht weder API-Schlüssel noch Netzwerk: KI-Antworten werden simuliert, der einzige HTTP-Test läuft gegen einen lokalen Server auf <code>127.0.0.1</code>.</p>
+        <p>142 Tests in zwölf Dateien (plus ein gesondert markierter Docling-Integrationstest), in der Regel eine Datei pro Modul (<code>cli</code> deckt <code>__main__</code> mit ab, <code>test_docling_pdf</code> auch <code>model_storage</code>). Der Standardlauf braucht weder API-Schlüssel noch Netzwerk noch Docling: KI-Antworten, Docling, Bildmodelle und Downloads werden simuliert, der einzige HTTP-Test läuft gegen einen lokalen Server auf <code>127.0.0.1</code>.</p>
       </div>
       <pre><button class="copy-button" type="button" aria-label="Befehle kopieren">Kopieren</button><code>.venv/bin/python -m ruff check src tests
 .venv/bin/python -m ruff format --check src tests
 .venv/bin/python -m pytest
-.venv/bin/python -m pytest tests/test_apkg.py -k extend   # gezielt</code></pre>
-      <div class="table-wrap searchable" data-module="cli settings config documents ai native_pdf models apkg" style="margin-top:1rem">
+.venv/bin/python -m pytest tests/test_apkg.py -k extend   # gezielt
+.venv/bin/python -m pytest -m docling                     # echtes Docling, opt-in</code></pre>
+      <div class="table-wrap searchable" data-module="cli settings config documents ai native_pdf models apkg structured_pdf pictures docling_pdf model_storage" style="margin-top:1rem">
         <table>
           <thead><tr><th>Datei</th><th>Tests</th><th>Schwerpunkte</th></tr></thead>
           <tbody>
-            <tr><td><code>test_documents.py</code></td><td>11</td><td>HTML ohne Skripte, DOCX mit Tabellen, leere und nicht unterstützte Dateien, beschädigte PDF, Überlappung beim Aufteilen, Standardüberlappung für Abschnittsgrößen von 1000 bis 24000 (parametrisiert), Prüfung einer ausdrücklichen Überlappung</td></tr>
+            <tr><td><code>test_documents.py</code></td><td>12</td><td>HTML ohne Skripte, DOCX mit Tabellen, leere und nicht unterstützte Dateien, beschädigte PDF, Überlappung beim Aufteilen, Standardüberlappung für Abschnittsgrößen von 1000 bis 24000 (parametrisiert), Prüfung einer ausdrücklichen Überlappung, passende Markdown-Tabelle bleibt in einem Chunk</td></tr>
             <tr><td><code>test_models.py</code></td><td>6</td><td>JSON-Roundtrip, ungültiges JSON, Tags ohne Leerzeichen, Deduplizierung, Unterdeck-Validierung, JSON mit optionalem <code>subdeck</code></td></tr>
-            <tr><td><code>test_ai.py</code></td><td>5</td><td>Limit über Abschnitte, Unlimited-Prompt ohne erfundenes Limit, ungültige KI-Antwort, Unterdeck-Schema und neue Unterdecks über Chunks hinweg, Verwerfen im normalen Modus</td></tr>
+            <tr><td><code>test_ai.py</code></td><td>6</td><td>Limit über Abschnitte, Unlimited-Prompt ohne erfundenes Limit, ungültige KI-Antwort, Unterdeck-Schema und neue Unterdecks über Chunks hinweg, Verwerfen im normalen Modus, <code>FIGURE_RULES</code> nur bei markiertem Text</td></tr>
+            <tr><td><code>test_structured_pdf.py</code></td><td>14</td><td>Seitenmarker, Abbildungsmarker mit Bildunterschrift und Text im Bild, Logos/kleine/wiederkehrende Bilder, Kopf- und Fußzeilen, CJK-Rauschen, Abbruch und Platzhalter bei Unlesbarem, Formeln ausgelassen, Backend <code>none</code>, leeres Ergebnis</td></tr>
+            <tr><td><code>test_pictures.py</code></td><td>5</td><td>gemeinsamer Prompt, lazy Laden und Englisch beim lokalen Modell, Fehlerübersetzung, LiteLLM-Anfrage mit PNG-Data-URL und Profildaten, Providerfehler</td></tr>
+            <tr><td><code>test_docling_pdf.py</code></td><td>11</td><td>GPU-Erkennung (CUDA, MPS) und Abbruch ohne GPU mit Hinweis auf <code>native</code>/<code>local</code>, kein Download ohne GPU, Cache-Variablen im Modellordner, Manifest, Installationshinweis, Docling- und Bildmodell-Downloads nur einmal (gefälschte Module), Extraktor ohne Docling, nur PDF</td></tr>
             <tr><td><code>test_subdecks.py</code></td><td>4</td><td>Neutraler Normalmodus, Regeln und Kontextabschnitt, Namensvereinheitlichung und Merken neuer Unterdecks, leerer Kontext</td></tr>
             <tr><td><code>test_native_pdf.py</code></td><td>17</td><td>Unterdeck-Modus mit Regeln, Kontext und Schema, Allowlist inklusive <code>gpt-4o-mini</code>-Snapshot, Optionsprüfung vor dem Upload, Beispielprofil gegen die echte SDK-Signatur, Upload/Parse/Delete, kein Upload bei falschem Modell, Nicht-PDF oder 50 MiB, Löschen nach Fehler, Löschwarnung, echtes OpenAI-SDK gegen lokalen Server</td></tr>
-            <tr><td><code>test_config.py</code></td><td>15</td><td>fehlende/leere/explizite Datei, ungültiges Schema und Secrets (parametrisiert), Profile, atomares Speichern, Gültigkeit von <code>config.example.yaml</code></td></tr>
-            <tr><td><code>test_settings.py</code></td><td>9</td><td>Unterdeck-Priorität, YAML-Pfade, Prioritäten, Altvariablen ohne Wirkung, Profil-Fallbacks, Export-Defaults, <code>ANKI_CONFIG</code>, Diagnose ohne Secrets</td></tr>
+            <tr><td><code>test_config.py</code></td><td>16</td><td>fehlende/leere/explizite Datei, ungültiges Schema und Secrets (parametrisiert), Profile, atomares Speichern, Gültigkeit von <code>config.example.yaml</code>, <code>pdf_conversion</code>-Defaults und -Validierung, <code>image_input</code></td></tr>
+            <tr><td><code>test_settings.py</code></td><td>12</td><td>Konvertierungsoptionen und Pfade (Default → YAML → CLI), Bildprofil mit <code>image_input</code>, Diagnose ohne Bildschlüssel, Unterdeck-Priorität, YAML-Pfade, Prioritäten, Altvariablen ohne Wirkung, Profil-Fallbacks, Export-Defaults, <code>ANKI_CONFIG</code>, Diagnose ohne Secrets</td></tr>
             <tr><td><code>test_apkg.py</code></td><td>9</td><td>Unterdecks neu und erweitert, Duplikate im Decks-Baum, unveränderter Normalmodus, Kontext lesen ohne Änderung, Neu/Erweitern/Inspizieren, Lernstand bleibt, echter moderner Anki-Export mit zstd, HTML-Escaping, Medien bleiben</td></tr>
-            <tr><td><code>test_cli.py</code></td><td>23</td><td><code>--chunk-size 1000</code> und <code>1001</code> bis zur simulierten KI, Unterdeck-Kontext bei <code>--extend</code>, Export mit Unterdecks, <code>config show</code>, Hilfeseiten, Exit-Codes, alle Befehle, YAML-Integration, nativ ohne lokale Extraktion und umgekehrt, <code>.env</code>, Subprozess ohne Traceback</td></tr>
+            <tr><td><code>test_cli.py</code></td><td>30</td><td>Abbruch ohne GPU vor Modellen und Aufbereitung, strukturierter Modus ohne Docling (Statistik, gespeicherter Text, kein <code>read_document</code>/Upload), Abweisung vor Docling (Nicht-PDF, vorhandene Textdatei), <code>models download</code> mit YAML-relativem Ordner, Hilfe zu den neuen Optionen und zu <code>models download</code>, <code>--chunk-size 1000</code> und <code>1001</code> bis zur simulierten KI, Unterdeck-Kontext bei <code>--extend</code>, Export mit Unterdecks, <code>config show</code>, Hilfeseiten, Exit-Codes, alle Befehle, YAML-Integration, nativ ohne lokale Extraktion und umgekehrt, <code>.env</code>, Subprozess ohne Traceback</td></tr>
           </tbody>
         </table>
       </div>
       <h3 style="margin-top:1.5rem">Die Nahtstellen zum Simulieren</h3>
-      <div class="table-wrap searchable" data-module="ai native_pdf cli">
+      <div class="table-wrap searchable" data-module="ai native_pdf cli docling_pdf pictures structured_pdf model_storage">
         <table>
           <thead><tr><th>Grenze</th><th>Ersetzt wird</th><th>Wofür</th></tr></thead>
           <tbody>
@@ -1782,6 +2015,10 @@ Known subdecks; reuse them when the content fits:
             <tr><td>OpenAI-SDK</td><td><code>anki_flashcards.native_pdf._openai_client</code></td><td><code>FakeOpenAIClient</code> mit <code>files</code> und <code>responses</code>; protokolliert Upload und Löschung</td></tr>
             <tr><td>Adapter</td><td><code>generate_native_cards(adapter=…)</code></td><td>Injektion über das Protocol, ganz ohne Monkeypatching</td></tr>
             <tr><td>CLI → Kern</td><td><code>anki_flashcards.cli.generate_cards</code>, <code>.read_document</code>, <code>.generate_native_cards</code></td><td>CLI-Abläufe ohne KI; Nachweis, dass nativ nie lokal extrahiert und lokal nie nativ hochlädt</td></tr>
+            <tr><td>GPU</td><td>gefälschtes Modul <code>torch</code> in <code>sys.modules</code> bzw. <code>anki_flashcards.cli.require_accelerator</code> und <code>docling_pdf.available_accelerator</code></td><td>GPU-Pflicht und <code>--allow-cpu</code> ohne echte GPU prüfen</td></tr>
+            <tr><td>Docling</td><td><code>convert_pdf(extractor=…)</code> bzw. <code>anki_flashcards.cli.convert_pdf</code>, <code>.require_docling</code>, <code>.configure_model_storage</code>, <code>.create_describer</code></td><td>Strukturierter Ablauf ohne Docling und ohne Modelle</td></tr>
+            <tr><td>Downloads</td><td>gefälschte Module <code>docling.utils.model_downloader</code> und <code>huggingface_hub</code> in <code>sys.modules</code></td><td>Download-Logik und Manifest ohne Netzwerk</td></tr>
+            <tr><td>Bildmodelle</td><td><code>LocalPictureDescriber(loader=…)</code>, <code>anki_flashcards.pictures._completion</code></td><td>Prompts und Anfragen ohne Transformers oder Provider</td></tr>
           </tbody>
         </table>
       </div>
@@ -1864,6 +2101,17 @@ Known subdecks; reuse them when the content fits:
             <li>Tests mit Fake-Client; kein echter Upload im Standardlauf.</li>
           </ol>
         </article>
+        <article class="card searchable" data-module="pictures docling_pdf config">
+          <span class="step-number">F</span>
+          <h3>Neues Bildmodell-Backend</h3>
+          <ol class="checklist">
+            <li><code>pictures.py</code>: Klasse mit <code>describe(image, context) → str</code>; Prompt über <code>description_prompt(context)</code>, damit Marker und Regeln gleich bleiben. Leerer Text heißt „unlesbar“.</li>
+            <li>Bibliothek nur innerhalb der Klasse importieren; Bibliotheksfehler in <code>FlashcardError</code> mit Seitenzahl übersetzen.</li>
+            <li><code>config.PictureBackend</code> um einen Wert erweitern und <code>docling_pdf.create_describer()</code> zuordnen; Datenübertragung wie bei <code>profile</code> ankündigen.</li>
+            <li>Downloads nur über <code>model_storage</code> in den Modellordner; Manifest-Komponente vergeben.</li>
+            <li><code>structured_pdf</code>, <code>ai</code> und <code>apkg</code> bleiben unverändert. Tests mit Fake-Loader oder ersetzter Grenzfunktion.</li>
+          </ol>
+        </article>
       </div>
 
       <article class="card searchable" data-module="ai apkg documents models settings" style="margin-top:1rem">
@@ -1929,6 +2177,31 @@ print(result.added, result.skipped)</code></pre>
           <h3><code>openai</code> ist nicht direkt deklariert</h3>
           <p><code>native_pdf.py</code> importiert das <code>openai</code>-SDK, <code>pyproject.toml</code> nennt es aber nicht. Es wird transitiv über <code>litellm</code> installiert (aktuell 3.52.0). Ein Wechsel der LiteLLM-Version kann das SDK unbemerkt ändern.</p>
         </article>
+        <article class="card searchable" data-module="docling_pdf">
+          <span class="tag doc">Randfall</span>
+          <h3>OCR nutzt nur die erste Sprache</h3>
+          <p>RapidOCR erkennt je Lauf eine Sprache; <code>_converter()</code> übergibt deshalb nur den ersten Eintrag aus <code>ocr_languages</code> (<code>iso:de</code>). Das verwendete mehrsprachige PP-OCRv6-Modell liest damit auch englischen Text; eine echte Mehrsprachen-Kombination findet nicht statt.</p>
+        </article>
+        <article class="card searchable" data-module="pictures">
+          <span class="tag err">Abweichung</span>
+          <h3>Standard-Bildmodell beschreibt technische Abbildungen schlecht</h3>
+          <p>R-155 verlangt <code>local</code> als Standard. Das Standardmodell SmolVLM-256M läuft auf der CPU, erkannte im Test aber Schaltbilder und leere Koordinatensysteme nicht und erfand Inhalte. Größere lokale Modelle (etwa 2B) sprengen den Arbeitsspeicher typischer Laptops. Empfohlen sind <code>profile</code> mit einem größeren Vision-Modell oder <code>none</code>.</p>
+        </article>
+        <article class="card searchable" data-module="docling_pdf">
+          <span class="tag doc">Randfall</span>
+          <h3>Integrierte AMD-GPUs zählen meist nicht</h3>
+          <p><code>available_accelerator()</code> verlässt sich auf PyTorch. Integrierte Radeon-GPUs wie Vega <code>gfx90c</code> unterstützt ROCm nicht offiziell; ein ROCm-PyTorch erkennt sie nur mit experimentellem <code>HSA_OVERRIDE_GFX_VERSION</code>. Mit der CPU-Variante von PyTorch gibt es nie eine GPU – dann hilft nur <code>--allow-cpu</code>.</p>
+        </article>
+        <article class="card searchable" data-module="structured_pdf docling_pdf">
+          <span class="tag doc">Randfall</span>
+          <h3>Handout-Folien werden ganz zur Abbildung</h3>
+          <p>Bei Handouts mit zwei Folien pro Seite stuft Docling eine ganze Folie oft als Abbildung ein. Ihr Text bleibt über „Text im Bild“ erhalten, das Bildmodell beschreibt aber die ganze Folie. Ohne gutes Bildmodell ist <code>--picture-backend none</code> hier sinnvoller.</p>
+        </article>
+        <article class="card searchable" data-module="structured_pdf">
+          <span class="tag doc">Randfall</span>
+          <h3>Kein Zwischenspeicher für aufbereitete PDFs</h3>
+          <p>R-154 (kann) ist nicht umgesetzt: Jeder Lauf bereitet neu auf. Zur Wiederverwendung dient <code>--source-text</code> mit anschließendem <code>--pdf-mode local</code> auf der gespeicherten <code>.md</code>.</p>
+        </article>
       </div>
     </section>
 
@@ -1951,6 +2224,10 @@ print(result.added, result.skipped)</code></pre>
         <article class="card searchable" data-module="documents ai"><h3>Chunk</h3><p>Ein Abschnitt des normalisierten Textes, der in einer einzelnen Modellanfrage verarbeitet wird.</p></article>
         <article class="card searchable" data-module="ai"><h3>Kontingent</h3><p>Die Höchstzahl an Karten, die der Prompt für einen Chunk verlangt.</p></article>
         <article class="card searchable" data-module="subdecks apkg"><h3>Unterdeck-Modus</h3><p>Optionaler Modus, in dem das Modell jede Karte einem Kapitel-Unterdeck <code>Deck::Kapitel</code> zuordnet. Gesteuert durch <code>SubdeckAssigner</code>.</p></article>
+        <article class="card searchable" data-module="docling_pdf structured_pdf"><h3>Docling</h3><p>Open-Source-Bibliothek (MIT) von IBM, die Dokumente mit lokalen Modellen für Layout, OCR, Tabellen und Formeln in ein strukturiertes <code>DoclingDocument</code> und Markdown umwandelt.</p></article>
+        <article class="card searchable" data-module="pictures"><h3>Bild-Sprach-Modell (VLM)</h3><p>Ein Modell, das Bild und Text zusammen verarbeitet. Hier beschreibt es Abbildungen in Worten.</p></article>
+        <article class="card searchable" data-module="docling_pdf structured_pdf"><h3>Bild-Token</h3><p>Platzhalter <code>⟦picture:i⟧</code> im Seiten-Markdown, den <code>render_document</code> durch den Abbildungsmarker ersetzt.</p></article>
+        <article class="card searchable" data-module="model_storage"><h3>Manifest</h3><p><code>models/downloaded.json</code>: Liste vollständig geladener Modellkomponenten. Was dort steht, wird nicht erneut geladen.</p></article>
         <article class="card searchable" data-module="settings"><h3>Herkunft (source)</h3><p>Die Schicht, aus der ein effektiver Wert stammt: <code>built-in</code>, <code>config</code> oder <code>cli</code>.</p></article>
       </div>
     </section>
