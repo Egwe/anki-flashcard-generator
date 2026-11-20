@@ -1,0 +1,7 @@
+Gibt es? Damit? Falls ein PDF sehr viele Bilder enthält. Diese Informationen nicht verloren gehen, wenn das PDF Fall bearbeitet wird. Beziehungsweise von der KI gelesen werden soll. Jetzt ist es so, dass auch bei dem Provider, der das key Modell ki-modell quasi nutzt. Muss irgendwie? Dieses PDF Fall bearbeitet werden und der Inhalt extrahiert werden.
+
+Wenn man jetzt viele Bilder und Tabellen drin hat, dann funktioniert das. Bisschen komplizierter oder bisschen anders? Und ich möchte dafür im Prinzip auch eine lokale Lösung haben. Die quasi in der Lage ist. Das PDF file soweit vorzubereiten, dass nur noch Text an das ki-modell geht. Und dabei muss es halt in der Lage sein irgendwie dieses PDF tool.
+
+Ja, den Inhalt aus dem PDF Tool wirklich zu extrahieren. Und da gilt es quasi eine Lösung für zu suchen. Ich weiß dass es Da im Internet schon einige implementationen dafür gibt. Mit denen man das machen kann. Die teilweise auch schon. KI nutzen, aber im Vorfeld quasi. Und? Ja, wichtig ist einfach nur, dass der Inhalt aus dem PDF wirklich vollständig Und möglichst umfangreich in.
+
+Direkten Text umgewandelt werden kann. Den KI dann halt nutzen kann. Ohne? Sich nur des Textes in dem PDF Fall zu bedienen? Und das ist die die Aufgabe. Daraus gilt es requirements abzuleiten Die konkret dieses Verhalten beschreiben und dann zu implementieren.

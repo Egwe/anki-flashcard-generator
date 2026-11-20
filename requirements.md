@@ -2,7 +2,7 @@
 
 ## 1. Zweck und Geltung
 
-Dieses Dokument bündelt alle fachlichen und technischen Anforderungen aus [req.md](./req.md), [req-2.md](./req-2.md), [req-3.md](./req-3.md) und [req-4.md](./req-4.md). Es ergänzt die Entscheidungen und Funktionen, die bereits beim ersten MVP entstanden sind. Die vier Ausgangsdateien bleiben als Originalvorgaben erhalten; dieses Dokument ist die konsolidierte Arbeitsgrundlage.
+Dieses Dokument bündelt alle fachlichen und technischen Anforderungen aus [req.md](./req.md), [req-2.md](./req-2.md), [req-3.md](./req-3.md), [req-4.md](./req-4.md) und [req-5.md](./req-5.md). Es ergänzt die Entscheidungen und Funktionen, die bereits beim ersten MVP entstanden sind. Die fünf Ausgangsdateien bleiben als Originalvorgaben erhalten; dieses Dokument ist die konsolidierte Arbeitsgrundlage.
 
 Die Begriffe **muss**, **soll** und **kann** sind verbindlich zu unterscheiden:
 
@@ -51,8 +51,8 @@ Nicht unterstützte Endungen, beschädigte Dokumente und Dokumente ohne extrahie
 **R-012 – Textaufteilung · muss · umgesetzt**
 Langer extrahierter Text muss für Modellaufrufe in überlappende Abschnitte aufgeteilt werden. Standard sind 24.000 Zeichen pro Abschnitt und 500 Zeichen Überlappung, höchstens jedoch ein Viertel der Abschnittsgröße (bei 1.000 Zeichen also 250). Die CLI erlaubt Abschnittsgrößen von 1.000 bis 100.000 Zeichen; jede Größe aus diesem Bereich muss ohne Fehler verarbeitet werden. Absätze und Wortgrenzen sollen bevorzugt werden; jeder Quelltext muss trotz Überschneidungen vollständig berücksichtigt werden.
 
-**R-013 – OCR · kann · später**
-Gescannte PDFs ohne Textebene benötigen derzeit eine externe OCR. Eine eingebaute OCR kann später ergänzt werden.
+**R-013 – OCR · muss · offen über R-142**
+Gescannte PDFs ohne Textebene benötigen derzeit eine externe OCR. Mit req-5 wird eine eingebaute OCR im strukturierten PDF-Modus verlangt (R-142); der Modus `local` bleibt bei der eingebetteten Textebene.
 
 **R-014 – Native Dokumentverarbeitung · muss · umgesetzt für geprüfte OpenAI-Modelle**
 Die lokale Extraktion muss für geeignete Modelle optional durch die native Verarbeitung der Originaldatei beim Provider ersetzt werden können.
@@ -295,18 +295,91 @@ Tests decken Prompt-Anweisungen und Kontext, Weitergabe neuer Unterdecks zwische
 **R-138 – Dokumentation · muss · umgesetzt**
 README, Benutzerhandbuch, Entwicklerhandbuch, CLI-Hilfe und `config.example.yaml` beschreiben Modus, Ablauf für mehrere Dokumente, Kontextübertragung an den Provider, Grenzen und Beispiele.
 
-## 12. Spätere Erweiterungen
+## 12. Vollständige lokale PDF-Aufbereitung (req-5)
+
+Ziel aus [req-5.md](./req-5.md): Auch PDFs mit vielen Abbildungen, Diagrammen und Tabellen – typisch für Vorlesungsfolien und Skripte – sollen ohne Informationsverlust in Karten einfließen. Dazu wird die PDF lokal so vollständig wie möglich in Text umgewandelt; an das Kartenmodell geht danach nur noch Text. Für die Umwandlung werden vorhandene Open-Source-Werkzeuge genutzt, die selbst lokale KI-Modelle für Layout, Tabellen, Texterkennung und Bilder einsetzen. Das Problem wird nicht von Grund auf neu gelöst.
+
+**Kernproblem.** Der Modus `local` liest mit pypdf nur die eingebettete Textebene. Dabei geht verloren:
+
+- Text, der nur als Bild vorliegt: gescannte Seiten, Screenshots, als Bild eingefügte Folieninhalte;
+- Information, die nur grafisch dargestellt ist: Diagramme, Schaltpläne, Abbildungen samt Achsen und Beschriftungen;
+- die Struktur von Tabellen: Zellen werden zu Fließtext ohne Zeilen- und Spaltenbezug;
+- Formeln, deren Symbole, Hoch- und Tiefstellungen in der Textebene oft verstümmelt sind;
+- die Lesereihenfolge bei mehrspaltigem Layout sowie die Trennung von Kopf- und Fußzeilen.
+
+Seiten ohne Textebene werden heute stillschweigend übersprungen; nur ein vollständig textloses Dokument führt zu einem Fehler. Der Modus `native` (Abschnitt 10) gibt dem Modell zusätzlich Seitenbilder, funktioniert aber nur für geprüfte OpenAI-Modelle, überträgt die Originaldatei und steht lokalen Textmodellen nicht zur Verfügung.
+
+**Machbarkeit.** Text, Lesereihenfolge, Tabellen und Texterkennung sind mit etablierten Bibliotheken zuverlässig und auf einer normalen CPU lösbar. Formeln sind lösbar, verlangsamen die Aufbereitung aber deutlich. Abbildungen lassen sich nur annähernd in Text übersetzen: Die Beschreibung stammt von einem Bild-Sprach-Modell (VLM), ihre Qualität hängt stark von dessen Größe ab, und sie kann Fehler enthalten. Kleine Modelle laufen auf der CPU, liefern aber eher kurze Bildunterschriften; für technische Diagramme sind größere Modelle über einen lokalen Endpunkt wie Ollama oder auf einer GPU realistisch. „Vollständig“ bedeutet daher: Jede Seite und jedes Element ist im Text vertreten oder als nicht lesbar gemeldet – nicht, dass jede grafische Information verlustfrei übertragen wird. Der Preis sind schwere optionale Abhängigkeiten (PyTorch, Modelldateien von einigen hundert MB bis zu mehreren GB) und Laufzeiten im Bereich von Sekunden pro Seite statt Millisekunden, mit Bildbeschreibung auf der CPU auch deutlich mehr.
+
+**Voruntersuchung** (Stand 20.11.2026, Quellen: offizielle Projektseiten, READMEs und PyPI; endgültige Auswahl nach R-141):
+
+| Kandidat | Lizenz | Stärken | Einschränkungen |
+|---|---|---|---|
+| Docling 2.151.1 | MIT | Layoutanalyse, Tabellenstruktur (TableFormer), OCR (u. a. RapidOCR, EasyOCR, Tesseract), Formeln als LaTeX, Bildbeschreibung mit lokalen VLMs (SmolVLM-256M, Granite Vision 2B, Qwen2.5-VL-3B) oder über einen OpenAI-kompatiblen Endpunkt wie Ollama, Markdown-Ausgabe, CPU-Betrieb, Python 3.10–3.14, auch DOCX/PPTX | PyTorch und Modell-Downloads; Bildbeschreibung auf der CPU langsam |
+| Marker 2.2.0 | Code Apache 2.0; Modellgewichte modifizierte OpenRAIL-M, kostenfrei nur für Forschung, private Nutzung und Unternehmen unter 5 Mio. USD Umsatz/Finanzierung | hohe Qualität und Geschwindigkeit, Tabellen, Formeln, Bildbeschreibung über `--use_llm` | Gewichtslizenz; Bildbeschreibung über LLM-Dienste mit Gemini als Standard, Ollama möglich |
+| MinerU | eigene, Apache-2.0-basierte Lizenz ab 3.1 (zuvor AGPL) | stark bei wissenschaftlichen Dokumenten und Formeln, CPU-Pipeline | schwerer Stack; VLM-Backend benötigt eine GPU; Lizenz vor Nutzung prüfen |
+| PyMuPDF4LLM | AGPL oder kommerziell (über PyMuPDF) | leicht und schnell, Markdown-Tabellen, automatische OCR über Tesseract | keine Bildbeschreibung; AGPL |
+| olmOCR | Apache 2.0 | VLM überführt ganze Seiten in Text | NVIDIA-GPU mit mindestens 12 GB Speicher erforderlich |
+
+Cloud-Dienste zur Dokumentanalyse widersprechen dem lokalen Ziel und werden nicht betrachtet.
+
+**R-140 – Strukturierter PDF-Modus · muss · offen**
+Ein dritter, ausdrücklich wählbarer Wert für `pdf_mode` (Arbeitstitel `structured`, CLI `--pdf-mode structured`) wandelt eine PDF lokal in strukturierten Text (Markdown) um. Dieser Text durchläuft danach unverändert dieselbe Textaufteilung, Generierung, Validierung, Duplikaterkennung, Unterdeck-Zuordnung und APKG-Ausgabe wie im Modus `local`. Der Modus funktioniert daher mit jedem Kartenmodell, auch mit reinen Textmodellen und lokal über Ollama. `local` bleibt Standard, `native` bleibt unverändert. Wie bei `native` gilt der Modus nur für `.pdf`; andere Formate werden mit einer verständlichen Meldung abgelehnt, bis R-153 umgesetzt ist.
+
+**R-141 – Bewährte Bibliothek hinter eigenem Adapter · muss · offen**
+Die Aufbereitung nutzt eine etablierte Open-Source-Bibliothek und wird nicht selbst entwickelt. Sie liegt hinter einer kleinen eigenen Schnittstelle in der Dokumentschicht (Eingabe: PDF-Pfad und Optionen; Ausgabe: `SourceDocument` mit Markdown-Text und einer Statistik), damit Bibliothek und Modelle austauschbar und Tests ohne die Bibliothek möglich bleiben. Auswahlkriterien: Lizenz ohne Copyleft- oder Umsatzbeschränkung für den Standardweg; Python 3.11 bis zur aktuell eingesetzten Version; Betrieb auf der CPU ohne Pflicht-GPU; lokal ausführbare Modelle; Tabellen, OCR, Bildbeschreibung und Markdown-Ausgabe. Vor der Implementierung werden die Kandidaten an einer kleinen Referenzsammlung verglichen (Folien mit Diagrammen, Tabellen, Formeln, gescannte Seiten, mehrspaltiger Text). Auswahl, Version, Quelle, Prüfdatum, Laufzeit und Speicherbedarf werden dokumentiert. Nach der Voruntersuchung ist Docling der bevorzugte Kandidat.
+
+**R-142 – Text in Bildern und gescannte Seiten · muss · offen**
+Seiten und Bildbereiche ohne verwertbare Textebene werden per Texterkennung (OCR) gelesen. Mindestens Deutsch und Englisch werden unterstützt; die Sprachen sind konfigurierbar. Eine vorhandene Textebene wird bevorzugt. OCR für alle Seiten kann ausdrücklich erzwungen werden, etwa bei einer fehlerhaften Textebene.
+
+**R-143 – Abbildungen als Text · muss · offen**
+Abbildungen wie Diagramme, Schaltpläne, Grafiken und Fotos werden von einem lokal laufenden Bild-Sprach-Modell sachlich beschrieben: dargestellter Inhalt, Beschriftungen, Achsen, Werte und Beziehungen, ohne Vermutungen. Die Beschreibung steht an der Stelle der Abbildung im Text und ist eindeutig als maschinelle Beschreibung mit Seitenzahl markiert, beispielsweise `[Abbildung S. 12 – Beschreibung: …]`. Text innerhalb der Abbildung wird zusätzlich per OCR übernommen. Das Kartenmodell erhält die Anweisung, dass solche Beschreibungen maschinell erstellt sind und keine darüber hinausgehenden Fakten erfunden werden dürfen. Das Beschreibungsmodell ist konfigurierbar: ein kleines eingebettetes Modell oder ein lokaler OpenAI-kompatibler Endpunkt wie Ollama. Die Bildbeschreibung kann ausdrücklich abgeschaltet werden; Abbildungen erscheinen dann nur als Platzhalter mit ihrem OCR-Text, und die Ausgabe weist darauf hin. Rein dekorative Elemente wie Logos sollen erkannt und ausgelassen werden.
+
+**R-144 – Tabellen und Lesereihenfolge · muss · offen**
+Tabellen werden mit Zeilen und Spalten als Markdown-Tabelle ausgegeben. Mehrspaltige Seiten erscheinen in natürlicher Lesereihenfolge. Überschriften bleiben als Markdown-Überschriften erhalten, damit Kapitelstruktur und Unterdeck-Zuordnung (R-131) davon profitieren. Wiederkehrende Kopf- und Fußzeilen sollen entfernt werden. Die Textaufteilung (R-012) soll Tabellen und Abbildungsbeschreibungen nicht trennen, solange sie in einen Abschnitt passen.
+
+**R-145 – Formeln · soll · offen**
+Formeln werden als LaTeX erkannt und in den Text übernommen. Die Formelerkennung ist abschaltbar, weil sie die Aufbereitung deutlich verlangsamt.
+
+**R-146 – Vollständigkeit und kein stiller Verlust · muss · offen**
+Jede Seite ist im Ergebnis mit einem Seitenmarker `[Seite N]` vertreten. Nach der Aufbereitung meldet die CLI die Zahl der Seiten, der per OCR gelesenen Seiten, der Tabellen, der beschriebenen und der ausgelassenen Abbildungen sowie der Formeln. Kann ein Element nicht gelesen oder beschrieben werden, bricht der Lauf mit einer verständlichen Meldung ab; nur mit einer ausdrücklichen Option wird stattdessen ein gemeldeter Platzhalter `[nicht lesbar: …]` eingefügt. Ist die Aufbereitung nicht installiert oder nicht lauffähig, wird nicht stillschweigend auf `local` oder `native` gewechselt (vgl. R-123).
+
+**R-147 – Lokal und privat · muss · offen**
+Während der Aufbereitung verlassen weder die PDF noch Seiten- oder Abbildungsbilder den Rechner. Ein Beschreibungsendpunkt auf einem anderen Rechner erfordert eine ausdrückliche Option und wird in Hilfe, Profil und Dokumentation wie `native` als Datenübertragung gekennzeichnet. An das Kartenmodell geht nur der aufbereitete Text. Benötigte Modelle werden ausschließlich aus den dokumentierten Quellen der Bibliothek geladen; der erste Download wird angekündigt. Danach muss die Aufbereitung offline funktionieren; ein lokales Modellverzeichnis ist konfigurierbar.
+
+**R-148 – Optionale Installation und Ressourcen · muss · offen**
+Die Abhängigkeiten der Aufbereitung (Bibliothek, PyTorch, Modelle) sind ein optionales Paket-Extra, beispielsweise `pip install -e '.[pdf]'`. Basisinstallation, `local` und `native` bleiben schlank und unverändert. Fehlt das Extra, meldet `generate` vor jeder Verarbeitung den Installationsbefehl. Ein Fortschritt je Seite wird angezeigt. Laufzeit, Arbeitsspeicher- und Plattenbedarf, Modellgrößen und die optionale GPU-Nutzung werden dokumentiert.
+
+**R-149 – Konfiguration · muss · offen**
+Der Modus und seine Optionen – OCR-Sprachen, erzwungene OCR, Bildbeschreibung an oder aus, Beschreibungsmodell beziehungsweise Endpunkt, Formelerkennung, Platzhalter statt Abbruch – sind im YAML-Profil streng validiert konfigurierbar und, soweit für die Bedienung nötig, per CLI überschreibbar. Es gelten die bestehende Priorität (R-115) sowie positive und negative Formen boolescher Optionen. `config show` zeigt die wirksamen Werte und ihre Herkunft.
+
+**R-150 – Aufbereiteten Text prüfen und wiederverwenden · soll · offen**
+Der aufbereitete Text kann als Markdown-Datei gespeichert werden, atomar und ohne vorhandene Dateien zu überschreiben. So lässt sich die Vollständigkeit prüfen und von Hand korrigieren. Die Datei kann wie jede Markdown-Datei mit `generate` erneut verarbeitet werden, ohne die Aufbereitung zu wiederholen.
+
+**R-151 – Tests · muss · offen**
+Reguläre Tests ersetzen Bibliothek und Modelle durch Attrappen. Sie prüfen Moduswahl und Priorität, die Markierung von Seiten, Abbildungen und Tabellen, Abbruch und Platzhalter, ein fehlendes Extra, das Ausbleiben eines stillen Fallbacks und jeder Übertragung, die unveränderte Weiterverarbeitung des Textes und das Speichern des Zwischentextes. Ein Integrationstest mit der echten Bibliothek und einer kleinen erzeugten PDF ist gesondert markiert und läuft nicht im Standardlauf.
+
+**R-152 – Dokumentation · muss · offen**
+README, Benutzerhandbuch, Entwicklerhandbuch, CLI-Hilfe und `config.example.yaml` beschreiben Installation, Modus, Optionen, Modell-Downloads, Datenschutz, Ressourcenbedarf und Grenzen, insbesondere dass Abbildungsbeschreibungen fehlerhaft sein können.
+
+**R-153 – Weitere Formate · kann · später**
+Dieselbe Aufbereitung für DOCX und PPTX mit eingebetteten Bildern sowie für Bilddateien (PNG, JPEG) als Eingabe.
+
+**R-154 – Zwischenspeicher · kann · später**
+Aufbereitete Dokumente werden anhand eines Datei-Hashes zwischengespeichert, damit wiederholte Läufe die Aufbereitung überspringen.
+
+## 13. Spätere Erweiterungen
 
 Die folgenden Punkte sind Ideen und keine aktuellen Implementierungsaufträge:
 
 - **R-200 · kann · später:** Webinterface beziehungsweise Web-API auf dem vorhandenen fachlichen Kern; Konfiguration und Kartenprüfung über dieselben Dienste.
 - **R-201 · kann · später:** Linux-Container und Deployment auf Proxmox, erst nach stabiler Anwendung und geklärter Verwaltung von Konfiguration, Secrets und Daten.
 - **R-202 · kann · später:** URLs als zusätzliche Quelle mit eigenen Sicherheits- und Datenschutzregeln.
-- **R-203 · kann · später:** OCR für gescannte Dokumente.
+- **R-203 · übernommen in R-142:** OCR für gescannte PDF-Dokumente; weitere Formate siehe R-153.
 - **R-204 · kann · später:** Quellenangaben pro Karte, interaktive Prüfung und Fortsetzen abgebrochener Generierungen.
 - **R-205 · kann · später:** Lückentext, weitere Notiztypen sowie Bilder und Audio in Karten.
 
-## 13. Aktuelle CLI-Vertragsgrundlage
+## 14. Aktuelle CLI-Vertragsgrundlage
 
 Bis zur Umsetzung der neuen Konfigurations- und Hilfeanforderungen bestehen diese Befehle:
 
@@ -327,7 +400,7 @@ Wichtige Ist-Eigenschaften:
 - `--limit` akzeptiert nichtnegative ganze Zahlen; `0` bedeutet Unlimited.
 - API-Schlüssel werden über die in YAML referenzierten provider-spezifischen Umgebungsvariablen aus `.env` oder der Prozessumgebung bereitgestellt; `.env` enthält keine Modelle oder Endpunkte.
 
-## 14. Abnahmekriterien für die noch offenen Hauptpakete
+## 15. Abnahmekriterien für die noch offenen Hauptpakete
 
 ### A. Qualitäts- und CLI-Paket (req-2)
 
@@ -364,3 +437,13 @@ Wichtige Ist-Eigenschaften:
 4. Duplikate werden über das übergeordnete Deck und alle Unterdecks erkannt; Lernstände bleiben erhalten.
 5. JSON-Export, nativer Weg, Konfiguration und Diagnose unterstützen den Modus.
 6. Alle Tests laufen ohne echte KI-Aufrufe; README und beide Handbücher sind aktualisiert.
+
+### E. PDF-Aufbereitungspaket (req-5)
+
+1. Die Bibliotheksauswahl ist an einer Referenzsammlung begründet und mit Version, Lizenz, Quelle, Prüfdatum und Messwerten dokumentiert.
+2. Der strukturierte Modus wird nur ausdrücklich aktiviert; `local`, `native` und die Basisinstallation bleiben unverändert.
+3. In der Referenzsammlung ist jede Seite im Text vertreten; Text in Bildern ist per OCR enthalten, Tabellen erscheinen als Markdown-Tabellen und Abbildungen als markierte Beschreibungen.
+4. Nicht lesbare Elemente werden gemeldet; es gibt keinen stillen Verlust und keinen stillen Moduswechsel.
+5. Während der Aufbereitung werden keine Dokumentdaten übertragen; nach dem ersten Modell-Download funktioniert sie offline.
+6. Der aufbereitete Text durchläuft dieselbe Validierung, Unterdeck-Zuordnung und APKG-Ausgabe wie im Modus `local`.
+7. Reguläre Tests laufen ohne Bibliothek, Modelle und Netzwerk; README und beide Handbücher sind aktualisiert.
