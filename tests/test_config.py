@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 import yaml
+from pydantic import ValidationError
 
 from anki_flashcards.config import (
     AppConfig,
@@ -237,3 +238,28 @@ def test_example_configuration_is_valid_and_covers_required_providers() -> None:
     assert config.models["ollama-local"].pdf_mode == PDFMode.LOCAL
     assert config.models["openai-native-pdf"].pdf_mode == PDFMode.NATIVE
     assert config.generation.pdf_mode == PDFMode.LOCAL
+
+
+def test_pdf_conversion_defaults_and_validation() -> None:
+    """Verify structured-mode defaults and strict validation of new keys.
+
+    Returns:
+        None. Assertions inspect defaults and rejected values.
+    """
+    config = AppConfig()
+
+    assert config.pdf_conversion.models_dir == Path("models")
+    assert config.pdf_conversion.ocr_languages == ["de", "en"]
+    assert config.pdf_conversion.formulas is True
+    assert config.pdf_conversion.allow_cpu is False
+    assert config.pdf_conversion.pictures.backend == "local"
+    with pytest.raises(ValidationError, match="ISO 639-1"):
+        AppConfig.model_validate({"pdf_conversion": {"ocr_languages": ["deu"]}})
+    with pytest.raises(ValidationError, match="Unknown model profile: vision"):
+        AppConfig.model_validate({"pdf_conversion": {"pictures": {"profile": "vision"}}})
+    with pytest.raises(ValidationError, match="Extra inputs"):
+        AppConfig.model_validate({"pdf_conversion": {"ocr": True}})
+    profile = AppConfig.model_validate(
+        {"models": {"v": {"model": "ollama/qwen2.5vl", "image_input": True}}}
+    )
+    assert profile.models["v"].image_input is True

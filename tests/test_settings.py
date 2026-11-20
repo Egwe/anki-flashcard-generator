@@ -4,7 +4,13 @@ from pathlib import Path
 
 import pytest
 
-from anki_flashcards.config import AppConfig, GenerationConfig, ModelProfile, PDFMode
+from anki_flashcards.config import (
+    AppConfig,
+    GenerationConfig,
+    ModelProfile,
+    PDFMode,
+    PictureBackend,
+)
 from anki_flashcards.documents import read_document
 from anki_flashcards.errors import FlashcardError
 from anki_flashcards.settings import (
@@ -300,3 +306,141 @@ def test_subdeck_mode_follows_default_yaml_and_cli_precedence(tmp_path: Path) ->
     assert cli_off.subdecks is False
     assert cli_off.origins["subdecks"] == "cli"
     assert configuration_diagnostics(cli_on, None)["subdecks"] is True
+
+
+def structured_config(**pictures: object) -> AppConfig:
+    """Build a configuration for the structured PDF mode with two profiles.
+
+    Args:
+        **pictures: Overrides for ``pdf_conversion.pictures``.
+
+    Returns:
+        Typed configuration with a text-only and an image-capable profile.
+    """
+    return AppConfig.model_validate(
+        {
+            "default_profile": "cards",
+            "generation": {"pdf_mode": "structured"},
+            "pdf_conversion": {
+                "models_dir": "modelle",
+                "formulas": False,
+                "source_text_dir": "texte",
+                "pictures": pictures,
+            },
+            "models": {
+                "cards": {"model": "openai/gpt-4o-mini", "api_key_env": "CARD_KEY"},
+                "vision": {
+                    "model": "ollama/qwen2.5vl",
+                    "api_base": "http://server:11434",
+                    "image_input": True,
+                },
+            },
+        }
+    )
+
+
+def test_conversion_settings_follow_yaml_and_cli_precedence(tmp_path: Path) -> None:
+    """Verify built-in defaults, YAML values, CLI overrides, and YAML-relative paths.
+
+    Args:
+        tmp_path: Isolated directory holding the YAML location.
+
+    Returns:
+        None. Assertions inspect resolved conversion settings.
+    """
+    config_path = tmp_path / "config.yaml"
+    defaults = resolve_generate_settings(
+        {"input_file": Path("vl.pdf"), "output": Path("deck.apkg")}, AppConfig(), None
+    )
+    yaml = resolve_generate_settings(
+        {"input_file": Path("vl.pdf"), "output": Path("deck.apkg")},
+        structured_config(),
+        config_path,
+    )
+    cli = resolve_generate_settings(
+        {
+            "input_file": Path("vl.pdf"),
+            "output": Path("deck.apkg"),
+            "formulas": True,
+            "force_ocr": True,
+            "allow_unreadable": True,
+            "allow_cpu": True,
+            "picture_backend": PictureBackend.NONE,
+            "source_text": Path("eigen.md"),
+        },
+        structured_config(),
+        config_path,
+    )
+
+    assert defaults.conversion.options.formulas is True
+    assert defaults.conversion.models_dir == Path.cwd() / "models"
+    assert defaults.conversion.picture_backend == PictureBackend.LOCAL
+    assert defaults.conversion.source_text is None
+    assert yaml.pdf_mode == PDFMode.STRUCTURED
+    assert yaml.conversion.options.formulas is False
+    assert yaml.conversion.options.language == "Deutsch"
+    assert yaml.conversion.models_dir == tmp_path / "modelle"
+    assert yaml.conversion.source_text == tmp_path / "texte" / "vl.md"
+    assert cli.conversion.options.formulas is True
+    assert cli.conversion.options.force_ocr is True
+    assert cli.conversion.options.allow_unreadable is True
+    assert cli.conversion.options.allow_cpu is True
+    assert yaml.conversion.options.allow_cpu is False
+    assert cli.conversion.picture_backend == PictureBackend.NONE
+    assert cli.conversion.source_text == Path("eigen.md").absolute()
+    assert cli.origins["formulas"] == "cli" and yaml.origins["formulas"] == "config"
+
+
+def test_picture_profile_requires_explicit_image_input(tmp_path: Path, monkeypatch) -> None:
+    """Verify the profile backend uses an image-capable profile or fails early.
+
+    Args:
+        tmp_path: Isolated directory holding the YAML location.
+        monkeypatch: Pytest fixture providing a credential.
+
+    Returns:
+        None. Assertions inspect the picture settings and the error.
+    """
+    monkeypatch.setenv("CARD_KEY", "card-secret")
+    base = {"input_file": Path("vl.pdf"), "output": Path("deck.apkg")}
+    vision = resolve_generate_settings(
+        base, structured_config(backend="profile", profile="vision"), tmp_path / "c.yaml"
+    )
+
+    assert vision.conversion.picture_profile == "vision"
+    assert vision.conversion.picture_ai.model == "ollama/qwen2.5vl"
+    assert vision.conversion.picture_ai.api_base == "http://server:11434"
+    with pytest.raises(FlashcardError, match="'cards' must set image_input: true"):
+        resolve_generate_settings(base, structured_config(backend="profile"), tmp_path / "c.yaml")
+    local_mode = resolve_generate_settings(
+        {**base, "pdf_mode": PDFMode.LOCAL},
+        structured_config(backend="profile"),
+        tmp_path / "c.yaml",
+    )
+    assert local_mode.conversion.picture_ai is None
+
+
+def test_conversion_diagnostics_hide_picture_credentials(tmp_path: Path, monkeypatch) -> None:
+    """Verify ``config show`` data names conversion values but hides keys.
+
+    Args:
+        tmp_path: Isolated directory holding the YAML location.
+        monkeypatch: Pytest fixture providing a picture credential.
+
+    Returns:
+        None. Assertions inspect the diagnostic view.
+    """
+    config = structured_config(backend="profile", profile="vision")
+    config.models["vision"].api_key_env = "VISION_KEY"
+    monkeypatch.setenv("VISION_KEY", "vision-secret")
+    settings = resolve_generate_settings(
+        {"input_file": Path("vl.pdf"), "output": Path("deck.apkg")}, config, tmp_path / "c.yaml"
+    )
+
+    diagnostics = configuration_diagnostics(settings, tmp_path / "c.yaml")
+
+    conversion = diagnostics["pdf_conversion"]
+    assert conversion["models_dir"] == str(tmp_path / "modelle")
+    assert conversion["picture_backend"] == "profile"
+    assert conversion["picture_api_key"] == "set (hidden)"
+    assert "vision-secret" not in str(diagnostics)

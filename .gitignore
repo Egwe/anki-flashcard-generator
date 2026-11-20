@@ -26,3 +26,6 @@ config.yaml
 # dev folders
 input/
 output/
+
+# Locally downloaded conversion models and library caches (R-157)
+models/

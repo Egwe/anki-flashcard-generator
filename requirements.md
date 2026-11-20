@@ -51,8 +51,8 @@ Nicht unterstützte Endungen, beschädigte Dokumente und Dokumente ohne extrahie
 **R-012 – Textaufteilung · muss · umgesetzt**
 Langer extrahierter Text muss für Modellaufrufe in überlappende Abschnitte aufgeteilt werden. Standard sind 24.000 Zeichen pro Abschnitt und 500 Zeichen Überlappung, höchstens jedoch ein Viertel der Abschnittsgröße (bei 1.000 Zeichen also 250). Die CLI erlaubt Abschnittsgrößen von 1.000 bis 100.000 Zeichen; jede Größe aus diesem Bereich muss ohne Fehler verarbeitet werden. Absätze und Wortgrenzen sollen bevorzugt werden; jeder Quelltext muss trotz Überschneidungen vollständig berücksichtigt werden.
 
-**R-013 – OCR · muss · offen über R-142**
-Gescannte PDFs ohne Textebene benötigen derzeit eine externe OCR. Mit req-5 wird eine eingebaute OCR im strukturierten PDF-Modus verlangt (R-142); der Modus `local` bleibt bei der eingebetteten Textebene.
+**R-013 – OCR · muss · umgesetzt über R-142**
+Im Modus `local` benötigen gescannte PDFs ohne Textebene weiterhin eine externe OCR. Seit req-5 bietet der strukturierte PDF-Modus eine eingebaute OCR (R-142); der Modus `local` bleibt bei der eingebetteten Textebene.
 
 **R-014 – Native Dokumentverarbeitung · muss · umgesetzt für geprüfte OpenAI-Modelle**
 Die lokale Extraktion muss für geeignete Modelle optional durch die native Verarbeitung der Originaldatei beim Provider ersetzt werden können.
@@ -323,43 +323,45 @@ Seiten ohne Textebene werden heute stillschweigend übersprungen; nur ein vollst
 
 Cloud-Dienste zur Dokumentanalyse widersprechen dem lokalen Ziel und werden nicht betrachtet.
 
-**R-140 – Strukturierter PDF-Modus · muss · offen**
+**R-140 – Strukturierter PDF-Modus · muss · umgesetzt**
 Ein dritter, ausdrücklich wählbarer Wert `pdf_mode: structured` (CLI `--pdf-mode structured`) wandelt eine PDF lokal in strukturierten Text (Markdown) um. Die Kartenanfragen selbst enthalten nur diesen Text. Dieser Text durchläuft danach unverändert dieselbe Textaufteilung, Generierung, Validierung, Duplikaterkennung, Unterdeck-Zuordnung und APKG-Ausgabe wie im Modus `local`. Der Modus funktioniert daher mit jedem Kartenmodell, auch mit reinen Textmodellen und lokal über Ollama. `local` bleibt Standard, `native` bleibt unverändert. Wie bei `native` gilt der Modus nur für `.pdf`; andere Formate werden mit einer verständlichen Meldung abgelehnt, bis R-153 umgesetzt ist.
 
-**R-141 – Docling hinter eigenem Adapter · muss · offen**
+**R-141 – Docling hinter eigenem Adapter · muss · umgesetzt**
 Die Aufbereitung verwendet Docling (MIT-Lizenz) und wird nicht selbst entwickelt. Docling liegt hinter einer kleinen eigenen Schnittstelle in der Dokumentschicht (Eingabe: PDF-Pfad und Optionen; Ausgabe: `SourceDocument` mit Markdown-Text und einer Statistik). So bleiben Tests ohne Docling möglich, und Docling-Typen gelangen nicht in Generierung, CLI oder APKG-Schicht. Die unterstützte Docling-Version wird im optionalen Extra mit Unter- und Obergrenze festgelegt. Vor der Umsetzung wird Docling an einer kleinen Referenzsammlung geprüft (Folien mit Diagrammen, Tabellen, Formeln, gescannte Seiten, mehrspaltiger Text). Dabei werden OCR-Engine, Tabellenmodus und das Standard-Bildmodell festgelegt. Version, Quelle, Prüfdatum, Laufzeit und Speicherbedarf werden dokumentiert.
 
-**R-142 – Text in Bildern und gescannte Seiten · muss · offen**
+*Prüfergebnis (20.11.2026, Docling 2.151.1, PyTorch 2.15 CPU, an den Vorlesungs-PDFs in `input/`):* OCR-Engine RapidOCR mit PyTorch-Backend (EasyOCR ausgeschlossen, weil es nach `~/.EasyOCR` schreibt), TableFormer im Modus *accurate*, Bildausschnitte mit Faktor 2, Standard-Bildmodell SmolVLM-256M-Instruct ohne Bildkachelung. Messwerte und Grenzen stehen in README und Entwicklerhandbuch. SmolVLM-256M und -500M beschrieben technische Abbildungen unzuverlässig; SmolVLM2-2.2B überschritt den verfügbaren Arbeitsspeicher. Die Bildbeschreibung über ein Profil ist nur mit simulierten Antworten geprüft, nicht mit einem echten Vision-Modell. Auf der CPU war die Aufbereitung zu langsam (siehe R-158); ein Lauf auf einer GPU steht noch aus.
+
+**R-142 – Text in Bildern und gescannte Seiten · muss · umgesetzt**
 Seiten und Bildbereiche ohne verwertbare Textebene werden per Texterkennung (OCR) gelesen. Mindestens Deutsch und Englisch werden unterstützt; die Sprachen sind konfigurierbar. Eine vorhandene Textebene wird bevorzugt. OCR für alle Seiten kann ausdrücklich erzwungen werden, etwa bei einer fehlerhaften Textebene.
 
-**R-143 – Abbildungen als Text · muss · offen**
+**R-143 – Abbildungen als Text · muss · umgesetzt**
 Abbildungen wie Diagramme, Schaltpläne, Grafiken und Fotos werden von einem Bild-Sprach-Modell (Bildmodell, R-155) sachlich beschrieben: dargestellter Inhalt, Beschriftungen, Achsen, Werte und Beziehungen, ohne Vermutungen. Die Beschreibung steht an der Stelle der Abbildung im Text und ist eindeutig als maschinelle Beschreibung mit Seitenzahl markiert, beispielsweise `[Abbildung S. 12 – Beschreibung: …]`. Text innerhalb der Abbildung wird zusätzlich per OCR übernommen. Das Kartenmodell erhält die Anweisung, dass solche Beschreibungen maschinell erstellt sind und keine darüber hinausgehenden Fakten erfunden werden dürfen. Welches Bildmodell beschreibt, ist austauschbar (R-155, R-156); Standard ist ein lokal eingebettetes Modell. Die Bildbeschreibung kann ausdrücklich abgeschaltet werden; Abbildungen erscheinen dann nur als Platzhalter mit ihrem OCR-Text, und die Ausgabe weist darauf hin. Rein dekorative Elemente wie Logos sollen erkannt und ausgelassen werden.
 
-**R-144 – Tabellen und Lesereihenfolge · muss · offen**
+**R-144 – Tabellen und Lesereihenfolge · muss · umgesetzt**
 Tabellen werden mit Zeilen und Spalten als Markdown-Tabelle ausgegeben. Mehrspaltige Seiten erscheinen in natürlicher Lesereihenfolge. Überschriften bleiben als Markdown-Überschriften erhalten, damit Kapitelstruktur und Unterdeck-Zuordnung (R-131) davon profitieren. Wiederkehrende Kopf- und Fußzeilen sollen entfernt werden. Die Textaufteilung (R-012) soll Tabellen und Abbildungsbeschreibungen nicht trennen, solange sie in einen Abschnitt passen.
 
-**R-145 – Formeln · soll · offen**
+**R-145 – Formeln · soll · umgesetzt**
 Formeln werden als LaTeX erkannt und in den Text übernommen. Die Formelerkennung ist abschaltbar, weil sie die Aufbereitung deutlich verlangsamt.
 
-**R-146 – Vollständigkeit und kein stiller Verlust · muss · offen**
+**R-146 – Vollständigkeit und kein stiller Verlust · muss · umgesetzt**
 Jede Seite ist im Ergebnis mit einem Seitenmarker `[Seite N]` vertreten. Nach der Aufbereitung meldet die CLI die Zahl der Seiten, der per OCR gelesenen Seiten, der Tabellen, der beschriebenen und der ausgelassenen Abbildungen sowie der Formeln. Kann ein Element nicht gelesen oder beschrieben werden, bricht der Lauf mit einer verständlichen Meldung ab; nur mit einer ausdrücklichen Option wird stattdessen ein gemeldeter Platzhalter `[nicht lesbar: …]` eingefügt. Ist die Aufbereitung nicht installiert oder nicht lauffähig, wird nicht stillschweigend auf `local` oder `native` gewechselt (vgl. R-123).
 
-**R-147 – Lokal und privat · muss · offen**
+**R-147 – Lokal und privat · muss · umgesetzt**
 Mit dem Standard-Bildmodell verlassen während der Aufbereitung weder die PDF noch Seiten- oder Abbildungsbilder den Rechner. Nur wenn ein Bildmodell über ein Modellprofil ausdrücklich gewählt ist (R-156), gehen Bildausschnitte – nie die ganze PDF – an den Provider dieses Profils. An das Kartenmodell geht in jedem Fall nur der aufbereitete Text. Benötigte Modelle werden ausschließlich aus den dokumentierten Quellen von Docling beziehungsweise des gewählten Modells geladen; der erste Download wird angekündigt. Danach muss die Aufbereitung offline funktionieren. Speicherort siehe R-157.
 
-**R-148 – Optionale Installation und Ressourcen · muss · offen**
+**R-148 – Optionale Installation und Ressourcen · muss · umgesetzt**
 Die Abhängigkeiten der Aufbereitung (Docling, PyTorch) sind ein optionales Paket-Extra, beispielsweise `pip install -e '.[pdf]'`, das in die projekteigene `.venv` installiert wird. Modelle sind nicht Teil des Pakets, sondern werden nach R-157 im Projektordner abgelegt. Basisinstallation, `local` und `native` bleiben schlank und unverändert. Fehlt das Extra, meldet `generate` vor jeder Verarbeitung den Installationsbefehl. Ein Fortschritt je Seite wird angezeigt. Laufzeit, Arbeitsspeicher- und Plattenbedarf, Modellgrößen und die optionale GPU-Nutzung werden dokumentiert.
 
-**R-149 – Konfiguration · muss · offen**
+**R-149 – Konfiguration · muss · umgesetzt**
 `pdf_mode: structured` ist wie die anderen PDF-Modi im Modellprofil und per CLI wählbar. Die Optionen der Aufbereitung hängen nicht vom Kartenmodell ab und stehen daher in einem eigenen, streng validierten YAML-Block (Arbeitstitel `pdf_conversion`): OCR-Sprachen, erzwungene OCR, Formelerkennung, Platzhalter statt Abbruch, Bildmodell-Backend mit Modell beziehungsweise Profil (R-155, R-156) und Modellordner (R-157). Mindestens Bildmodell-Backend, Bildprofil, erzwungene OCR, Formelerkennung und der Speicherpfad des Zwischentextes (R-150) sind per CLI überschreibbar. Es gelten die bestehende Priorität (R-115) sowie positive und negative Formen boolescher Optionen. `config show` zeigt die wirksamen Werte und ihre Herkunft.
 
-**R-150 – Aufbereiteten Text prüfen und wiederverwenden · muss · offen**
+**R-150 – Aufbereiteten Text prüfen und wiederverwenden · muss · umgesetzt**
 Der aufbereitete Text kann als Markdown-Datei gespeichert werden, atomar und ohne vorhandene Dateien zu überschreiben. So lässt sich die Vollständigkeit prüfen und von Hand korrigieren. Die Datei kann wie jede Markdown-Datei mit `generate` erneut verarbeitet werden, ohne die Aufbereitung zu wiederholen.
 
-**R-151 – Tests · muss · offen**
+**R-151 – Tests · muss · umgesetzt**
 Reguläre Tests ersetzen Bibliothek und Modelle durch Attrappen. Sie prüfen Moduswahl und Priorität, die Markierung von Seiten, Abbildungen und Tabellen, Abbruch und Platzhalter, ein fehlendes Extra, das Ausbleiben eines stillen Fallbacks und jeder ungewollten Übertragung, alle Bildmodell-Backends samt Ablehnung von Profilen ohne freigegebene Bildeingabe, die Auflösung des Modellordners, die unveränderte Weiterverarbeitung des Textes und das Speichern des Zwischentextes. Ein Integrationstest mit echtem Docling, einem kleinen lokalen Bildmodell aus dem Projektordner und einer kleinen erzeugten PDF ist gesondert markiert und läuft nicht im Standardlauf.
 
-**R-152 – Dokumentation · muss · offen**
+**R-152 – Dokumentation · muss · umgesetzt**
 README, Benutzerhandbuch, Entwicklerhandbuch, CLI-Hilfe und `config.example.yaml` beschreiben Installation, Modus, Optionen, Bildmodell-Backends mit Beispielprofilen, Modellordner und Modell-Downloads, Datenschutz, Ressourcenbedarf und Grenzen, insbesondere dass Abbildungsbeschreibungen fehlerhaft sein können.
 
 **R-153 – Weitere Formate · kann · später**
@@ -368,19 +370,22 @@ Dieselbe Aufbereitung für DOCX und PPTX mit eingebetteten Bildern sowie für Bi
 **R-154 – Zwischenspeicher · kann · später**
 Aufbereitete Dokumente werden anhand eines Datei-Hashes im Modellordner nach R-157 zwischengespeichert, damit wiederholte Läufe die Aufbereitung überspringen.
 
-**R-155 – Austauschbare Bildmodelle · muss · offen**
+**R-155 – Austauschbare Bildmodelle · muss · umgesetzt**
 Docling liefert Layout, Bildausschnitte und deren Position im Text. Welches Modell eine Abbildung beschreibt, entscheidet ein austauschbares Backend hinter einer kleinen eigenen Schnittstelle (Eingabe: Bildausschnitt, Seitenzahl, Bildunterschrift beziehungsweise umgebender Text, Zielsprache; Ausgabe: Beschreibungstext). Alle Backends verwenden dieselbe Beschreibungsanweisung und dieselbe Markierung nach R-143. Weitere Backends lassen sich ergänzen, ohne Generierung, Kartenvalidierung, Unterdeck-Zuordnung oder APKG-Ausgabe zu ändern. Vorgesehen sind:
 
 - `local` (Standard): ein lokal im Prozess laufendes Bildmodell, wählbar über eine Docling-Voreinstellung oder eine beliebige Hugging-Face-Modellkennung;
 - `profile`: ein Modellprofil aus der YAML-Konfiguration nach R-156;
 - `none`: keine Beschreibung, nur Platzhalter mit OCR-Text nach R-143.
 
-**R-156 – Bildmodell über ein Modellprofil · muss · offen**
+**R-156 – Bildmodell über ein Modellprofil · muss · umgesetzt**
 Das Bildmodell kann über dieselben Modellprofile angesprochen werden wie das Kartenmodell: entweder über dasselbe Profil, das die Karten erzeugt, oder über ein eigenes, benanntes Profil, etwa ein Vision-Modell in Ollama auf einem Server, einen anderen API-Anbieter oder einen eigenen OpenAI-kompatiblen Endpunkt. Es gelten dasselbe `provider/modell`-Format über LiteLLM, `api_base`, `api_key_env`, Timeout und Optionen; Schlüssel kommen ausschließlich aus der Umgebung. Weil Fähigkeiten nicht am Modellnamen erraten werden dürfen, muss ein für Bilder genutztes Profil die Bildeingabe ausdrücklich freigeben (Arbeitstitel `image_input: true`); sonst bricht der Lauf vor der Aufbereitung verständlich ab. Bei diesem Backend kündigt die CLI vor der Aufbereitung an, dass Bildausschnitte an Provider und Modell des Profils gesendet werden; Hilfe, Profil und Dokumentation kennzeichnen das wie `native` als Datenübertragung. `config.example.yaml` enthält ein kommentiertes Beispielprofil für ein lokales Vision-Modell.
 
-**R-157 – Modelle und Caches im Projektordner · muss · offen**
+**R-157 – Modelle und Caches im Projektordner · muss · umgesetzt**
 Alles, was die Aufbereitung herunterlädt oder zwischenspeichert – Docling-Modelle, OCR- und Bildmodelle sowie die Caches von Hugging Face und PyTorch –, liegt in einem einzigen, gut auffindbaren Modellordner, standardmäßig `models/` neben der YAML-Konfiguration und damit im Projektordner. Ohne YAML-Datei gilt `models/` im aktuellen Arbeitsverzeichnis. Der Pfad ist in YAML konfigurierbar; relative YAML-Pfade werden wie in R-113 relativ zur YAML-Datei aufgelöst. Die Anwendung setzt die Speicherorte der Bibliotheken für ihren eigenen Prozess selbst und schreibt nichts in benutzerweite Ordner wie `~/.cache/huggingface`, `~/.cache/torch` oder `~/.EasyOCR`. Die dokumentierte Installation verwendet die projekteigene `.venv` und keinen globalen pip-Cache. Der Modellordner steht in `.gitignore` und wird nie committet. Die CLI nennt den verwendeten Ordner beim ersten Download. Ein Befehl soll die benötigten Modelle vorab in diesen Ordner laden, damit danach offline gearbeitet werden kann. Modelle, die ein separater Dienst wie Ollama verwaltet, bleiben in dessen eigener Ablage; das wird dokumentiert.
 
+
+**R-158 – GPU als Voraussetzung · muss · umgesetzt**
+Der strukturierte Modus ist für einen GPU-Beschleuniger ausgelegt: NVIDIA über CUDA, AMD über eine ROCm-Version von PyTorch, Apple Silicon über MPS oder Intel über XPU. Vor Modell-Downloads und Aufbereitung prüft das Programm, ob PyTorch einen solchen Beschleuniger nutzen kann, und verwendet ihn für Docling und das lokale Bildmodell. Ohne Beschleuniger bricht der Lauf mit einer klaren Meldung ab. Sie nennt die beiden Alternativen: Entweder übernimmt das KI-Modell die PDF (`--pdf-mode native`, Upload an einen freigegebenen Provider), oder `--pdf-mode local` liest nur die eingebettete Textebene. Es gibt keinen stillen Wechsel des Modus. Eine ausdrückliche Option (`--allow-cpu`, YAML `pdf_conversion.allow_cpu`, Standard aus) erlaubt den CPU-Betrieb trotzdem, etwa für kurze Dokumente oder mit `--no-formulas`; die CLI weist dann auf die lange Laufzeit hin. Begründung (Messung 20.11.2026): Auf einem Laptop mit Ryzen 5 PRO 4650U ohne nutzbare GPU brauchte die Aufbereitung einer 15-seitigen Vorlesung mit Formelerkennung über 50 Minuten. Die integrierte Radeon-Vega-GPU (`gfx90c`) wird von ROCm nicht offiziell unterstützt und hat nur 512 MiB eigenen Speicher.
 ## 13. Spätere Erweiterungen
 
 Die folgenden Punkte sind Ideen und keine aktuellen Implementierungsaufträge:
@@ -396,10 +401,11 @@ Die folgenden Punkte sind Ideen und keine aktuellen Implementierungsaufträge:
 
 Bis zur Umsetzung der neuen Konfigurations- und Hilfeanforderungen bestehen diese Befehle:
 
-- `generate EINGABE [--output ZIEL.apkg] [--deck NAME] [--model PROVIDER/MODELL] [--profile NAME] [--limit N] [--extend/--no-extend] [--subdecks/--no-subdecks] [--json DATEI] [--config DATEI] [--pdf-mode local|native]`
+- `generate EINGABE [--output ZIEL.apkg] [--deck NAME] [--model PROVIDER/MODELL] [--profile NAME] [--limit N] [--extend/--no-extend] [--subdecks/--no-subdecks] [--json DATEI] [--config DATEI] [--pdf-mode local|structured|native] [--formulas/--no-formulas] [--force-ocr/--no-force-ocr] [--allow-unreadable/--no-allow-unreadable] [--picture-backend local|profile|none] [--picture-profile NAME] [--source-text DATEI.md]`
 - `export KARTEN.json [--output ZIEL.apkg] [--deck NAME] [--extend/--no-extend] [--config DATEI]`
 - `decks PAKET.apkg`
 - `config show EINGABE [--config DATEI] [weitere Overrides]`
+- `models download [--config DATEI] [--formulas/--no-formulas] [--picture-backend local|profile|none]`
 
 Wichtige Ist-Eigenschaften:
 
@@ -408,6 +414,7 @@ Wichtige Ist-Eigenschaften:
 - `--config` beziehungsweise `ANKI_CONFIG` wählt YAML; ohne Datei bleibt der bisherige Workflow erhalten.
 - `config show` gibt effektive Werte und Herkunft ohne geheime Schlüsselwerte als JSON aus.
 - `--pdf-mode native` beziehungsweise ein natives Profil lädt Original-PDFs nur für ausdrücklich freigegebene OpenAI-Modelle hoch; `local` bleibt Standard.
+- `--pdf-mode structured` bereitet PDFs lokal mit Docling auf (optionales Extra `pdf`); Modelle und Caches liegen in `pdf_conversion.models_dir`.
 - Ohne `--extend` muss die Ausgabedatei neu sein; mit `--extend` muss sie bereits existieren.
 - Fehlende Elternordner der Ausgabe werden erstellt.
 - `--limit` akzeptiert nichtnegative ganze Zahlen; `0` bedeutet Unlimited.
@@ -459,6 +466,7 @@ Wichtige Ist-Eigenschaften:
 4. Nicht lesbare Elemente werden gemeldet; es gibt keinen stillen Verlust und keinen stillen Moduswechsel.
 5. Das Bildmodell ist wählbar: lokal eingebettet, über das Kartenprofil, über ein eigenes Profil oder abgeschaltet. Profile ohne freigegebene Bildeingabe werden abgelehnt; ein weiteres Backend lässt sich ohne Änderungen an Generierung und Ausgabe ergänzen.
 6. Mit dem lokalen Bildmodell werden keine Dokumentdaten übertragen; ein Profil-Bildmodell wird vor der Übertragung angekündigt. Nach dem ersten Modell-Download funktioniert die Aufbereitung offline.
-7. Alle heruntergeladenen Modelle und Caches liegen im Modellordner im Projekt; nach Installation und Testlauf sind in benutzerweiten Cache-Ordnern keine neuen Daten entstanden.
-8. Der aufbereitete Text durchläuft dieselbe Validierung, Unterdeck-Zuordnung und APKG-Ausgabe wie im Modus `local`.
-9. Reguläre Tests laufen ohne Docling, Modelle und Netzwerk; README und beide Handbücher sind aktualisiert.
+7. Ohne GPU-Beschleuniger bricht der strukturierte Modus vor jeder Arbeit mit Hinweis auf `native` und `local` ab; nur `--allow-cpu` erlaubt den CPU-Betrieb.
+8. Alle heruntergeladenen Modelle und Caches liegen im Modellordner im Projekt; nach Installation und Testlauf sind in benutzerweiten Cache-Ordnern keine neuen Daten entstanden.
+9. Der aufbereitete Text durchläuft dieselbe Validierung, Unterdeck-Zuordnung und APKG-Ausgabe wie im Modus `local`.
+10. Reguläre Tests laufen ohne Docling, Modelle, GPU und Netzwerk; README und beide Handbücher sind aktualisiert.

@@ -10,7 +10,7 @@ Ein CLI-Werkzeug, das aus lokalen Dokumenten mit KI überprüfbare Karteikarten 
 - [docs/benutzerhandbuch.html](./docs/benutzerhandbuch.html) ist das ausführliche Benutzerhandbuch mit einfachen Erklärungen, allen Befehlen und Optionen, Suchfunktion und kopierbaren Beispielen. Öffne die Datei direkt in einem Browser; kein Server ist erforderlich.
 - [docs/entwicklerhandbuch.html](./docs/entwicklerhandbuch.html) ist das Entwicklerhandbuch: Architektur, alle Module und Funktionen, ein Ablaufdiagramm vom Befehl bis zum APKG, Konfigurationsauflösung, Teststrategie, Erweiterungsrezepte sowie geprüfte Randfälle. Ebenfalls ohne Server im Browser nutzbar.
 
-Der erste MVP ist funktionsfähig. Never Nesting, kleine fachliche Einheiten und vollständige Funktions-/Klassendokumentation sind im Bestand umgesetzt und durch Ruff abgesichert. Die zentrale YAML-Konfiguration ist einschließlich Modellprofilen, Prioritäten, Pfaden und Diagnose vollständig in die CLI integriert. Native PDF-Verarbeitung ist für ausdrücklich freigegebene OpenAI-Modelle implementiert; lokale Extraktion bleibt Standard. Web-UI und Proxmox-/Container-Deployment sind weiterhin spätere Ausbaustufen.
+Der erste MVP ist funktionsfähig. Never Nesting, kleine fachliche Einheiten und vollständige Funktions-/Klassendokumentation sind im Bestand umgesetzt und durch Ruff abgesichert. Die zentrale YAML-Konfiguration ist einschließlich Modellprofilen, Prioritäten, Pfaden und Diagnose vollständig in die CLI integriert. Native PDF-Verarbeitung ist für ausdrücklich freigegebene OpenAI-Modelle implementiert; lokale Extraktion bleibt Standard. Die strukturierte lokale PDF-Aufbereitung mit Docling (OCR, Tabellen, Formeln, Bildbeschreibungen) ist als optionaler Modus `structured` verfügbar. Web-UI und Proxmox-/Container-Deployment sind weiterhin spätere Ausbaustufen.
 
 ## Warum Python?
 
@@ -28,6 +28,7 @@ Python verbindet hier drei passende Ökosysteme: Dokumentverarbeitung (`pypdf`, 
 - JSON-Zwischendatei zur Prüfung und zum erneuten Export ohne weitere KI-Kosten
 - Duplikaterkennung beim Generieren und Erweitern
 - Deckliste mit Kartenanzahl anzeigen
+- optional: PDFs lokal mit Docling vollständig aufbereiten – Text in Bildern per OCR, Tabellen als Markdown-Tabellen, Formeln als LaTeX, Abbildungen als markierte Beschreibungen; an das Kartenmodell geht nur Text
 - optional: KI ordnet Karten inhaltlich passenden Unterdecks zu (`Vorlesung::Kapitel`) und nutzt beim Erweitern die vorhandenen Unterdecks als Kontext
 
 ## Installation
@@ -47,6 +48,16 @@ python -m pip install -e '.[dev]'
 ```
 
 Die virtuelle Umgebung und lokale `.env`-Dateien sind von Git ausgeschlossen.
+
+Für die strukturierte PDF-Aufbereitung (`--pdf-mode structured`) werden zusätzlich das optionale Extra `pdf` mit Docling und **eine GPU** benötigt, die PyTorch nutzen kann (NVIDIA CUDA, AMD über ROCm, Apple Silicon über MPS oder Intel XPU). Installiere zuerst PyTorch passend zu deiner GPU; den Befehl liefert die Auswahl auf [pytorch.org](https://pytorch.org/get-started/locally/). `--no-cache-dir` verhindert, dass pip Kopien in `~/.cache/pip` ablegt:
+
+```bash
+.venv/bin/python -m pip install --no-cache-dir torch torchvision   # Befehl je nach GPU von pytorch.org
+.venv/bin/python -m pip install --no-cache-dir -e '.[pdf]'
+anki-flashcards models download   # Modelle vorab nach ./models laden (optional)
+```
+
+Ohne GPU ist der Modus nicht vorgesehen (siehe unten). Wer ihn trotzdem mit `--allow-cpu` nutzen will, installiert die kleinere CPU-Variante mit `--index-url https://download.pytorch.org/whl/cpu`.
 
 ## Schnellstart mit lokalem Ollama
 
@@ -147,6 +158,7 @@ anki-flashcards --help
 anki-flashcards generate --help
 anki-flashcards export --help
 anki-flashcards decks --help
+anki-flashcards models download --help
 ```
 
 Die Hilfe funktioniert auch mit `-h` und enthält Beispiele, Pflicht- und optionsabhängige Werte, Standardwerte, Wertebereiche sowie das Verhalten bei neuen oder bestehenden Ausgabedateien. Erfolgreiche Befehle verwenden Exit-Code **0**, erwartete Anwendungs-/Providerfehler **1** und ungültige CLI-Nutzung **2**. Erwartete Fehler erscheinen ohne unnötigen Traceback auf `stderr`.
@@ -203,6 +215,68 @@ Die Beispieldateien enthalten bereits Standardendpunkte, Profilfelder und kommen
 | Eigener kompatibler Server | `openai/dein-modellname` | `http://localhost:8000/v1` | `CUSTOM_LLM_API_KEY` |
 
 `--model`, `--profile` und `--api-base` überschreiben die YAML-Werte für den aktuellen Aufruf. Die verfügbaren Modellnamen und unterstützten Optionen können sich ändern. Maßgeblich sind die Modelllisten des Anbieters und die [LiteLLM-Provider-Dokumentation](https://docs.litellm.ai/docs/providers). Anfragen verwenden strukturierte JSON-Ausgaben, zwei Wiederholversuche und einen konfigurierbaren Timeout. Die Antwort wird mit Pydantic validiert.
+
+## Strukturierte lokale PDF-Aufbereitung (Docling)
+
+`--pdf-mode structured` beziehungsweise `pdf_mode: structured` löst ein Problem des Standardmodus: `local` liest nur die eingebettete Textebene einer PDF. Text in Bildern und Scans, grafische Inhalte, Tabellenstrukturen und Formeln gehen dabei verloren oder kommen verstümmelt an. Der strukturierte Modus wandelt die PDF stattdessen **lokal** mit [Docling](https://github.com/docling-project/docling) (MIT-Lizenz) in Markdown um:
+
+- Layoutanalyse mit Überschriften und Lesereihenfolge, auch bei mehrspaltigen Seiten
+- Texterkennung (OCR, RapidOCR) für Bildbereiche und gescannte Seiten; `--force-ocr` liest jede Seite per OCR
+- Tabellen als Markdown-Tabellen mit Zeilen und Spalten
+- Formeln als LaTeX (`--no-formulas` schaltet die langsame Formelerkennung ab; Formeln erscheinen dann als `[Formel S. N – nicht ausgewertet]`)
+- Abbildungen als markierte Beschreibung an ihrer Stelle, z. B. `[Abbildung S. 12 – Beschreibung: …; Text im Bild: …]`
+- Logos, Icons und auf vielen Seiten wiederkehrende Bilder sowie wiederkehrende Kopf- und Fußzeilen werden ausgelassen
+- jede Seite beginnt mit `[Seite N]`
+
+**Der Modus braucht eine GPU.** Vor Modell-Downloads und Aufbereitung prüft das Programm, ob PyTorch einen Beschleuniger (CUDA, ROCm, MPS oder XPU) nutzen kann, und setzt ihn für Docling und das lokale Bildmodell ein. Ohne GPU bricht der Lauf sofort mit einem Hinweis auf die beiden Alternativen ab:
+
+- `--pdf-mode native`: Das KI-Modell des Providers liest die Original-PDF samt Seitenbildern (Upload, nur freigegebene OpenAI-Modelle).
+- `--pdf-mode local`: Nur die eingebettete Textebene wird gelesen; Bilder, Scans und Formeln fehlen.
+
+`--allow-cpu` (YAML `pdf_conversion.allow_cpu`) erzwingt den CPU-Betrieb trotzdem, etwa für kurze Dokumente oder mit `--no-formulas`.
+
+Danach durchläuft der Text unverändert Textaufteilung, Kartenerzeugung, Validierung, Unterdeck-Zuordnung und APKG-Ausgabe. Der Modus funktioniert daher mit **jedem** Kartenmodell, auch mit reinen Textmodellen über Ollama. Das Kartenmodell erhält den Hinweis, dass Abbildungsbeschreibungen maschinell erstellt sind und nichts darüber hinaus erfunden werden darf. Nur `.pdf`-Dateien werden angenommen; für Markdown oder Text gilt `--pdf-mode local`.
+
+```bash
+anki-flashcards generate input/EL1_WS26_V03.pdf \
+  --output output/el1.apkg --deck EL1 --subdecks \
+  --pdf-mode structured \
+  --source-text output/texte/EL1_WS26_V03.md
+```
+
+Nach der Aufbereitung meldet die CLI Seiten, OCR-Seiten, Tabellen, Formeln sowie beschriebene und ausgelassene Abbildungen. `--source-text DATEI.md` (oder `pdf_conversion.source_text_dir`) speichert den aufbereiteten Text atomar in eine **neue** Datei. So lässt sich die Vollständigkeit prüfen und von Hand korrigieren. Die Datei kann danach mit `--pdf-mode local` wie jede Markdown-Datei erneut verarbeitet werden, ohne die Aufbereitung zu wiederholen.
+
+**Nichts geht stillschweigend verloren:** Kann ein Element nicht gelesen werden, etwa eine Formel ohne Ergebnis oder eine Abbildung ohne Beschreibung, bricht der Lauf vor jeder KI-Anfrage mit einer Liste ab. `--allow-unreadable` setzt stattdessen gemeldete Platzhalter `[nicht lesbar: …]`. Fehlt Docling, nennt die CLI den Installationsbefehl. Es gibt keinen stillen Wechsel zu `local` oder `native`.
+
+### Bildmodelle
+
+Welches Modell Abbildungen beschreibt, ist austauschbar (`--picture-backend`, YAML `pdf_conversion.pictures.backend`):
+
+| Backend | Wirkung | Datenfluss |
+| --- | --- | --- |
+| `local` (Standard) | Bild-Sprach-Modell läuft im Programm; Standard `HuggingFaceTB/SmolVLM-256M-Instruct`, jede Hugging-Face-Kennung über `pictures.model` | bleibt auf dem Rechner |
+| `profile` | ein Modellprofil aus `models` beschreibt, z. B. ein Vision-Modell in Ollama auf einem Server, das Kartenprofil oder eine eigene OpenAI-kompatible API; `--picture-profile NAME` oder `pictures.profile`, sonst das Kartenprofil | Bildausschnitte – nie die ganze PDF – gehen an den Provider des Profils; die CLI kündigt das an |
+| `none` | keine Beschreibung; die Abbildung bleibt als `[Abbildung S. N – nicht beschrieben; Text im Bild: …]` erhalten | bleibt auf dem Rechner |
+
+Ein Profil für Bilder muss `image_input: true` setzen. Das Programm vermutet Bildfähigkeit nie anhand des Modellnamens und bricht sonst vor der Aufbereitung ab. `config.example.yaml` enthält dafür das Beispielprofil `ollama-vision`. Weitere Backends lassen sich hinter der Schnittstelle `PictureDescriber` ergänzen, ohne Kartenerzeugung oder APKG-Ausgabe zu ändern.
+
+**Ehrliche Einschätzung der Bildbeschreibung:** Kleine lokale Modelle laufen auf der CPU, verstehen technische Abbildungen aber schlecht und erfinden teilweise Inhalte. Mit SmolVLM-256M ergab der Test an den Vorlesungsfolien keine verlässlichen Beschreibungen von Schaltbildern oder Diagrammen. Der Text in Abbildungen wird unabhängig davon per OCR übernommen. Für brauchbare Beschreibungen empfiehlt sich `--picture-backend profile` mit einem größeren Vision-Modell (etwa 7B) auf einem Server mit ausreichend Arbeitsspeicher oder GPU. Ohne ein solches Modell ist `--picture-backend none` die vorsichtigere Wahl.
+
+### Modelle und Speicherort
+
+Alles, was der Modus herunterlädt oder zwischenspeichert, liegt in **einem** Ordner: `pdf_conversion.models_dir`, standardmäßig `models/` neben der YAML-Datei. Ohne YAML-Datei gilt `models/` im aktuellen Arbeitsverzeichnis. Das betrifft Docling-Modelle (`models/docling`), Bildmodelle (`models/pictures`) und die Caches von Hugging Face, PyTorch und Docling. Das Programm setzt `HF_HOME`, `TORCH_HOME`, `XDG_CACHE_HOME` und `DOCLING_CACHE_DIR` für seinen eigenen Prozess und schreibt nichts in `~/.cache`. `models/` steht in `.gitignore`. Der erste Download wird angekündigt; `models download` lädt alles vorab, danach arbeitet der Modus offline. Modelle, die Ollama verwaltet, bleiben in Ollamas eigener Ablage.
+
+### Laufzeit und Ressourcen
+
+Warum eine GPU nötig ist, zeigt die Messung auf einem Laptop **ohne nutzbare GPU** (Ryzen 5 PRO 4650U, 12 Threads, 14 GB RAM) mit den Vorlesungsfolien aus `input/`:
+
+- Installation: rund 2,2 GB in `.venv` (PyTorch CPU, Docling); Modelle rund 1,9 GB in `models/` (Docling inklusive Formelmodell 1,4 GB, SmolVLM-256M 0,5 GB)
+- Layout, Text, Tabellen und OCR ohne Formeln: etwa 8–12 Sekunden pro Seite
+- Formelerkennung: auf formelreichen Folien rund 2 Minuten pro Seite; eine 15-seitige EL1-Vorlesung war nach über 50 Minuten noch nicht fertig und wurde abgebrochen
+- lokale Bildbeschreibung (SmolVLM-256M): etwa 15–25 Sekunden pro Abbildung
+- Arbeitsspeicher: etwa 2,5–3 GB während der Aufbereitung
+
+Die integrierte Radeon-Vega-GPU dieses Laptops (`gfx90c`) hilft nicht: ROCm unterstützt sie nicht offiziell, und sie hat nur 512 MiB eigenen Speicher. Modelle mit etwa 2B Parametern brauchten über 4 GB Arbeitsspeicher und brachten den Rechner in den Swap. Für größere Bildmodelle eignet sich das Backend `profile` mit einem eigenen Server.
 
 ## Native PDF-Verarbeitung
 
@@ -264,6 +338,10 @@ Dokument → Textextraktion → Chunks → LiteLLM → validierte Karten
 - `ai.py`: Provider-Anbindung, Prompting und Antwortvalidierung
 - `subdecks.py`: Unterdeck-Modus – Regeln, Kontext im Prompt, Antwortschema und einheitliche Unterdecknamen
 - `native_pdf.py`: konservative Modellfreigabe sowie OpenAI-Upload, Responses-Parsing und Löschung
+- `docling_pdf.py`: einzige Docling-Schnittstelle – Konvertierung, Bildausschnitte, Modell-Downloads und Bildmodell-Auswahl
+- `structured_pdf.py`: setzt Seiten, Abbildungs- und Formelmarker zusammen, filtert Wiederholungen und meldet Unlesbares
+- `pictures.py`: austauschbare Bildmodelle (`local`, `profile`) hinter der Schnittstelle `PictureDescriber`
+- `model_storage.py`: projektlokaler Modellordner, Cache-Variablen und Download-Manifest
 - `models.py`: Karten- und JSON-Schema sowie Deduplizierung
 - `apkg.py`: Erstellung, Erweiterung und Inspektion von Anki-Paketen
 - `cli.py`: ausschließlich Kommandozeilen-Workflow und Darstellung
@@ -280,13 +358,13 @@ python -m ruff format --check src tests
 python -m pytest
 ```
 
-Die Tests verwenden einen simulierten KI-Client und benötigen keine API-Schlüssel. Sie prüfen unter anderem Dokumentextraktion, Kartenlimits, JSON-Validierung, APKG-Erstellung und -Erweiterung, Duplikate, Lernstand-Erhalt, Medien-Einträge und zstd-Komprimierung.
+Die Tests verwenden einen simulierten KI-Client und benötigen keine API-Schlüssel. Sie prüfen unter anderem Dokumentextraktion, Kartenlimits, JSON-Validierung, APKG-Erstellung und -Erweiterung, Duplikate, Lernstand-Erhalt, Medien-Einträge und zstd-Komprimierung. Der strukturierte PDF-Modus wird mit Attrappen für Docling, Bildmodelle und Downloads getestet; der reguläre Testlauf braucht weder Docling noch Modelle noch Netzwerk. Ein gesondert markierter Integrationstest mit echtem Docling und einer erzeugten Scan-Seite läuft nur ausdrücklich mit `python -m pytest -m docling`; fehlende Modelle lädt er nach `models/`.
 
 ## Bewusste MVP-Grenzen und nächste sinnvolle Schritte
 
-- Gescannte PDFs benötigen derzeit eine vorherige OCR; eingebetteter Text wird direkt gelesen. Inhalte von Bildern und Diagrammen sowie die Tabellenstruktur gehen bei der lokalen PDF-Extraktion verloren. Eine vollständige lokale PDF-Aufbereitung mit OCR, Tabellen und Bildbeschreibungen ist als req-5 (R-140 bis R-157, Umsetzung mit Docling) beschrieben, aber noch nicht umgesetzt.
+- Im Standardmodus `local` werden nur eingebettete PDF-Texte gelesen; gescannte Seiten, Bildinhalte und Tabellenstrukturen erfasst erst `--pdf-mode structured`. Dieser Modus braucht eine GPU, und kleine lokale Bildmodelle beschreiben technische Abbildungen unzuverlässig (siehe oben). Ohne GPU bleiben `native` und `local`.
 - URLs, Bilder/Audio in Karten, Lückentext und frei wählbare Notiztypen sind noch nicht enthalten.
 - KI-Ergebnisse müssen fachlich geprüft werden. Die JSON-Datei ist dafür der empfohlene Zwischenschritt.
 - Bei Cloud-Providern werden Dokumentauszüge an den jeweiligen Anbieter übertragen. Für vertrauliche Dokumente ist ein lokales Modell wie Ollama vorzusehen. Im Unterdeck-Modus mit `--extend` gehen zusätzlich die Namen vorhandener Unterdecks und einige Beispielfragen daraus an den Provider.
-- Als nächste Ausbaustufen bieten sich Quellenangaben pro Karte, eine interaktive Kartenprüfung, die lokale PDF-Aufbereitung (req-5), Cloze-Karten und ein Fortsetzen abgebrochener Generierungen an.
+- Als nächste Ausbaustufen bieten sich Quellenangaben pro Karte, eine interaktive Kartenprüfung, ein Zwischenspeicher für aufbereitete PDFs, Cloze-Karten und ein Fortsetzen abgebrochener Generierungen an.
 - Web-UI und Linux-Container/Proxmox-Deployment sind bewusst **noch nicht** Teil dieses MVP. Die Trennung von Kern und CLI bereitet beides vor, ohne jetzt Betriebskomplexität einzuführen.

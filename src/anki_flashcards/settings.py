@@ -13,9 +13,21 @@ from anki_flashcards.config import (
     AppConfig,
     ModelProfile,
     PDFMode,
+    PictureBackend,
     load_config,
 )
 from anki_flashcards.errors import FlashcardError
+from anki_flashcards.structured_pdf import ConversionOptions
+
+CONVERSION_OPTIONS = (
+    "force_ocr",
+    "formulas",
+    "allow_unreadable",
+    "allow_cpu",
+    "picture_backend",
+    "picture_profile",
+    "source_text",
+)
 
 
 class ValueSource(StrEnum):
@@ -44,6 +56,29 @@ class SourcedValue:
 
 
 @dataclass(frozen=True)
+class ConversionSettings:
+    """Contain resolved settings of the structured local PDF conversion.
+
+    Attributes:
+        options: OCR, formula, gap handling, and description language.
+        models_dir: Absolute folder for every downloaded model and cache.
+        picture_backend: Backend that describes figures.
+        picture_model: Hugging Face identifier of the local picture model.
+        picture_profile: Profile name used by the ``profile`` backend.
+        picture_ai: Provider settings of that profile, or None for other backends.
+        source_text: Optional new Markdown file receiving the converted text.
+    """
+
+    options: ConversionOptions
+    models_dir: Path
+    picture_backend: PictureBackend
+    picture_model: str
+    picture_profile: str | None = None
+    picture_ai: AISettings | None = None
+    source_text: Path | None = None
+
+
+@dataclass(frozen=True)
 class GenerateSettings:
     """Contain fully resolved values needed for a document generation run.
 
@@ -58,9 +93,10 @@ class GenerateSettings:
         instructions: Additional prompt instructions.
         chunk_size: Maximum source characters per local-text request.
         ai: Provider model, credentials, endpoint, timeout, and options.
-        pdf_mode: Effective local or native PDF processing mode.
+        pdf_mode: Effective local, structured, or native PDF processing mode.
         subdecks: Whether the AI assigns cards to subdecks below ``deck``.
         profile_name: Selected profile name or None for direct model settings.
+        conversion: Settings of the structured local PDF conversion.
         origins: Precedence-layer label for every effective scalar setting.
     """
 
@@ -77,6 +113,7 @@ class GenerateSettings:
     pdf_mode: PDFMode
     subdecks: bool
     profile_name: str | None
+    conversion: ConversionSettings
     origins: dict[str, str] = field(default_factory=dict)
 
 
@@ -159,6 +196,10 @@ def resolve_generate_settings(
     timeout = _resolve_timeout(cli.get("timeout"), config, profile)
     pdf_mode = _resolve_pdf_mode(cli.get("pdf_mode"), config, profile)
     origins = _generate_origins(cli, config, profile_name, config_path)
+    language = cli.get("language", config.generation.language)
+    conversion = _resolve_conversion(
+        cli, config, config_path, input_file, profile_name, language, pdf_mode
+    )
     ai = AISettings(
         model=model.value,
         api_key=_profile_api_key(profile),
@@ -173,13 +214,14 @@ def resolve_generate_settings(
         extend=cli.get("extend", config.generation.extend),
         json_output=json_output,
         limit=cli.get("limit", config.generation.limit),
-        language=cli.get("language", config.generation.language),
+        language=language,
         instructions=cli.get("instructions", config.generation.instructions),
         chunk_size=cli.get("chunk_size", config.generation.chunk_size),
         ai=ai,
         pdf_mode=pdf_mode,
         subdecks=cli.get("subdecks", config.generation.subdecks),
         profile_name=profile_name,
+        conversion=conversion,
         origins=origins,
     )
 
@@ -221,6 +263,131 @@ def resolve_export_settings(
         extend=cli.get("extend", config.generation.extend),
         origins=origins,
     )
+
+
+def _resolve_conversion(
+    cli: Mapping[str, Any],
+    config: AppConfig,
+    config_path: Path | None,
+    input_file: Path,
+    profile_name: str | None,
+    language: str,
+    pdf_mode: PDFMode,
+) -> ConversionSettings:
+    """Merge structured PDF conversion settings from CLI, YAML, and defaults.
+
+    Args:
+        cli: Explicit command options.
+        config: Validated application configuration.
+        config_path: YAML location for relative models and text folders.
+        input_file: Resolved input used to name a saved source text.
+        profile_name: Profile generating the cards, reused by default for
+            the ``profile`` picture backend.
+        language: Effective card language, also used for descriptions.
+        pdf_mode: Effective PDF mode; the picture profile is only validated
+            for the structured mode.
+
+    Returns:
+        Resolved conversion settings.
+
+    Raises:
+        FlashcardError: If the structured mode uses a picture profile that is
+            missing or does not allow image input.
+    """
+    conversion = config.pdf_conversion
+    options = ConversionOptions(
+        ocr_languages=tuple(conversion.ocr_languages),
+        force_ocr=cli.get("force_ocr", conversion.force_ocr),
+        formulas=cli.get("formulas", conversion.formulas),
+        allow_unreadable=cli.get("allow_unreadable", conversion.allow_unreadable),
+        allow_cpu=cli.get("allow_cpu", conversion.allow_cpu),
+        language=language,
+    )
+    backend = cli.get("picture_backend", conversion.pictures.backend)
+    picture_profile = cli.get("picture_profile") or conversion.pictures.profile or profile_name
+    picture_ai = None
+    if pdf_mode == PDFMode.STRUCTURED and backend == PictureBackend.PROFILE:
+        picture_ai = _picture_ai(config, picture_profile)
+    return ConversionSettings(
+        options=options,
+        models_dir=resolve_models_dir(config, config_path),
+        picture_backend=backend,
+        picture_model=conversion.pictures.model,
+        picture_profile=picture_profile if backend == PictureBackend.PROFILE else None,
+        picture_ai=picture_ai,
+        source_text=_resolve_source_text(cli, conversion.source_text_dir, input_file, config_path),
+    )
+
+
+def resolve_models_dir(config: AppConfig, config_path: Path | None) -> Path:
+    """Resolve the project-local folder for downloaded models and caches.
+
+    Args:
+        config: Validated application configuration.
+        config_path: YAML location; relative folders are resolved next to it,
+            without YAML relative to the current working directory.
+
+    Returns:
+        The absolute models folder.
+    """
+    return _config_directory(config.pdf_conversion.models_dir, config_path)
+
+
+def _picture_ai(config: AppConfig, name: str | None) -> AISettings:
+    """Resolve provider settings of the profile that describes figures.
+
+    Args:
+        config: Validated application configuration.
+        name: Picture profile name, or None when no profile is selected.
+
+    Returns:
+        Settings of the profile, with its credential read from the environment.
+
+    Raises:
+        FlashcardError: If no profile is selected, it is unknown, or it does
+            not explicitly allow image input.
+    """
+    if name is None:
+        raise FlashcardError(
+            "The picture backend 'profile' needs a model profile: use --picture-profile "
+            "or pdf_conversion.pictures.profile, or select a card profile."
+        )
+    profile = _select_profile(config, name)
+    if profile is None or not profile.image_input:
+        raise FlashcardError(
+            f"Model profile '{name}' must set image_input: true to describe figures."
+        )
+    return AISettings(
+        model=profile.model,
+        api_key=_profile_api_key(profile),
+        api_base=profile.api_base,
+        timeout=profile.timeout,
+        options=profile.options.copy(),
+    )
+
+
+def _resolve_source_text(
+    cli: Mapping[str, Any],
+    configured_dir: Path | None,
+    input_file: Path,
+    config_path: Path | None,
+) -> Path | None:
+    """Resolve where the converted Markdown is saved, if anywhere.
+
+    Args:
+        cli: Explicit command options; ``source_text`` is a file path.
+        configured_dir: YAML folder for saved texts or None.
+        input_file: Resolved input whose name is reused for the file.
+        config_path: YAML location for a relative folder.
+
+    Returns:
+        Absolute Markdown path, or None when the text is not saved.
+    """
+    if "source_text" in cli:
+        return Path(cli["source_text"]).absolute()
+    if configured_dir is None:
+        return None
+    return _config_directory(configured_dir, config_path) / f"{input_file.stem}.md"
 
 
 def _resolve_profile_name(cli: Mapping[str, Any], config: AppConfig) -> str | None:
@@ -546,6 +713,10 @@ def _generate_origins(
         "chunk_size": _source_for_option(cli, "chunk_size", config_path is not None).source.value,
         "pdf_mode": _pdf_mode_origin(cli, config, profile_name).source.value,
         "subdecks": _source_for_option(cli, "subdecks", config_path is not None).source.value,
+        **{
+            name: _source_for_option(cli, name, config_path is not None).source.value
+            for name in CONVERSION_OPTIONS
+        },
         "json_output": _source_for_option(
             cli, "json_output", config.generation.json_output is not None
         ).source.value,
@@ -580,10 +751,38 @@ def configuration_diagnostics(
         "chunk_size": settings.chunk_size,
         "pdf_mode": settings.pdf_mode.value,
         "subdecks": settings.subdecks,
+        "pdf_conversion": _conversion_diagnostics(settings.conversion),
         "model": settings.ai.model,
         "api_base": settings.ai.api_base,
         "timeout": settings.ai.timeout,
         "api_key": "set (hidden)" if settings.ai.api_key else "not set",
         "provider_options": sorted(settings.ai.options),
         "sources": settings.origins,
+    }
+
+
+def _conversion_diagnostics(conversion: ConversionSettings) -> dict[str, Any]:
+    """Describe structured PDF settings without credential values.
+
+    Args:
+        conversion: Resolved conversion settings.
+
+    Returns:
+        A JSON-safe dictionary; the picture profile's key is only reported
+        as set or not set.
+    """
+    options = conversion.options
+    picture_key = conversion.picture_ai.api_key if conversion.picture_ai else None
+    return {
+        "models_dir": str(conversion.models_dir),
+        "ocr_languages": list(options.ocr_languages),
+        "force_ocr": options.force_ocr,
+        "formulas": options.formulas,
+        "allow_unreadable": options.allow_unreadable,
+        "allow_cpu": options.allow_cpu,
+        "picture_backend": conversion.picture_backend.value,
+        "picture_model": conversion.picture_model,
+        "picture_profile": conversion.picture_profile,
+        "picture_api_key": "set (hidden)" if picture_key else "not set",
+        "source_text": str(conversion.source_text) if conversion.source_text else None,
     }
