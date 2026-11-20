@@ -386,18 +386,43 @@ Alles, was die Aufbereitung herunterlädt oder zwischenspeichert – Docling-Mod
 
 **R-158 – GPU als Voraussetzung · muss · umgesetzt**
 Der strukturierte Modus ist für einen GPU-Beschleuniger ausgelegt: NVIDIA über CUDA, AMD über eine ROCm-Version von PyTorch, Apple Silicon über MPS oder Intel über XPU. Vor Modell-Downloads und Aufbereitung prüft das Programm, ob PyTorch einen solchen Beschleuniger nutzen kann, und verwendet ihn für Docling und das lokale Bildmodell. Ohne Beschleuniger bricht der Lauf mit einer klaren Meldung ab. Sie nennt die beiden Alternativen: Entweder übernimmt das KI-Modell die PDF (`--pdf-mode native`, Upload an einen freigegebenen Provider), oder `--pdf-mode local` liest nur die eingebettete Textebene. Es gibt keinen stillen Wechsel des Modus. Eine ausdrückliche Option (`--allow-cpu`, YAML `pdf_conversion.allow_cpu`, Standard aus) erlaubt den CPU-Betrieb trotzdem, etwa für kurze Dokumente oder mit `--no-formulas`; die CLI weist dann auf die lange Laufzeit hin. Begründung (Messung 20.11.2026): Auf einem Laptop mit Ryzen 5 PRO 4650U ohne nutzbare GPU brauchte die Aufbereitung einer 15-seitigen Vorlesung mit Formelerkennung über 50 Minuten. Die integrierte Radeon-Vega-GPU (`gfx90c`) wird von ROCm nicht offiziell unterstützt und hat nur 512 MiB eigenen Speicher.
-## 13. Spätere Erweiterungen
+## 13. Vorbereitung der Web-Oberfläche „Anki Studio“
+
+Entscheidung vom 20.11.2026: Die Web-Oberfläche entsteht als eigenes Projekt „Anki Studio“ in einem eigenen Repository. Sie bindet dieses Paket als versionierte Python-Abhängigkeit ein und ist ein weiterer Client des selbst betriebenen Anki-Sync-Servers. Dieses Repository liefert dafür nur den UI-unabhängigen Kern. Web-Oberfläche, Sync, Authentifizierung und Deployment gehören nicht hierher. Die Übergabe an das neue Projekt beschreibt [docs/anki-studio-uebergabe.md](./docs/anki-studio-uebergabe.md).
+
+**R-170 – Generierungsdienst ohne CLI · muss · offen**
+Die Abläufe von `generate`, `export` und `models download` müssen als UI-unabhängiger Dienst aufrufbar sein: Ausgabe prüfen, Unterdeck-Kontext lesen, Karten im gewählten PDF-Modus erzeugen, JSON schreiben und Paket schreiben. Der Dienst importiert weder Typer noch Rich und gibt nichts auf der Konsole aus. Die CLI wird zu einer dünnen Schicht, die Optionen sammelt, den Dienst aufruft und Ereignisse darstellt. Ihr Verhalten, ihre Ausgaben und ihre Exit-Codes bleiben unverändert.
+
+**R-171 – Fortschritts- und Hinweisereignisse · muss · offen**
+Der Dienst meldet Fortschritt und Hinweise als strukturierte, unveränderliche Ereignisse an einen vom Aufrufer übergebenen Callback: Beginn und Fortschritt einer Phase (Aufbereitung, Generierung), Hinweise mit Stufe (Information, Warnung, Datenübertragung) und die Statistik der strukturierten Aufbereitung. Die Ereignisse lassen sich ohne Verlust in JSON umwandeln, damit eine Web-Oberfläche sie live übertragen kann. Ankündigungen von Datenübertragungen (native PDF, Bild-Profil) sind als eigene Stufe erkennbar.
+
+**R-172 – Abbruch · soll · offen**
+Ein Aufrufer kann einen laufenden Generierungsauftrag abbrechen. Der Dienst prüft eine Abbruchanfrage zwischen Abschnitten der KI-Generierung und zwischen Schritten der Aufbereitung und bricht dann mit einem eigenen Fehler ab. Ein abgebrochener Lauf schreibt weder JSON noch Paket. Ein einzelner laufender Provider-Request oder ein nativer Upload wird nicht unterbrochen; der Abbruch greift danach.
+
+**R-173 – Karten erzeugen und Ziel schreiben getrennt · muss · offen**
+Karten erzeugen und Karten schreiben sind getrennt aufrufbar. Eine Oberfläche kann Karten erzeugen, sie anzeigen und bearbeiten lassen und erst danach in ein Ziel schreiben. Für die geprüften Karten gelten dieselbe Validierung, Duplikaterkennung und Escaping-Regeln wie im direkten Lauf.
+
+**R-174 – Ziel Anki-Sammlung · muss · offen**
+Zusätzlich zur APKG-Datei kann eine vom Aufrufer geöffnete Anki-Sammlung (offizielles `anki.collection.Collection`-Objekt) Ziel sein. Es gelten derselbe Notiztyp, dieselbe Duplikaterkennung über Deck und Unterdecks, dieselben stabilen GUIDs, dasselbe HTML-Escaping und dieselbe Unterdeck-Logik wie beim Erweitern eines Pakets. Alle neuen Notizen eines Aufrufs werden in einer einzigen Anki-Operation hinzugefügt. Decks mit Kartenanzahl und der Unterdeck-Kontext lassen sich ebenso aus einer offenen Sammlung lesen. Das Paket öffnet, synchronisiert oder schließt keine Sammlung selbst; Pfad, Sperren und Sync verantwortet der Aufrufer. Die CLI bleibt bei APKG-Dateien und berührt keine persönliche Sammlung.
+
+**R-175 – Versionierte Schnittstelle · muss · offen**
+Die von Anki Studio genutzten Funktionen und Klassen sind im Entwicklerhandbuch als öffentliche Schnittstelle beschrieben. Der Stand, der sie erstmals bereitstellt, erhält die Paketversion 0.2.0 und den Git-Tag `v0.2.0`. Spätere inkompatible Änderungen dieser Schnittstelle erhöhen die Version und werden in der Übergabedatei vermerkt.
+
+**R-176 – Übergabe an Anki Studio · muss · offen**
+[docs/anki-studio-uebergabe.md](./docs/anki-studio-uebergabe.md) bündelt Ziel, Entscheidungen, Infrastruktur, Architektur, Anforderungen an Anki Studio, Risiken und die konkreten Schnittstellen dieses Pakets. Sie wird aktualisiert, sobald R-170 bis R-175 umgesetzt sind.
+
+## 14. Spätere Erweiterungen
 
 Die folgenden Punkte sind Ideen und keine aktuellen Implementierungsaufträge:
 
-- **R-200 · kann · später:** Webinterface beziehungsweise Web-API auf dem vorhandenen fachlichen Kern; Konfiguration und Kartenprüfung über dieselben Dienste.
-- **R-201 · kann · später:** Linux-Container und Deployment auf Proxmox, erst nach stabiler Anwendung und geklärter Verwaltung von Konfiguration, Secrets und Daten.
+- **R-200 · übertragen an Anki Studio:** Webinterface beziehungsweise Web-API auf dem vorhandenen fachlichen Kern; Konfiguration und Kartenprüfung über dieselben Dienste. Umsetzung im eigenen Repository, vorbereitet durch R-170 bis R-176.
+- **R-201 · übertragen an Anki Studio:** Linux-Container und Deployment auf Proxmox. Umsetzung im eigenen Repository; siehe [docs/anki-studio-uebergabe.md](./docs/anki-studio-uebergabe.md).
 - **R-202 · kann · später:** URLs als zusätzliche Quelle mit eigenen Sicherheits- und Datenschutzregeln.
 - **R-203 · übernommen in R-142:** OCR für gescannte PDF-Dokumente; weitere Formate siehe R-153.
 - **R-204 · kann · später:** Quellenangaben pro Karte, interaktive Prüfung und Fortsetzen abgebrochener Generierungen.
 - **R-205 · kann · später:** Lückentext, weitere Notiztypen sowie Bilder und Audio in Karten.
 
-## 14. Aktuelle CLI-Vertragsgrundlage
+## 15. Aktuelle CLI-Vertragsgrundlage
 
 Bis zur Umsetzung der neuen Konfigurations- und Hilfeanforderungen bestehen diese Befehle:
 
@@ -420,7 +445,7 @@ Wichtige Ist-Eigenschaften:
 - `--limit` akzeptiert nichtnegative ganze Zahlen; `0` bedeutet Unlimited.
 - API-Schlüssel werden über die in YAML referenzierten provider-spezifischen Umgebungsvariablen aus `.env` oder der Prozessumgebung bereitgestellt; `.env` enthält keine Modelle oder Endpunkte.
 
-## 15. Abnahmekriterien für die noch offenen Hauptpakete
+## 16. Abnahmekriterien für die noch offenen Hauptpakete
 
 ### A. Qualitäts- und CLI-Paket (req-2)
 
@@ -470,3 +495,12 @@ Wichtige Ist-Eigenschaften:
 8. Alle heruntergeladenen Modelle und Caches liegen im Modellordner im Projekt; nach Installation und Testlauf sind in benutzerweiten Cache-Ordnern keine neuen Daten entstanden.
 9. Der aufbereitete Text durchläuft dieselbe Validierung, Unterdeck-Zuordnung und APKG-Ausgabe wie im Modus `local`.
 10. Reguläre Tests laufen ohne Docling, Modelle, GPU und Netzwerk; README und beide Handbücher sind aktualisiert.
+
+### F. Vorbereitung von Anki Studio
+
+1. `generate`, `export` und `models download` laufen über einen Dienst ohne Typer, Rich und Konsolenausgabe; die bestehenden CLI-Tests bestehen unverändert in ihren Erwartungen.
+2. Fortschritt, Hinweise, Datenübertragungen und Aufbereitungsstatistik kommen als JSON-fähige Ereignisse beim Aufrufer an.
+3. Ein Abbruch zwischen Abschnitten oder Aufbereitungsschritten beendet den Lauf ohne geschriebene Dateien.
+4. Karten lassen sich erzeugen, prüfen und danach in eine APKG-Datei oder eine offene Anki-Sammlung schreiben; die Sammlung erhält alle Notizen eines Aufrufs in einer Operation und mit denselben Duplikat-, GUID- und Unterdeckregeln.
+5. Decks und Unterdeck-Kontext lassen sich aus einer offenen Sammlung lesen, ohne sie zu verändern.
+6. Version 0.2.0 ist getaggt; Entwicklerhandbuch und Übergabedatei nennen die öffentliche Schnittstelle.
