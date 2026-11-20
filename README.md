@@ -284,7 +284,7 @@ Die Tests verwenden einen simulierten KI-Client und benötigen keine API-Schlüs
 
 ## Bewusste MVP-Grenzen und nächste sinnvolle Schritte
 
-- Gescannte PDFs benötigen derzeit eine vorherige OCR; eingebetteter Text wird direkt gelesen. Inhalte von Bildern und Diagrammen sowie die Tabellenstruktur gehen bei der lokalen PDF-Extraktion verloren. Eine vollständige lokale PDF-Aufbereitung mit OCR, Tabellen und Bildbeschreibungen ist als req-5 (R-140 bis R-154) beschrieben, aber noch nicht umgesetzt.
+- Gescannte PDFs benötigen derzeit eine vorherige OCR; eingebetteter Text wird direkt gelesen. Inhalte von Bildern und Diagrammen sowie die Tabellenstruktur gehen bei der lokalen PDF-Extraktion verloren. Eine vollständige lokale PDF-Aufbereitung mit OCR, Tabellen und Bildbeschreibungen ist als req-5 (R-140 bis R-157, Umsetzung mit Docling) beschrieben, aber noch nicht umgesetzt.
 - URLs, Bilder/Audio in Karten, Lückentext und frei wählbare Notiztypen sind noch nicht enthalten.
 - KI-Ergebnisse müssen fachlich geprüft werden. Die JSON-Datei ist dafür der empfohlene Zwischenschritt.
 - Bei Cloud-Providern werden Dokumentauszüge an den jeweiligen Anbieter übertragen. Für vertrauliche Dokumente ist ein lokales Modell wie Ollama vorzusehen. Im Unterdeck-Modus mit `--extend` gehen zusätzlich die Namen vorhandener Unterdecks und einige Beispielfragen daraus an den Provider.
