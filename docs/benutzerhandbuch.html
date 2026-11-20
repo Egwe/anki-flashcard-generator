@@ -663,7 +663,7 @@ python -m pip install -e .</code></pre>
           <div class="details-body">
             <div class="option">
               <div class="option-heading"><span class="option-name"><code>cards_file</code></span><span class="option-meta">Pflicht · JSON-Datei</span></div>
-              <p>Gib eine Karten-JSON-Datei mit <code>schema_version: 1</code> an. Diese Datei stammt normalerweise aus <code>generate --json</code>. Ein reiner Dateiname kann durch <code>input_dir</code> aufgelöst werden.</p>
+              <p>Gib eine Karten-JSON-Datei mit <code>schema_version: 1</code> an. Diese Datei stammt normalerweise aus <code>generate --json</code>. Ein reiner Dateiname kann durch <code>input_dir</code> aufgelöst werden. Tags aus mehreren Wörtern werden beim Einlesen zu einem Tag mit Unterstrichen zusammengezogen (<code>Ohmsches Gesetz</code> → <code>Ohmsches_Gesetz</code>), weil Anki keine Leerzeichen in Tags kennt; dasselbe gilt für Tags in KI-Antworten.</p>
               <p>Hat eine Karte das Feld <code>subdeck</code>, legt das Programm sie in <code>--deck::subdeck</code> ab. Du kannst die Zuordnung also vor dem Export in der JSON-Datei ändern.</p>
             </div>
             <div class="option">

@@ -867,7 +867,7 @@
         <dl class="facts">
           <dt>Importiert</dt><dd><code>errors</code> · Pydantic, <code>json</code>, <code>tempfile</code>, <code>os</code></dd>
           <dt>Verwendet von</dt><dd><code>ai</code>, <code>native_pdf</code>, <code>subdecks</code>, <code>apkg</code>, <code>cli</code></dd>
-          <dt>Tests</dt><dd><code>tests/test_models.py</code> (6 Tests)</dd>
+          <dt>Tests</dt><dd><code>tests/test_models.py</code> (8 Tests)</dd>
         </dl>
         <details open>
           <summary>Öffentliche Schnittstelle</summary>
@@ -880,6 +880,7 @@
             <div class="option">
               <div class="option-heading"><span class="option-name"><code>class CardBatch(BaseModel)</code></span><span class="option-meta">Pydantic-Modell</span></div>
               <p><code>cards: list[Card]</code>. Eine leere Liste ist an dieser Grenze erlaubt. <code>CardBatch</code> ist zugleich das <strong>Antwortschema für die KI</strong>: LiteLLM erhält es als <code>response_format</code>, das OpenAI-SDK als <code>text_format</code>.</p>
+              <p><code>join_tag_words()</code> (Validator vor der Prüfung, seit 0.2.1, R-177) zieht Mehrwort-Tags der Rohdaten zu einem Tag mit Unterstrichen zusammen, etwa <code>"Ohmsches Gesetz"</code> → <code>Ohmsches_Gesetz</code>. Das gilt für KI-Antworten (auch <code>SubdeckCardBatch</code> und den nativen Weg) und für Karten-JSON aus <code>load_cards</code>; ein direkt erzeugtes <code>Card</code> lehnt Leerzeichen weiterhin ab.</p>
               <p><code>validate_subdeck()</code> fasst Leerraum zusammen, macht leere Namen zu <code>None</code> und lehnt <code>::</code> ab – ein Unterdeck hat genau eine Ebene.</p>
             </div>
             <div class="option">

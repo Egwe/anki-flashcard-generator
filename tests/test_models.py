@@ -6,7 +6,15 @@ import pytest
 from pydantic import ValidationError
 
 from anki_flashcards.errors import FlashcardError
-from anki_flashcards.models import Card, SubdeckCard, deduplicate_cards, load_cards, save_cards
+from anki_flashcards.models import (
+    Card,
+    CardBatch,
+    SubdeckCard,
+    SubdeckCardBatch,
+    deduplicate_cards,
+    load_cards,
+    save_cards,
+)
 
 
 def test_card_json_round_trip(tmp_path: Path) -> None:
@@ -104,3 +112,33 @@ def test_subdeck_json_round_trip_omits_missing_subdecks(tmp_path: Path) -> None:
     assert raw["cards"][0]["subdeck"] == "Kapitel 1"
     assert "subdeck" not in raw["cards"][1]
     assert load_cards(path) == expected
+
+
+def test_batch_joins_multi_word_tags() -> None:
+    """Verify model answers and card JSON turn multi-word tags into one tag.
+
+    Small models often answer with tags such as "Ohmsches Gesetz"; Anki
+    cannot store spaces in a tag, so the words are joined with underscores
+    instead of rejecting the whole answer (R-177).
+
+    Returns:
+        None. The assertions check the normalized tags.
+    """
+    batch = CardBatch.model_validate(
+        {"cards": [{"front": "Frage?", "back": "Antwort", "tags": ["Ohmsches  Gesetz", "Strom"]}]}
+    )
+
+    assert batch.cards[0].tags == ["Ohmsches_Gesetz", "Strom"]
+
+
+def test_subdeck_batch_joins_multi_word_tags() -> None:
+    """Verify the subdeck response schema normalizes tags the same way.
+
+    Returns:
+        None. The assertion checks the normalized tag.
+    """
+    batch = SubdeckCardBatch.model_validate(
+        {"cards": [{"front": "F?", "back": "A", "tags": ["zwei Worte"], "subdeck": "Kapitel"}]}
+    )
+
+    assert batch.cards[0].tags == ["zwei_Worte"]

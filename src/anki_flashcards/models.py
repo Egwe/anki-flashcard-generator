@@ -6,7 +6,7 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from anki_flashcards.errors import FlashcardError
 
@@ -88,11 +88,32 @@ class SubdeckCard(Card):
 class CardBatch(BaseModel):
     """Wrap the list of cards returned by an AI provider or stored in JSON.
 
+    Multi-word tags are joined with underscores before the cards are
+    validated, because Anki cannot store spaces in a tag and models often
+    answer with tags like ``Ohmsches Gesetz`` (R-177).
+
     Attributes:
         cards: Validated flashcards; an empty batch is allowed at this boundary.
     """
 
     cards: list[Card]
+
+    @model_validator(mode="before")
+    @classmethod
+    def join_tag_words(cls, data: Any) -> Any:
+        """Turn every multi-word tag of the raw cards into a single tag.
+
+        Args:
+            data: Raw batch, usually ``{"cards": [...]}`` from JSON.
+
+        Returns:
+            The batch with tags such as ``"Ohmsches Gesetz"`` replaced by
+            ``"Ohmsches_Gesetz"``; other input is returned unchanged for the
+            regular validation to report.
+        """
+        if not isinstance(data, dict) or not isinstance(data.get("cards"), list):
+            return data
+        return {**data, "cards": [_join_card_tags(card) for card in data["cards"]]}
 
 
 class SubdeckCardBatch(CardBatch):
@@ -103,6 +124,22 @@ class SubdeckCardBatch(CardBatch):
     """
 
     cards: list[SubdeckCard]
+
+
+def _join_card_tags(card: Any) -> Any:
+    """Join the words of each tag of one raw card with underscores.
+
+    Args:
+        card: Raw card data from a model answer or JSON file.
+
+    Returns:
+        The card with joined tags, or the input unchanged if it is no dict
+        or has no list of tags.
+    """
+    if not isinstance(card, dict) or not isinstance(card.get("tags"), list):
+        return card
+    tags = ["_".join(str(tag).split()) for tag in card["tags"]]
+    return {**card, "tags": tags}
 
 
 def normalize_key(text: str) -> str:

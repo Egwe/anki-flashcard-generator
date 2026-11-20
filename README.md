@@ -121,7 +121,7 @@ Vor dem Import eines erweiterten Decks ist zusätzlich eine Anki-Sicherung sinnv
 
 ### 3. JSON prüfen und ohne KI exportieren
 
-Beim Generieren mit `--json` entsteht eine versionierte Datei mit `schema_version`, Decknamen und Karten. Nach einer manuellen Prüfung oder Bearbeitung:
+Beim Generieren mit `--json` entsteht eine versionierte Datei mit `schema_version`, Decknamen und Karten. Tags aus mehreren Wörtern – in KI-Antworten wie in dieser Datei – werden zu einem Tag mit Unterstrichen zusammengezogen (`Ohmsches_Gesetz`), weil Anki keine Leerzeichen in Tags kennt. Nach einer manuellen Prüfung oder Bearbeitung:
 
 ```bash
 anki-flashcards export output/biologie.cards.json \
