@@ -49,7 +49,7 @@ Neben PDF müssen gängige lokale Textformate unterstützt werden. Aktuell sind 
 Nicht unterstützte Endungen, beschädigte Dokumente und Dokumente ohne extrahierbaren Text müssen mit einer verständlichen Fehlermeldung abgelehnt werden.
 
 **R-012 – Textaufteilung · muss · umgesetzt**
-Langer extrahierter Text muss für Modellaufrufe in überlappende Abschnitte aufgeteilt werden. Standard sind 24.000 Zeichen pro Abschnitt und 500 Zeichen Überlappung. Die CLI erlaubt Abschnittsgrößen von 1.000 bis 100.000 Zeichen. Absätze und Wortgrenzen sollen bevorzugt werden; jeder Quelltext muss trotz Überschneidungen vollständig berücksichtigt werden.
+Langer extrahierter Text muss für Modellaufrufe in überlappende Abschnitte aufgeteilt werden. Standard sind 24.000 Zeichen pro Abschnitt und 500 Zeichen Überlappung, höchstens jedoch ein Viertel der Abschnittsgröße (bei 1.000 Zeichen also 250). Die CLI erlaubt Abschnittsgrößen von 1.000 bis 100.000 Zeichen; jede Größe aus diesem Bereich muss ohne Fehler verarbeitet werden. Absätze und Wortgrenzen sollen bevorzugt werden; jeder Quelltext muss trotz Überschneidungen vollständig berücksichtigt werden.
 
 **R-013 – OCR · kann · später**
 Gescannte PDFs ohne Textebene benötigen derzeit eine externe OCR. Eine eingebaute OCR kann später ergänzt werden.
