@@ -489,3 +489,18 @@ Commits auf `main` (Merge-Commits je Paket):
 Für Tests in Anki Studio wichtig: Patch-Ziele für simulierte KI und Docling liegen jetzt in `anki_flashcards.pipeline` (zum Beispiel `anki_flashcards.pipeline.generate_cards`, `.generate_native_cards`, `.convert_pdf`, `.require_accelerator`), nicht mehr in `anki_flashcards.cli`.
 
 Prüfstand bei Übergabe: 160 Tests grün (`pytest`), `ruff check` und `ruff format --check` ohne Befund, Wheel-Build enthält `pipeline.py`.
+
+---
+
+## 13. Änderungen in 0.2.1 (21.11.2026)
+
+Kompatible Fehlerbehebungen aus dem Betrieb von Anki Studio; die öffentliche Schnittstelle aus Abschnitt 11 bleibt unverändert. Tag `v0.2.1`.
+
+| Änderung | Wirkung für Anki Studio |
+|---|---|
+| `tenacity` ist Abhängigkeit (R-027) | LiteLLM braucht es für `num_retries`; ohne es scheiterte in frischen Umgebungen jede KI-Anfrage. Anki Studio kann seine eigene Abhängigkeit darauf entfernen. |
+| Mehrwort-Tags werden zusammengezogen (R-177) | `CardBatch` macht aus `Ohmsches Gesetz` den Tag `Ohmsches_Gesetz`, statt die Antwort des Abschnitts zu verwerfen; betrifft KI-Antworten und `load_cards`. Ein direkt erzeugtes `Card` lehnt Leerzeichen in Tags weiterhin ab. |
+| `pdf_conversion.formula_batch_size` (R-159) | Für die Quadro K1200 (4 GiB) `1` setzen; sonst bleiben die meisten Formeln unlesbar. `configuration_diagnostics` nennt den Wert. |
+| GPU-Architektur wird geprüft (R-160) | `docling_pdf.available_accelerator()` meldet eine CUDA-GPU nur, wenn der PyTorch-Build Kernel für sie enthält; neu ist `cuda_architecture_problem(torch)`. Für die K1200 ist der Build `cu126` nötig. |
+
+Prüfstand: 176 Tests grün, `ruff check` und `ruff format --check` ohne Befund.
