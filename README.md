@@ -235,6 +235,10 @@ Die Beispieldateien enthalten bereits Standardendpunkte, Profilfelder und kommen
 
 `--allow-cpu` (YAML `pdf_conversion.allow_cpu`) erzwingt den CPU-Betrieb trotzdem, etwa für kurze Dokumente oder mit `--no-formulas`.
 
+Eine GPU zählt nur, wenn der installierte PyTorch-Build Kernel für ihre Architektur enthält. Neuere CUDA-Builds unterstützen ältere Karten nicht mehr (etwa Maxwell, `sm_50`); dann nennt die Meldung die GPU, ihre Architektur und die Architekturen des Builds, statt dass die Aufbereitung erst mitten in Docling scheitert. Für Maxwell-Karten passt der CUDA-12.6-Build von PyTorch.
+
+Die Formelerkennung liest standardmäßig fünf Formeln je Aufruf und braucht dafür rund 2 GiB zusätzlichen Grafikspeicher. Auf GPUs mit 4 GiB (gemessen mit einer Quadro K1200) blieben so 30 von 32 Formeln einer Vorlesung unlesbar; mit `pdf_conversion.formula_batch_size: 1` wurden alle erkannt. Der Wert gilt nur in der YAML.
+
 Danach durchläuft der Text unverändert Textaufteilung, Kartenerzeugung, Validierung, Unterdeck-Zuordnung und APKG-Ausgabe. Der Modus funktioniert daher mit **jedem** Kartenmodell, auch mit reinen Textmodellen über Ollama. Das Kartenmodell erhält den Hinweis, dass Abbildungsbeschreibungen maschinell erstellt sind und nichts darüber hinaus erfunden werden darf. Nur `.pdf`-Dateien werden angenommen; für Markdown oder Text gilt `--pdf-mode local`.
 
 ```bash

@@ -449,7 +449,49 @@ def _converter(options: ConversionOptions, storage: ModelStorage, device: str) -
         num_threads=os.cpu_count() or 4, device=device
     )
     pdf_option = PdfFormatOption(pipeline_options=pipeline)
-    return DocumentConverter(format_options={InputFormat.PDF: pdf_option})
+    converter = DocumentConverter(format_options={InputFormat.PDF: pdf_option})
+    limit_formula_batch(converter, options, InputFormat.PDF)
+    return converter
+
+
+def limit_formula_batch(converter: Any, options: ConversionOptions, input_format: Any) -> None:
+    """Set how many formulas Docling's formula model reads per call (R-159).
+
+    Docling fixes this at 5, which needs about 2 GiB of extra GPU memory per
+    call; 4 GiB GPUs then lose most formulas. Docling's converter exposes
+    its built pipelines and their enrichment models; the formula model is
+    recognized by its stable ``progress_step`` ``code_formula``.
+
+    Args:
+        converter: Docling ``DocumentConverter`` for PDF input.
+        options: Conversion options; nothing happens without formulas or
+            without ``formula_batch_size``.
+        input_format: Docling's ``InputFormat.PDF``, passed in so this
+            function needs no Docling import.
+
+    Returns:
+        None. The PDF pipeline is built early and the formula model changed.
+
+    Raises:
+        FlashcardError: If the pipeline contains no formula model, for
+            example after a Docling update.
+    """
+    if not options.formulas or options.formula_batch_size is None:
+        return
+    converter.initialize_pipeline(input_format)
+    models = [
+        model
+        for pipeline in converter.initialized_pipelines.values()
+        for model in getattr(pipeline, "enrichment_pipe", [])
+        if getattr(model, "progress_step", None) == FORMULA_COMPONENT
+    ]
+    if not models:
+        raise FlashcardError(
+            "Docling's formula model was not found; pdf_conversion.formula_batch_size "
+            "cannot be applied with this Docling version."
+        )
+    for model in models:
+        model.elements_batch_size = options.formula_batch_size
 
 
 def _progress_adapter(progress: ProgressCallback | None) -> Callable[[Any], None] | None:
