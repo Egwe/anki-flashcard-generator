@@ -32,6 +32,7 @@
       --c-apkg: #b4532a;     --c-apkg-soft: #fbece4;
       --c-ext: #5d7181;      --c-ext-soft: #eef2f5;
       --c-err: #a23b34;      --c-err-soft: #fbe9e7;
+      --c-pipe: #8a3f6f;     --c-pipe-soft: #f8e9f2;
       --edge: #6b7f8c;
     }
     * { box-sizing: border-box; }
@@ -123,6 +124,7 @@
     .tag.apkg { color: var(--c-apkg); background: var(--c-apkg-soft); }
     .tag.ext { color: var(--c-ext); background: var(--c-ext-soft); }
     .tag.err { color: var(--c-err); background: var(--c-err-soft); }
+    .tag.pipe { color: var(--c-pipe); background: var(--c-pipe-soft); }
     .module-card { border-left: 5px solid var(--c-cli); }
     .module-card[data-module~="config"], .module-card[data-module~="settings"] { border-left-color: var(--c-cfg); }
     .module-card[data-module~="documents"] { border-left-color: var(--c-doc); }
@@ -130,6 +132,7 @@
     .module-card[data-module~="models"] { border-left-color: var(--c-model); }
     .module-card[data-module~="apkg"] { border-left-color: var(--c-apkg); }
     .module-card[data-module~="errors"] { border-left-color: var(--c-err); }
+    .module-card[data-module~="pipeline"] { border-left-color: var(--c-pipe); }
     details { margin-top: .75rem; border: 1px solid var(--line); border-radius: .65rem; background: var(--card); overflow: clip; }
     summary { padding: .85rem 1rem; color: var(--brand-dark); font-weight: 700; cursor: pointer; }
     summary:hover { background: #f0f8f5; }
@@ -212,6 +215,7 @@
     .sw-model { border-color: var(--c-model); background: var(--c-model-soft); }
     .sw-apkg { border-color: var(--c-apkg); background: var(--c-apkg-soft); }
     .sw-ext { border-color: var(--c-ext); background: var(--c-ext-soft); }
+    .sw-pipe { border-color: var(--c-pipe); background: var(--c-pipe-soft); }
     .sw-err { border-color: var(--c-err); background: var(--c-err-soft); border-style: dashed; }
     svg text { fill: var(--ink); font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
     svg .t-title { font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace; font-size: 15px; font-weight: 700; }
@@ -232,6 +236,7 @@
     svg .n-model .box { fill: var(--c-model-soft); stroke: var(--c-model); } svg .n-model .dot { fill: var(--c-model); }
     svg .n-apkg .box { fill: var(--c-apkg-soft); stroke: var(--c-apkg); } svg .n-apkg .dot { fill: var(--c-apkg); }
     svg .n-ext .box { fill: var(--c-ext-soft); stroke: var(--c-ext); }   svg .n-ext .dot { fill: var(--c-ext); }
+    svg .n-pipe .box { fill: var(--c-pipe-soft); stroke: var(--c-pipe); } svg .n-pipe .dot { fill: var(--c-pipe); }
     svg .n-err .box { fill: var(--c-err-soft); stroke: var(--c-err); stroke-dasharray: 6 4; }
     svg .band { fill: #f6f9fa; stroke: var(--line); }
     svg .frame { fill: none; stroke-width: 2; stroke-dasharray: 7 5; }
@@ -310,6 +315,7 @@
     <div class="filter-row" aria-label="Nach Modul filtern">
       <span class="small muted">Nach Modul filtern:</span>
       <button class="filter-button" type="button" data-filter="cli" aria-pressed="false">cli</button>
+      <button class="filter-button" type="button" data-filter="pipeline" aria-pressed="false">pipeline</button>
       <button class="filter-button" type="button" data-filter="settings" aria-pressed="false">settings</button>
       <button class="filter-button" type="button" data-filter="config" aria-pressed="false">config</button>
       <button class="filter-button" type="button" data-filter="documents" aria-pressed="false">documents</button>
@@ -331,7 +337,7 @@
       <div class="section-heading">
         <p class="eyebrow">Das große Bild</p>
         <h2>Wie ist das Projekt aufgebaut?</h2>
-        <p>Das Projekt ist ein Python-Paket <code>anki_flashcards</code> im <code>src</code>-Layout. Es hat genau einen Einstiegspunkt: Der Konsolenbefehl <code>anki-flashcards</code> ist in <code>pyproject.toml</code> auf <code>anki_flashcards.cli:run</code> abgebildet. Sechzehn Dateien mit zusammen rund 5.500 Zeilen (inklusive Docstrings) bilden vier klar getrennte Schichten.</p>
+        <p>Das Projekt ist ein Python-Paket <code>anki_flashcards</code> im <code>src</code>-Layout. Es hat genau einen Einstiegspunkt: Der Konsolenbefehl <code>anki-flashcards</code> ist in <code>pyproject.toml</code> auf <code>anki_flashcards.cli:run</code> abgebildet. Siebzehn Dateien mit zusammen rund 6.200 Zeilen (inklusive Docstrings) bilden vier klar getrennte Schichten. Die Abläufe der Befehle stehen in <code>pipeline.py</code> und sind ohne Kommandozeile nutzbar – die Web-Oberfläche <a href="anki-studio-uebergabe.md">Anki Studio</a> ruft sie direkt auf.</p>
       </div>
       <div class="grid three">
         <article class="card searchable" data-module="documents native_pdf docling_pdf structured_pdf pictures">
@@ -354,6 +360,7 @@
       <figure class="diagram">
         <ul class="legend" aria-label="Farblegende">
           <li><span class="swatch sw-cli"></span>Präsentation (CLI)</li>
+          <li><span class="swatch sw-pipe"></span>Abläufe ohne Oberfläche</li>
           <li><span class="swatch sw-cfg"></span>Konfiguration</li>
           <li><span class="swatch sw-doc"></span>Dokumente</li>
           <li><span class="swatch sw-ai"></span>KI-Generierung</li>
@@ -365,13 +372,14 @@
         <div class="diagram-scroll">
           <svg viewBox="0 0 1000 640" aria-labelledby="arch-title arch-desc">
             <title id="arch-title">Schichtenarchitektur des Anki Flashcard Generators</title>
-            <desc id="arch-desc">Vier Schichten: Präsentation mit cli.py, Konfiguration mit settings.py und config.py, Fachkern mit documents, ai, native_pdf, subdecks, models und apkg sowie der strukturierten PDF-Aufbereitung mit docling_pdf, structured_pdf, pictures und model_storage, darunter externe Bibliotheken. errors.py liegt quer zu allen Schichten. Klick auf ein Modul springt zur Beschreibung.</desc>
+            <desc id="arch-desc">Vier Schichten: Präsentation mit cli.py und den oberflächenfreien Abläufen in pipeline.py, Konfiguration mit settings.py und config.py, Fachkern mit documents, ai, native_pdf, subdecks, models und apkg sowie der strukturierten PDF-Aufbereitung mit docling_pdf, structured_pdf, pictures und model_storage, darunter externe Bibliotheken. errors.py liegt quer zu allen Schichten. Klick auf ein Modul springt zur Beschreibung.</desc>
             <defs>
               <marker id="arr-arch" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#6b7f8c"/></marker>
             </defs>
             <!-- Bänder -->
             <rect class="band" x="10" y="10" width="980" height="96" rx="12"/>
             <text class="t-label" x="26" y="34">Präsentation</text>
+            <text class="t-label" x="26" y="50">· Abläufe</text>
             <rect class="band" x="10" y="124" width="980" height="96" rx="12"/>
             <text class="t-label" x="26" y="148">Konfiguration</text>
             <rect class="band" x="10" y="238" width="980" height="252" rx="12"/>
@@ -382,8 +390,11 @@
             <a href="#mod-main"><g class="n-cli"><rect class="box" x="170" y="34" width="170" height="60" rx="10"/>
               <text class="t-title" x="186" y="58">__main__.py</text><text class="t-sub" x="186" y="80">python -m …</text></g></a>
             <path class="edge" d="M340 64 H372" marker-end="url(#arr-arch)"/>
-            <a href="#mod-cli"><g class="n-cli"><rect class="box" x="376" y="34" width="600" height="60" rx="10"/>
-              <text class="t-title" x="392" y="58">cli.py</text><text class="t-sub" x="392" y="80">generate · export · decks · config show · run() — Typer, Rich, python-dotenv</text></g></a>
+            <a href="#mod-cli"><g class="n-cli"><rect class="box" x="376" y="34" width="250" height="60" rx="10"/>
+              <text class="t-title" x="392" y="58">cli.py</text><text class="t-sub" x="392" y="80">Optionen · Ausgabe · Typer, Rich</text></g></a>
+            <path class="edge" d="M626 64 H656" marker-end="url(#arr-arch)"/>
+            <a href="#mod-pipeline"><g class="n-pipe"><rect class="box" x="660" y="34" width="316" height="60" rx="10"/>
+              <text class="t-title" x="676" y="58">pipeline.py</text><text class="t-sub" x="676" y="80">run_generate · run_export · Ereignisse</text></g></a>
             <!-- Konfiguration -->
             <a href="#mod-settings"><g class="n-cfg"><rect class="box" x="170" y="148" width="390" height="60" rx="10"/>
               <text class="t-title" x="186" y="172">settings.py</text><text class="t-sub" x="186" y="194">Prioritäten · Pfade · API-Key aus Umgebung · Diagnose</text></g></a>
@@ -391,7 +402,7 @@
             <a href="#mod-config"><g class="n-cfg"><rect class="box" x="586" y="148" width="390" height="60" rx="10"/>
               <text class="t-title" x="602" y="172">config.py</text><text class="t-sub" x="602" y="194">YAML-Schema (Pydantic) · laden · atomar speichern</text></g></a>
             <path class="edge" d="M560 94 V144" marker-end="url(#arr-arch)"/>
-            <text class="t-edge" x="568" y="124">1 · Einstellungen auflösen</text>
+            <text class="t-edge" x="568" y="136">1 · Einstellungen auflösen</text>
             <!-- Fachkern -->
             <a href="#mod-documents"><g class="n-doc"><rect class="box" x="170" y="270" width="126" height="70" rx="10"/>
               <text class="t-title" x="180" y="295">documents</text><text class="t-sub" x="180" y="316">Text lesen</text><text class="t-sub" x="180" y="332">Chunks bilden</text></g></a>
@@ -417,7 +428,7 @@
             <text class="t-sub" x="720" y="400">nur mit Extra „pdf“ lauffähig</text>
             <a href="#mod-errors"><g class="n-err"><rect class="box" x="170" y="432" width="806" height="44" rx="10"/>
               <text class="t-title" x="186" y="459">errors.py</text><text class="t-sub" x="290" y="459">FlashcardError – in allen Modulen an Bibliotheksgrenzen erzeugt, nur in cli.run() gefangen</text></g></a>
-            <path class="edge" d="M420 94 V114 H150 V305 H166" marker-end="url(#arr-arch)"/>
+            <path class="edge" d="M760 94 V114 H150 V305 H166" marker-end="url(#arr-arch)"/>
             <text class="t-edge" x="34" y="300">2 · Kern</text>
             <text class="t-edge" x="34" y="316">direkt</text>
             <text class="t-edge" x="34" y="332">aufrufen</text>
@@ -442,14 +453,14 @@
             <path class="edge" d="M913 476 V538" marker-end="url(#arr-arch)"/>
           </svg>
         </div>
-        <figcaption>Schichtenmodell. Abhängigkeiten zeigen nur nach unten: Der Fachkern kennt weder Typer noch Rich. Klicke auf ein Modul, um zu seiner Beschreibung zu springen.</figcaption>
+        <figcaption>Schichtenmodell. Abhängigkeiten zeigen nur nach unten: Weder <code>pipeline.py</code> noch der Fachkern kennen Typer oder Rich. Klicke auf ein Modul, um zu seiner Beschreibung zu springen.</figcaption>
       </figure>
 
       <h3 style="margin-top:2rem">Leitprinzipien im Code</h3>
       <div class="grid two">
         <article class="card searchable" data-module="cli settings">
           <h3>Kern ohne Oberfläche</h3>
-          <p>Nur <code>cli.py</code> importiert <code>typer</code> und <code>rich</code>. Alle anderen Module nehmen normale Python-Objekte entgegen (<code>Path</code>, <code>str</code>, <code>Card</code>, <code>AISettings</code>) und geben solche zurück. Eine spätere Web-API kann denselben Kern ohne Änderung aufrufen (R-002, R-004, R-117).</p>
+          <p>Nur <code>cli.py</code> importiert <code>typer</code> und <code>rich</code>. Alle anderen Module nehmen normale Python-Objekte entgegen (<code>Path</code>, <code>str</code>, <code>Card</code>, <code>AISettings</code>) und geben solche zurück. Die vollständigen Abläufe stehen in <code>pipeline.py</code>; Fortschritt und Hinweise gehen als Ereignisse an einen Callback statt auf die Konsole. Die CLI und die Web-Oberfläche Anki Studio rufen dieselben Funktionen auf (R-002, R-117, R-170, R-171).</p>
         </article>
         <article class="card searchable" data-module="errors">
           <h3>Fehler an der Grenze übersetzen</h3>
@@ -517,6 +528,7 @@
       <figure class="diagram wide">
         <ul class="legend" aria-label="Farblegende des Ablaufdiagramms">
           <li><span class="swatch sw-cli"></span>cli.py</li>
+          <li><span class="swatch sw-pipe"></span>pipeline.py</li>
           <li><span class="swatch sw-cfg"></span>settings.py / config.py</li>
           <li><span class="swatch sw-doc"></span>documents.py</li>
           <li><span class="swatch sw-ai"></span>ai.py / native_pdf.py</li>
@@ -528,7 +540,7 @@
         <div class="diagram-scroll">
           <svg viewBox="0 0 1000 1860" aria-labelledby="flow-title flow-desc">
             <title id="flow-title">Ablauf eines generate-Aufrufs</title>
-            <desc id="flow-desc">Von cli.run über Typer, Konfiguration und Ausgabeprüfung zur Verzweigung nach pdf_mode. Lokal: read_document (local) oder convert_pdf mit Docling (structured), dann chunk_text und eine LiteLLM-Anfrage je Chunk. Nativ: Prüfungen, Upload, responses.parse und Löschen bei OpenAI. Danach Ergebnisprüfung, optionales JSON, Verzweigung nach extend in create_apkg oder append_apkg und Ergebnisausgabe. Jede FlashcardError führt zurück zu cli.run und Exit-Code 1.</desc>
+            <desc id="flow-desc">Von cli.run über Typer und Konfiguration an pipeline.run_generate, dann Ausgabeprüfung zur Verzweigung nach pdf_mode. Lokal: read_document (local) oder convert_pdf mit Docling (structured), dann chunk_text und eine LiteLLM-Anfrage je Chunk. Nativ: Prüfungen, Upload, responses.parse und Löschen bei OpenAI. Danach Ergebnisprüfung, optionales JSON, Verzweigung nach extend in create_apkg oder append_apkg und Ergebnisausgabe. Jede FlashcardError führt zurück zu cli.run und Exit-Code 1.</desc>
             <defs>
               <marker id="arr-flow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#6b7f8c"/></marker>
               <marker id="arr-err" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#a23b34"/></marker>
@@ -564,15 +576,16 @@
             <path class="edge" d="M740 484 H756" marker-end="url(#arr-flow)"/>
             <g class="n-cfg"><rect class="box opt" x="760" y="464" width="196" height="40" rx="20"/><text class="t-mono" x="778" y="489">GenerateSettings</text></g>
             <path class="edge" d="M500 514 V540" marker-end="url(#arr-flow)"/>
+            <text class="t-edge" x="512" y="533">cli → pipeline.run_generate(settings, report=…)</text>
 
-            <a href="#schritt-6"><g class="n-cli"><rect class="box" x="260" y="544" width="480" height="60" rx="10"/><circle class="dot" cx="288" cy="574" r="16"/><text class="t-num" x="288" y="578.5">6</text>
-              <text class="t-title" x="314" y="570">_validate_output()</text><text class="t-sub" x="314" y="591">Endung .apkg? neu ↔ --extend? – vor jeder KI-Anfrage</text></g></a>
+            <a href="#schritt-6"><g class="n-pipe"><rect class="box" x="260" y="544" width="480" height="60" rx="10"/><circle class="dot" cx="288" cy="574" r="16"/><text class="t-num" x="288" y="578.5">6</text>
+              <text class="t-title" x="314" y="570">validate_output()</text><text class="t-sub" x="314" y="591">Endung .apkg? neu ↔ --extend? – vor jeder KI-Anfrage</text></g></a>
             <path class="edge" d="M500 604 V630" marker-end="url(#arr-flow)"/>
             <a href="#schritt-6b"><g class="n-apkg"><rect class="box opt" x="260" y="634" width="480" height="60" rx="10"/><circle class="dot" cx="288" cy="664" r="16"/><text class="t-num" x="288" y="668.5">6b</text>
               <text class="t-title" x="314" y="660">read_subdeck_context()</text><text class="t-sub" x="314" y="681">nur mit --subdecks und --extend · Unterdecks + Beispiele</text></g></a>
             <path class="edge" d="M500 694 V720" marker-end="url(#arr-flow)"/>
 
-            <g class="n-cli"><polygon class="box" points="500,724 600,764 500,804 400,764"/><text class="t-title" x="500" y="769" text-anchor="middle">pdf_mode?</text></g>
+            <g class="n-pipe"><polygon class="box" points="500,724 600,764 500,804 400,764"/><text class="t-title" x="500" y="769" text-anchor="middle">pdf_mode?</text></g>
             <path class="edge" d="M400 764 H255 V846" marker-end="url(#arr-flow)"/>
             <text class="t-edge" x="236" y="754">local (Standard) · structured</text>
             <path class="edge" d="M600 764 H745 V846" marker-end="url(#arr-flow)"/>
@@ -628,7 +641,7 @@
               <text class="t-title" x="314" y="1406">save_cards()</text><text class="t-sub" x="314" y="1427">nur mit --json · Schema v1 · atomar · vor dem APKG</text></g></a>
             <path class="edge" d="M500 1440 V1466" marker-end="url(#arr-flow)"/>
 
-            <g class="n-cli"><polygon class="box" points="500,1470 600,1510 500,1550 400,1510"/><text class="t-title" x="500" y="1515" text-anchor="middle">extend?</text></g>
+            <g class="n-pipe"><polygon class="box" points="500,1470 600,1510 500,1550 400,1510"/><text class="t-title" x="500" y="1515" text-anchor="middle">extend?</text></g>
             <path class="edge" d="M400 1510 H255 V1586" marker-end="url(#arr-flow)"/>
             <text class="t-edge" x="268" y="1500">nein → neue Datei</text>
             <path class="edge" d="M600 1510 H745 V1586" marker-end="url(#arr-flow)"/>
@@ -647,7 +660,7 @@
             <g class="n-ext"><rect class="box" x="340" y="1800" width="320" height="44" rx="22"/><text class="t-title" x="500" y="1827" text-anchor="middle">output/biologie.apkg</text></g>
           </svg>
         </div>
-        <figcaption>Gestrichelte Kästen sind optional. Der rote Weg rechts gilt für jeden Schritt: Erwartete Fehler werden als <code>FlashcardError</code> bis <code>cli.run()</code> durchgereicht. Bedienfehler (Schritt 2) beendet Typer selbst mit Exit-Code 2.</figcaption>
+        <figcaption>Gestrichelte Kästen sind optional. Ab Schritt 6 läuft alles in <code>pipeline.run_generate()</code>; Spinner und Meldungen entstehen in der CLI aus den Ereignissen des Dienstes. Der rote Weg rechts gilt für jeden Schritt: Erwartete Fehler werden als <code>FlashcardError</code> bis <code>cli.run()</code> durchgereicht. Bedienfehler (Schritt 2) beendet Typer selbst mit Exit-Code 2.</figcaption>
       </figure>
 
       <h3 style="margin-top:2rem">Die Schritte im Einzelnen</h3>
@@ -668,7 +681,7 @@
           <span class="step-number">3</span>
           <h3><code>cli.generate()</code> sammelt explizite Werte</h3>
           <p><code>_explicit_values()</code> entfernt alle <code>None</code>-Werte. <code>False</code>, <code>0</code> und <code>""</code> bleiben erhalten. Deshalb überschreiben <code>--no-extend</code>, <code>--limit 0</code> und <code>--instructions ""</code> einen YAML-Wert wirksam.</p>
-          <p>Das Ergebnis ist ein einfaches <code>dict</code>. Kein Typer-Objekt gelangt in die Konfigurationsschicht oder den Kern.</p>
+          <p>Das Ergebnis ist ein einfaches <code>dict</code>. Kein Typer-Objekt gelangt in die Konfigurationsschicht oder den Kern. Nach Schritt 5 übergibt <code>generate()</code> an <code>pipeline.run_generate(settings, report=_ConsoleReporter(console))</code> und gibt am Ende nur noch das Ergebnis aus.</p>
         </article>
         <article class="card searchable" data-module="settings config" id="schritt-4">
           <span class="step-number">4</span>
@@ -682,31 +695,31 @@
           <p><code>resolve_generate_settings(cli, config, config_path)</code> legt die drei Schichten übereinander (siehe <a href="#konfiguration">Konfigurationsauflösung</a>). Reihenfolge: Profilname → Profil (unbekannt → Fehler) → Eingabepfad → Ausgabepfad (weder <code>--output</code> noch <code>output_dir</code> → Fehler) → Deck → JSON-Pfad → Modell → Endpunkt → Timeout → PDF-Modus → Herkunftslabels.</p>
           <p>Nur hier wird der API-Schlüssel gelesen: <code>os.getenv(profile.api_key_env)</code>. Ergebnis ist ein unveränderliches <code>GenerateSettings</code> mit eingebettetem <code>AISettings</code>.</p>
         </article>
-        <article class="card searchable" data-module="cli" id="schritt-6">
+        <article class="card searchable" data-module="pipeline" id="schritt-6">
           <span class="step-number">6</span>
           <h3>Ausgabe vorab prüfen</h3>
-          <p><code>_validate_output()</code> prüft, bevor Kosten entstehen: Endung <code>.apkg</code> (ohne Beachtung der Groß-/Kleinschreibung); bei <code>extend=True</code> muss die Datei existieren, bei <code>extend=False</code> darf sie nicht existieren.</p>
+          <p><code>pipeline.validate_output()</code> prüft, bevor Kosten entstehen: Endung <code>.apkg</code> (ohne Beachtung der Groß-/Kleinschreibung); bei <code>extend=True</code> muss die Datei existieren, bei <code>extend=False</code> darf sie nicht existieren.</p>
           <p>So wird nie eine KI-Anfrage bezahlt, deren Ergebnis anschließend nicht geschrieben werden darf.</p>
         </article>
-        <article class="card searchable" data-module="cli apkg subdecks" id="schritt-6b">
+        <article class="card searchable" data-module="pipeline apkg subdecks" id="schritt-6b">
           <span class="step-number">6b</span>
           <h3>Optional: Unterdeck-Kontext lesen</h3>
-          <p>Nur mit <code>--subdecks</code> (oder <code>generation.subdecks: true</code>). <code>cli._subdeck_context()</code> liefert ohne <code>--extend</code> einen leeren <code>SubdeckContext</code> für das Zieldeck. Mit <code>--extend</code> liest <code>apkg.read_subdeck_context()</code> die direkten Unterdecks des Decks und je Unterdeck bis zu fünf Beispielfragen aus einer Temp-Kopie des Pakets; die CLI kündigt diese Übertragung an.</p>
+          <p>Nur mit <code>--subdecks</code> (oder <code>generation.subdecks: true</code>). <code>pipeline.apkg_subdeck_context()</code> liefert ohne <code>--extend</code> einen leeren <code>SubdeckContext</code> für das Zieldeck. Mit <code>--extend</code> liest <code>apkg.read_subdeck_context()</code> die direkten Unterdecks des Decks und je Unterdeck bis zu fünf Beispielfragen aus einer Temp-Kopie des Pakets; der Dienst kündigt diese Übertragung als <code>Notice</code> an.</p>
           <p>Ohne Unterdeck-Modus ist der Kontext <code>None</code>, und alle folgenden Schritte verhalten sich wie vor req-4. → <a href="#unterdecks">KI-Unterdecks</a></p>
         </article>
-        <article class="card searchable" data-module="documents ai native_pdf subdecks docling_pdf structured_pdf pictures" id="schritt-7">
+        <article class="card searchable" data-module="pipeline documents ai native_pdf subdecks docling_pdf structured_pdf pictures" id="schritt-7">
           <span class="step-number">7</span>
           <h3>Karten erzeugen: lokal, strukturiert oder nativ</h3>
-          <p><strong>7a · lokal (Standard, alle Formate):</strong> <code>read_document()</code> prüft Größe und Endung, extrahiert Text je Format und normalisiert Leerraum. Ein Rich-Spinner startet; <code>ai.generate_cards()</code> teilt den Text mit <code>chunk_text()</code> auf und sendet je Chunk eine Anfrage über LiteLLM. Jede Antwort wird gegen <code>CardBatch</code> validiert und mit <code>deduplicate_cards(cards, limit)</code> bereinigt. Ist das Limit erreicht, werden restliche Chunks nicht mehr angefragt. → <a href="#ki-generierung">KI-Generierung</a></p>
-          <p><strong>7c · strukturiert (nur PDF):</strong> <code>_generate_structured_cards()</code> prüft Endung und <code>--source-text</code>, verlangt Docling und eine GPU (<code>require_accelerator</code>, sonst Abbruch mit Hinweis auf <code>native</code>/<code>local</code>, außer bei <code>--allow-cpu</code>), legt den Modellordner an und wählt das Bildmodell (<code>create_describer</code>). <code>convert_pdf()</code> lädt fehlende Modelle, konvertiert mit Docling, beschreibt Abbildungen und setzt Marker. Unlesbares bricht hier ab – vor jeder KI-Anfrage. Danach läuft derselbe Weg wie in 7a ab <code>generate_cards()</code>. → <a href="#strukturiert">Strukturierte PDF-Aufbereitung</a></p>
-          <p><strong>7b · nativ:</strong> Die CLI meldet den Upload. <code>generate_native_cards()</code> akzeptiert nur <code>.pdf</code> und ruft <code>read_document()</code> nie auf. Allowlist, Größe, API-Schlüssel und Profiloptionen werden vor dem Upload geprüft. Es gibt genau eine Modellanfrage; <code>chunk_size</code> wirkt hier nicht. → <a href="#native">Native PDF</a></p>
+          <p><strong>7a · lokal (Standard, alle Formate):</strong> <code>read_document()</code> prüft Größe und Endung, extrahiert Text je Format und normalisiert Leerraum. <code>pipeline.produce_cards()</code> meldet <code>StageStarted</code> (die CLI zeigt einen Rich-Spinner); <code>ai.generate_cards()</code> teilt den Text mit <code>chunk_text()</code> auf und sendet je Chunk eine Anfrage über LiteLLM. Jede Antwort wird gegen <code>CardBatch</code> validiert und mit <code>deduplicate_cards(cards, limit)</code> bereinigt. Ist das Limit erreicht, werden restliche Chunks nicht mehr angefragt. → <a href="#ki-generierung">KI-Generierung</a></p>
+          <p><strong>7c · strukturiert (nur PDF):</strong> <code>pipeline._structured_cards()</code> prüft Endung und <code>--source-text</code>, verlangt Docling und eine GPU (<code>require_accelerator</code>, sonst Abbruch mit Hinweis auf <code>native</code>/<code>local</code>, außer bei <code>--allow-cpu</code>), legt den Modellordner an und wählt das Bildmodell (<code>create_describer</code>). <code>convert_pdf()</code> lädt fehlende Modelle, konvertiert mit Docling, beschreibt Abbildungen und setzt Marker. Unlesbares bricht hier ab – vor jeder KI-Anfrage. Die Statistik geht als <code>ConversionFinished</code> an den Aufrufer. Danach läuft derselbe Weg wie in 7a ab <code>generate_cards()</code>. → <a href="#strukturiert">Strukturierte PDF-Aufbereitung</a></p>
+          <p><strong>7b · nativ:</strong> Der Dienst meldet den Upload als <code>Notice</code> der Stufe <code>transfer</code>. <code>generate_native_cards()</code> akzeptiert nur <code>.pdf</code> und ruft <code>read_document()</code> nie auf. Allowlist, Größe, API-Schlüssel und Profiloptionen werden vor dem Upload geprüft. Es gibt genau eine Modellanfrage; <code>chunk_size</code> wirkt hier nicht. → <a href="#native">Native PDF</a></p>
           <p><strong>Unterdeck-Modus:</strong> Beide Wege erhalten über <code>SubdeckAssigner</code> zusätzliche Regeln im Systemprompt, den Kontextabschnitt im Benutzer-Prompt und das Schema <code>SubdeckCardBatch</code>. <code>assign()</code> vereinheitlicht die Namen und gibt neue Unterdecks an spätere Chunks weiter.</p>
         </article>
-        <article class="card searchable" data-module="cli models" id="schritt-8">
+        <article class="card searchable" data-module="pipeline models" id="schritt-8">
           <span class="step-number">8</span>
           <h3>Ergebnis prüfen</h3>
           <p>Beide Wege liefern dieselbe Form: <code>list[Card]</code> – Pydantic-validiert, dedupliziert und auf das Limit gekürzt. Ab hier ist der Rest des Ablaufs identisch.</p>
-          <p>Ist die Liste leer, bricht <code>generate</code> mit „The AI did not return any usable cards“ ab. Ein leeres Deck wird nie geschrieben.</p>
+          <p>Ist die Liste leer, bricht <code>produce_cards()</code> mit „The AI did not return any usable cards“ ab. Ein leeres Deck wird nie geschrieben.</p>
         </article>
         <article class="card searchable" data-module="models" id="schritt-9">
           <span class="step-number">9</span>
@@ -714,10 +727,10 @@
           <p>Nur mit <code>--json</code> oder <code>generation.json_output</code>: <code>save_cards()</code> schreibt <code>schema_version</code>, <code>deck</code>, <code>cards</code> und <code>source</code> atomar. Eine vorhandene JSON-Datei wird ersetzt.</p>
           <p>Das JSON entsteht <em>vor</em> dem APKG. Schlägt das Schreiben des Pakets fehl, bleiben die bereits bezahlten Karten erhalten und lassen sich mit <code>export</code> erneut verwenden.</p>
         </article>
-        <article class="card searchable" data-module="cli apkg" id="schritt-10">
+        <article class="card searchable" data-module="pipeline apkg" id="schritt-10">
           <span class="step-number">10</span>
           <h3>Paket schreiben</h3>
-          <p><code>_write_deck()</code> lehnt einen leeren Decknamen ab und verzweigt nach <code>extend</code>.</p>
+          <p><code>pipeline.write_apkg()</code> lehnt einen leeren Decknamen ab und verzweigt nach <code>extend</code>.</p>
           <p><strong>10a · neu:</strong> <code>create_apkg()</code> baut mit genanki einen Notiztyp mit fester ID, ein Deck mit stabiler ID und je Karte eine Notiz mit HTML-escapten Feldern und stabiler GUID. Ziel: Temp-Datei <code>.&lt;name&gt;.&lt;PID&gt;.tmp</code>, dann <code>os.replace</code>.</p>
           <p><strong>10b · erweitern:</strong> <code>append_apkg()</code> entpackt die Sammlung in einen Temp-Ordner, schreibt über die offizielle Anki-API, überspringt vorhandene Fragen, führt einen WAL-Checkpoint aus und packt das ZIP neu. → <a href="#apkg-intern">Anki-Pakete</a></p>
           <p>Karten mit <code>subdeck</code> landen in beiden Fällen in <code>Deck::subdeck</code>. Beim Erweitern umfasst die Duplikatprüfung dann das Deck mit allen Unterdecks.</p>
@@ -725,7 +738,7 @@
         <article class="card searchable" data-module="cli" id="schritt-11">
           <span class="step-number">11</span>
           <h3>Ergebnis melden</h3>
-          <p><code>_print_result()</code> schreibt auf stdout: <code>Fertig: N Karten in 'Deck' → Pfad (M Duplikate übersprungen)</code> und gegebenenfalls den JSON-Pfad. Typer beendet regulär mit Exit-Code 0.</p>
+          <p>Zurück in der CLI schreibt <code>_print_result()</code> aus <code>GenerateResult.export</code> auf stdout: <code>Fertig: N Karten in 'Deck' → Pfad (M Duplikate übersprungen)</code> und gegebenenfalls den JSON-Pfad. Typer beendet regulär mit Exit-Code 0.</p>
           <p>Liegen Karten in Unterdecks, folgt die Liste „Neue Karten je Unterdeck“ aus <code>ExportResult.added_by_deck</code>.</p>
           <p class="small muted">Bei <code>create_apkg()</code> ist die Duplikatzahl immer 0, weil die Liste bereits in Schritt 7 dedupliziert wurde. Nur <code>append_apkg()</code> kann gegen vorhandene Karten zusätzliche Duplikate finden.</p>
         </article>
@@ -740,22 +753,23 @@
         <p>Die übrigen Befehle verwenden dieselben Bausteine in kürzeren Ketten. Keiner davon ruft ein KI-Modell auf.</p>
       </div>
       <div class="stack">
-        <article class="card searchable" data-module="cli settings models apkg" id="ablauf-export">
+        <article class="card searchable" data-module="cli pipeline settings models apkg" id="ablauf-export">
           <div class="command-header"><h3 class="command-title"><code>export</code></h3><span class="tag model">JSON → APKG ohne KI</span></div>
           <ol class="chain">
             <li><code>load_selected_config()</code></li>
             <li><code>resolve_export_settings()</code></li>
-            <li><code>_validate_output()</code></li>
+            <li><code>pipeline.run_export()</code></li>
+            <li><code>validate_output()</code></li>
             <li><code>load_cards()</code></li>
             <li><code>deduplicate_cards()</code></li>
-            <li><code>_write_deck()</code></li>
+            <li><code>write_apkg()</code></li>
             <li><code>_print_result()</code></li>
           </ol>
           <ul class="checklist">
             <li>Das Zieldeck kommt aus <code>--deck</code> oder <code>generation.deck</code>; fehlen beide, ist das ein Fehler. Das Feld <code>deck</code> in der JSON-Datei wird beim Laden bewusst ignoriert.</li>
             <li>Ohne <code>--output</code> entsteht <code>output_dir/&lt;json-name-ohne-.json&gt;.apkg</code> – aus <code>biologie.cards.json</code> wird also <code>biologie.cards.apkg</code>.</li>
             <li>Es gibt kein Limit; <code>deduplicate_cards()</code> läuft mit <code>limit=0</code> und entfernt nur doppelte Fragen.</li>
-            <li><code>--extend</code> verhält sich exakt wie bei <code>generate</code>, weil beide <code>_validate_output()</code> und <code>_write_deck()</code> teilen.</li>
+            <li><code>--extend</code> verhält sich exakt wie bei <code>generate</code>, weil beide <code>pipeline.validate_output()</code> und <code>pipeline.write_apkg()</code> teilen.</li>
             <li>Karten mit dem JSON-Feld <code>subdeck</code> landen in <code>--deck::subdeck</code>. Der Export ist datengesteuert und braucht dafür keine Option.</li>
           </ul>
         </article>
@@ -801,23 +815,24 @@
       </div>
 
       <h3>Wer importiert wen?</h3>
-      <div class="table-wrap searchable" data-module="cli settings config documents ai native_pdf subdecks models apkg errors docling_pdf structured_pdf pictures model_storage">
+      <div class="table-wrap searchable" data-module="cli pipeline settings config documents ai native_pdf subdecks models apkg errors docling_pdf structured_pdf pictures model_storage">
         <table>
           <thead><tr><th>Modul</th><th>importiert aus dem Paket</th><th>wird verwendet von</th></tr></thead>
           <tbody>
-            <tr><td><code>cli</code></td><td><code>ai</code>, <code>apkg</code>, <code>config</code>, <code>docling_pdf</code>, <code>documents</code>, <code>errors</code>, <code>model_storage</code>, <code>models</code>, <code>native_pdf</code>, <code>settings</code>, <code>structured_pdf</code>, <code>subdecks</code></td><td><code>__main__</code>, Konsolenbefehl</td></tr>
-            <tr><td><code>settings</code></td><td><code>ai</code> (<code>AISettings</code>), <code>config</code>, <code>errors</code>, <code>structured_pdf</code> (<code>ConversionOptions</code>)</td><td><code>cli</code></td></tr>
-            <tr><td><code>config</code></td><td><code>errors</code></td><td><code>settings</code>, <code>docling_pdf</code> (<code>PictureBackend</code>), <code>cli</code> (<code>PDFMode</code>, <code>PictureBackend</code>)</td></tr>
-            <tr><td><code>docling_pdf</code></td><td><code>ai</code> (<code>AISettings</code>), <code>config</code>, <code>errors</code>, <code>model_storage</code>, <code>pictures</code>, <code>structured_pdf</code></td><td><code>cli</code></td></tr>
-            <tr><td><code>structured_pdf</code></td><td><code>ai</code> (<code>FIGURE_MARKER</code>), <code>documents</code> (<code>SourceDocument</code>), <code>errors</code>, <code>pictures</code></td><td><code>docling_pdf</code>, <code>settings</code>, <code>cli</code></td></tr>
+            <tr><td><code>cli</code></td><td><code>apkg</code> (<code>ExportResult</code>, <code>inspect_apkg</code>), <code>config</code>, <code>errors</code>, <code>pipeline</code>, <code>settings</code>, <code>structured_pdf</code> (<code>ConversionStats</code>)</td><td><code>__main__</code>, Konsolenbefehl</td></tr>
+            <tr><td><code>pipeline</code></td><td><code>ai</code>, <code>apkg</code>, <code>config</code>, <code>docling_pdf</code>, <code>documents</code>, <code>errors</code>, <code>model_storage</code>, <code>models</code>, <code>native_pdf</code>, <code>settings</code>, <code>structured_pdf</code>, <code>subdecks</code></td><td><code>cli</code>, Anki Studio</td></tr>
+            <tr><td><code>settings</code></td><td><code>ai</code> (<code>AISettings</code>), <code>config</code>, <code>errors</code>, <code>structured_pdf</code> (<code>ConversionOptions</code>)</td><td><code>cli</code>, <code>pipeline</code></td></tr>
+            <tr><td><code>config</code></td><td><code>errors</code></td><td><code>settings</code>, <code>docling_pdf</code> (<code>PictureBackend</code>), <code>pipeline</code>, <code>cli</code> (<code>PDFMode</code>, <code>PictureBackend</code>)</td></tr>
+            <tr><td><code>docling_pdf</code></td><td><code>ai</code> (<code>AISettings</code>), <code>config</code>, <code>errors</code>, <code>model_storage</code>, <code>pictures</code>, <code>structured_pdf</code></td><td><code>pipeline</code></td></tr>
+            <tr><td><code>structured_pdf</code></td><td><code>ai</code> (<code>FIGURE_MARKER</code>), <code>documents</code> (<code>SourceDocument</code>), <code>errors</code>, <code>pictures</code></td><td><code>docling_pdf</code>, <code>settings</code>, <code>pipeline</code>, <code>cli</code></td></tr>
             <tr><td><code>pictures</code></td><td><code>ai</code> (<code>AISettings</code>, <code>connection_options</code>), <code>errors</code></td><td><code>structured_pdf</code>, <code>docling_pdf</code></td></tr>
-            <tr><td><code>model_storage</code></td><td><code>errors</code></td><td><code>docling_pdf</code>, <code>cli</code></td></tr>
-            <tr><td><code>native_pdf</code></td><td><code>ai</code> (<code>SYSTEM_PROMPT</code>, <code>AISettings</code>), <code>errors</code>, <code>models</code>, <code>subdecks</code></td><td><code>cli</code></td></tr>
-            <tr><td><code>ai</code></td><td><code>documents</code> (<code>SourceDocument</code>, <code>chunk_text</code>), <code>errors</code>, <code>models</code>, <code>subdecks</code></td><td><code>cli</code>, <code>settings</code>, <code>native_pdf</code>, <code>pictures</code>, <code>structured_pdf</code>, <code>docling_pdf</code></td></tr>
-            <tr><td><code>subdecks</code></td><td><code>models</code></td><td><code>ai</code>, <code>native_pdf</code>, <code>apkg</code>, <code>cli</code></td></tr>
-            <tr><td><code>apkg</code></td><td><code>errors</code>, <code>models</code> (<code>Card</code>), <code>subdecks</code> (<code>SubdeckContext</code>)</td><td><code>cli</code></td></tr>
-            <tr><td><code>documents</code></td><td><code>errors</code></td><td><code>cli</code>, <code>ai</code>, <code>structured_pdf</code></td></tr>
-            <tr><td><code>models</code></td><td><code>errors</code></td><td><code>cli</code>, <code>ai</code>, <code>native_pdf</code>, <code>subdecks</code>, <code>apkg</code></td></tr>
+            <tr><td><code>model_storage</code></td><td><code>errors</code></td><td><code>docling_pdf</code>, <code>pipeline</code></td></tr>
+            <tr><td><code>native_pdf</code></td><td><code>ai</code> (<code>SYSTEM_PROMPT</code>, <code>AISettings</code>), <code>errors</code>, <code>models</code>, <code>subdecks</code></td><td><code>pipeline</code></td></tr>
+            <tr><td><code>ai</code></td><td><code>documents</code> (<code>SourceDocument</code>, <code>chunk_text</code>), <code>errors</code>, <code>models</code>, <code>subdecks</code></td><td><code>pipeline</code>, <code>settings</code>, <code>native_pdf</code>, <code>pictures</code>, <code>structured_pdf</code>, <code>docling_pdf</code></td></tr>
+            <tr><td><code>subdecks</code></td><td><code>models</code></td><td><code>ai</code>, <code>native_pdf</code>, <code>apkg</code>, <code>pipeline</code></td></tr>
+            <tr><td><code>apkg</code></td><td><code>errors</code>, <code>models</code> (<code>Card</code>), <code>subdecks</code> (<code>SubdeckContext</code>)</td><td><code>pipeline</code>, <code>cli</code></td></tr>
+            <tr><td><code>documents</code></td><td><code>errors</code></td><td><code>pipeline</code>, <code>ai</code>, <code>structured_pdf</code></td></tr>
+            <tr><td><code>models</code></td><td><code>errors</code></td><td><code>pipeline</code>, <code>ai</code>, <code>native_pdf</code>, <code>subdecks</code>, <code>apkg</code></td></tr>
             <tr><td><code>errors</code></td><td>–</td><td>alle Module</td></tr>
           </tbody>
         </table>
@@ -827,7 +842,7 @@
       <!-- errors.py -->
       <article class="card command-section module-card searchable" data-module="errors" id="mod-errors">
         <div class="command-header"><h3 class="command-title"><code>errors.py</code></h3><span class="tag err">Querschnitt · Fehlerkonzept</span></div>
-        <p>Definiert genau eine Klasse: <code>FlashcardError(Exception)</code> – einen <em>erwarteten</em>, für Nutzer verständlichen Fehler. Alles, was ein Nutzer beheben kann (falscher Pfad, ungültige YAML, Provider nicht erreichbar, ungültige KI-Antwort), wird in diesen Typ übersetzt.</p>
+        <p>Definiert <code>FlashcardError(Exception)</code> – einen <em>erwarteten</em>, für Nutzer verständlichen Fehler. Alles, was ein Nutzer beheben kann (falscher Pfad, ungültige YAML, Provider nicht erreichbar, ungültige KI-Antwort), wird in diesen Typ übersetzt. Die Unterklasse <code>GenerationCancelled</code> meldet einen vom Aufrufer angeforderten Abbruch (R-172); die CLI löst ihn nie aus.</p>
         <dl class="facts">
           <dt>Importiert</dt><dd>nichts</dd>
           <dt>Gefangen in</dt><dd>ausschließlich <code>cli.run()</code></dd>
@@ -1046,7 +1061,7 @@
           <summary>Öffentliche Schnittstelle</summary>
           <div class="details-body">
             <div class="option"><div class="option-heading"><span class="option-name"><code>SUBDECK_RULES</code></span><span class="option-meta">Konstante</span></div><p>Wird an den Systemprompt angehängt: Antwortform mit <code>subdeck</code>, Kapitel aus Überschriften, Nummerierung oder Inhaltsverzeichnis ableiten, wenige grobe Kapitel bevorzugen, bekannte Unterdecks exakt wiederverwenden, neue nur bei Bedarf, kein Elterndeck und kein <code>::</code> im Namen.</p></div>
-            <div class="option"><div class="option-heading"><span class="option-name"><code>ExistingSubdeck(name, examples=())</code> · <code>SubdeckContext(parent, existing=())</code></span><span class="option-meta">frozen dataclasses</span></div><p>Eingabe für einen Lauf: übergeordnetes Deck und vorhandene Unterdecks mit Beispielfragen. Erzeugt von <code>cli._subdeck_context()</code> beziehungsweise <code>apkg.read_subdeck_context()</code>.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>ExistingSubdeck(name, examples=())</code> · <code>SubdeckContext(parent, existing=())</code></span><span class="option-meta">frozen dataclasses</span></div><p>Eingabe für einen Lauf: übergeordnetes Deck und vorhandene Unterdecks mit Beispielfragen. Erzeugt von <code>pipeline.apkg_subdeck_context()</code> beziehungsweise <code>apkg.read_subdeck_context()</code>.</p></div>
             <div class="option"><div class="option-heading"><span class="option-name"><code>class SubdeckAssigner(context)</code></span><span class="option-meta">Strategie je Lauf</span></div><p><code>enabled</code>, <code>response_model</code> (<code>CardBatch</code> oder <code>SubdeckCardBatch</code>), <code>created</code> (in diesem Lauf neue Namen), <code>system_prompt(base)</code>, <code>prompt_section()</code> (<code>&lt;parent_deck&gt;</code> und <code>&lt;known_subdecks&gt;</code> mit Beispielfragen und „new in this run“) und <code>assign(cards)</code>: liefert neue <code>Card</code>-Objekte, ordnet Schreibvarianten der ersten bekannten Schreibweise zu und merkt neue Namen – im normalen Modus entfernt es alle Unterdecks.</p></div>
           </div>
         </details>
@@ -1265,12 +1280,48 @@
         </details>
       </article>
 
+      <!-- pipeline.py -->
+      <article class="card command-section module-card searchable" data-module="pipeline" id="mod-pipeline">
+        <div class="command-header"><h3 class="command-title"><code>pipeline.py</code></h3><span class="tag pipe">Abläufe · ohne Oberfläche (R-170–R-173)</span></div>
+        <p>Enthält die vollständigen Abläufe hinter <code>generate</code>, <code>export</code> und <code>models download</code> – ohne Typer, Rich und Konsolenausgabe. Fortschritt und Hinweise gehen als unveränderliche Ereignisse an einen optionalen Callback <code>report</code>; ein optionaler Callback <code>cancel</code> bricht laufende Generierungen ab. Die CLI und die Web-Oberfläche Anki Studio nutzen dieselben Funktionen.</p>
+        <dl class="facts">
+          <dt>Importiert</dt><dd><code>ai</code>, <code>apkg</code>, <code>config</code>, <code>docling_pdf</code>, <code>documents</code>, <code>errors</code>, <code>model_storage</code>, <code>models</code>, <code>native_pdf</code>, <code>settings</code>, <code>structured_pdf</code>, <code>subdecks</code></dd>
+          <dt>Verwendet von</dt><dd><code>cli</code>, Anki Studio (eigenes Repository)</dd>
+          <dt>Tests</dt><dd><code>tests/test_pipeline.py</code>; die CLI-Tests prüfen dieselben Abläufe über die Kommandozeile</dd>
+        </dl>
+        <details open>
+          <summary>Öffentliche Schnittstelle</summary>
+          <div class="details-body">
+            <div class="option"><div class="option-heading"><span class="option-name"><code>run_generate(settings, *, report=None, cancel=None) → GenerateResult</code></span><span class="option-meta"><code>generate</code></span></div><p>Prüft die Ausgabe, liest bei Bedarf den Unterdeck-Kontext aus dem Paket, erzeugt Karten, schreibt optional JSON und dann das APKG. Ein Abbruch vor dem Schreiben hinterlässt keine Dateien.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>produce_cards(settings, subdeck_context, *, report=None, cancel=None) → CardRun</code></span><span class="option-meta">nur erzeugen</span></div><p>Erzeugt Karten im Modus <code>local</code>, <code>structured</code> oder <code>native</code> und schreibt kein Paket und kein JSON; <code>settings.output</code>, <code>extend</code> und <code>json_output</code> werden ignoriert. Ein gesetztes <code>conversion.source_text</code> wird weiterhin gespeichert. Leeres Ergebnis → <code>FlashcardError</code>. Grundlage für „erst prüfen, dann schreiben“ (R-173).</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>apkg_subdeck_context(settings, *, report=None) → SubdeckContext | None</code></span></div><p>Unterdeck-Kontext für ein APKG-Ziel: ohne Unterdeck-Modus <code>None</code>, ohne <code>extend</code> ein leerer Kontext, sonst die Unterdecks des Pakets.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>validate_output(output, extend)</code> · <code>write_apkg(output, deck, cards, extend) → ExportResult</code></span></div><p>Prüfung der Zieldatei (Endung, neu ↔ erweitern) und Schreiben über <code>create_apkg</code> oder <code>append_apkg</code>; leerer Deckname → Fehler.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>run_export(settings) → ExportResult</code></span><span class="option-meta"><code>export</code></span></div><p>Karten-JSON laden, deduplizieren, Paket schreiben.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>prepare_models(config, config_path, *, formulas=None, picture_backend=None, report=None) → Path</code></span><span class="option-meta"><code>models download</code></span></div><p>Lädt Docling-Komponenten (mit Formelmodell gemäß Argument oder YAML) und beim Backend <code>local</code> das Bildmodell in den Modellordner; gibt diesen zurück.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>event_to_dict(event) → dict</code></span></div><p>JSON-fähige Form eines Ereignisses mit Schlüssel <code>type</code> (<code>notice</code>, <code>stage_started</code>, <code>stage_progress</code>, <code>stage_finished</code>, <code>conversion_finished</code>). Gedacht für Server-Sent Events.</p></div>
+          </div>
+        </details>
+        <details>
+          <summary>Ereignisse, Abbruch und Ergebnisobjekte</summary>
+          <div class="details-body">
+            <ul class="checklist">
+              <li><code>Notice(text, level)</code> mit <code>NoticeLevel</code> <code>info</code>, <code>warning</code> oder <code>transfer</code>. <code>transfer</code> kennzeichnet jede Übertragung von Dokumentinhalt: nativer Upload und Bildausschnitte über ein Profil. Texte enthalten kein Rich-Markup.</li>
+              <li><code>StageStarted(stage, description)</code>, <code>StageProgress(stage, label, completed, total, cards)</code>, <code>StageFinished(stage)</code> mit <code>Stage</code> <code>conversion</code> oder <code>generation</code>. <code>StageFinished</code> kommt auch nach Fehler oder Abbruch. Bei der Generierung ist <code>label</code> <code>"Chunk"</code> und <code>cards</code> die Zahl einzigartiger Karten.</li>
+              <li><code>ConversionFinished(stats)</code> trägt die <code>ConversionStats</code> der strukturierten Aufbereitung.</li>
+              <li><code>cancel</code> wird vor dem Start (also vor einem nativen Upload), nach jedem Aufbereitungsschritt, nach der Aufbereitung, nach jedem Chunk und vor dem Schreiben geprüft. Liefert er <code>True</code>, folgt <code>GenerationCancelled</code>. Ein laufender Provider-Request wird nicht unterbrochen.</li>
+              <li><code>CardRun(cards, source_text, conversion)</code> ist das Ergebnis von <code>produce_cards</code>; <code>GenerateResult(run, export, json_output)</code> das von <code>run_generate</code>.</li>
+              <li>Die Funktionen sind synchron und blockieren. Eine Web-Oberfläche ruft sie in einem Worker-Thread auf; der <code>report</code>-Callback läuft dann in diesem Thread.</li>
+            </ul>
+          </div>
+        </details>
+      </article>
+
       <!-- cli.py -->
       <article class="card command-section module-card searchable" data-module="cli" id="mod-cli">
         <div class="command-header"><h3 class="command-title"><code>cli.py</code></h3><span class="tag">Präsentation</span></div>
-        <p>Die einzige Schicht mit Typer und Rich. Definiert Befehle, Optionen, Hilfetexte und Ausgaben und verdrahtet die Kernfunktionen. Enthält keine Fachlogik außer der Ausgabeprüfung und der Wahl zwischen neu und erweitern.</p>
+        <p>Die einzige Schicht mit Typer und Rich. Definiert Befehle, Optionen, Hilfetexte und Ausgaben. Sie sammelt die ausdrücklich gesetzten Optionen, löst die Einstellungen auf, ruft die Abläufe in <code>pipeline.py</code> auf und stellt deren Ereignisse dar. Sie enthält keine Fachlogik.</p>
         <dl class="facts">
-          <dt>Importiert</dt><dd>alle Paketmodule außer <code>__main__</code> · Typer, Rich, python-dotenv</dd>
+          <dt>Importiert</dt><dd><code>pipeline</code>, <code>settings</code>, <code>apkg</code>, <code>config</code>, <code>errors</code>, <code>structured_pdf</code> · Typer, Rich, python-dotenv</dd>
           <dt>Verwendet von</dt><dd>Konsolenbefehl <code>anki-flashcards</code>, <code>__main__.py</code></dd>
           <dt>Tests</dt><dd><code>tests/test_cli.py</code> (21 Tests mit <code>CliRunner</code> und einem Subprozess-Test)</dd>
         </dl>
@@ -1278,10 +1329,11 @@
           <summary>Befehle und Objekte</summary>
           <div class="details-body">
             <div class="option"><div class="option-heading"><span class="option-name"><code>app</code> · <code>config_app</code></span></div><p>Typer-Hauptapp (<code>no_args_is_help</code>, <code>-h</code>/<code>--help</code>) und die Unter-Apps <code>config</code> und <code>models</code> (<code>models_app</code>). <code>console</code> schreibt auf stdout, <code>error_console</code> auf stderr.</p></div>
-            <div class="option"><div class="option-heading"><span class="option-name"><code>generate(...)</code></span></div><p>Der Ablauf aus <a href="#anfrage">Schritt 3 bis 11</a>. Lokale Generierung steckt in <code>_generate_local_cards()</code> mit Rich-Spinner und innerem Callback <code>update()</code>. <code>_subdeck_context()</code> baut im Unterdeck-Modus den Kontext (Schritt 6b) und kündigt bei <code>--extend</code> die Übertragung an. <code>_generate_structured_cards()</code> führt den strukturierten Weg (Schritt 7c) mit <code>_progress()</code> und <code>_print_conversion()</code>; beide Wege enden in <code>_generate_from_document()</code>.</p></div>
-            <div class="option"><div class="option-heading"><span class="option-name"><code>download_models(...)</code></span><span class="option-meta"><code>models download</code></span></div><p>Lädt Docling-Komponenten (mit Formelmodell gemäß <code>--formulas</code>/YAML) und bei Backend <code>local</code> das Bildmodell in den Modellordner.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>generate(...)</code></span></div><p>Schritte 3 bis 5 und 11 aus <a href="#anfrage">dem Ablauf</a>: Optionen sammeln, Einstellungen auflösen, <code>pipeline.run_generate()</code> aufrufen, Ergebnis ausgeben.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>download_models(...)</code></span><span class="option-meta"><code>models download</code></span></div><p>Ruft <code>pipeline.prepare_models()</code> und meldet den Modellordner.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>_ConsoleReporter</code></span><span class="option-meta">Ereignisse → Rich</span></div><p>Aufrufbares Objekt, das die Ereignisse des Dienstes darstellt: <code>Notice</code> als Zeile (Warnungen gelb), <code>StageStarted</code>/<code>StageProgress</code>/<code>StageFinished</code> als Spinner-Zeile („Chunk n/m: k unique cards“ bzw. „Schritt: n/m“), <code>ConversionFinished</code> über <code>_print_conversion()</code>. Die Ausgabe gleicht der vor R-170.</p></div>
             <div class="option"><div class="option-heading"><span class="option-name"><code>export_cards(...)</code> · <code>list_decks(...)</code> · <code>show_config(...)</code></span></div><p>Die Befehle <code>export</code>, <code>decks</code> und <code>config show</code>. → <a href="#weitere-ablaeufe">Abläufe</a></p></div>
-            <div class="option"><div class="option-heading"><span class="option-name"><code>_explicit_values</code> · <code>_validate_output</code> · <code>_write_deck</code> · <code>_print_result</code></span></div><p>Gemeinsame Bausteine aller schreibenden Befehle. <code>_print_result</code> listet zusätzlich „Neue Karten je Unterdeck“, sobald <code>added_by_deck</code> andere Decks als das Zieldeck enthält.</p></div>
+            <div class="option"><div class="option-heading"><span class="option-name"><code>_explicit_values</code> · <code>_print_result</code> · <code>_print_conversion</code></span></div><p>Gemeinsame Bausteine der Befehle. <code>_print_result</code> listet zusätzlich „Neue Karten je Unterdeck“, sobald <code>added_by_deck</code> andere Decks als das Zieldeck enthält.</p></div>
             <div class="option"><div class="option-heading"><span class="option-name"><code>run()</code></span></div><p>Einstiegspunkt: <code>.env</code> laden, App starten, <code>FlashcardError</code> in stderr-Meldung und Exit-Code 1 übersetzen.</p></div>
           </div>
         </details>
@@ -1518,7 +1570,7 @@ Additional user instructions: Bevorzuge kurze Verständnisfragen.
             <path class="edge" d="M724 333 H744" marker-end="url(#arr-sub)"/>
           </svg>
         </div>
-        <figcaption>Innerhalb der KI-Generierung ist <code>SubdeckAssigner</code> der einzige Ort, an dem sich Unterdeck-Modus und normaler Modus unterscheiden; außerhalb unterscheiden nur <code>cli._subdeck_context()</code> und der Duplikat-Suchbereich in <code>apkg</code>. Ohne Kontext liefert sie den normalen Prompt, das Schema <code>CardBatch</code> und Karten ohne Unterdeck.</figcaption>
+        <figcaption>Innerhalb der KI-Generierung ist <code>SubdeckAssigner</code> der einzige Ort, an dem sich Unterdeck-Modus und normaler Modus unterscheiden; außerhalb unterscheiden nur <code>pipeline.apkg_subdeck_context()</code> und der Duplikat-Suchbereich in <code>apkg</code>. Ohne Kontext liefert sie den normalen Prompt, das Schema <code>CardBatch</code> und Karten ohne Unterdeck.</figcaption>
       </figure>
       <div class="grid two" style="margin-top:1rem">
         <article class="card searchable" data-module="subdecks cli settings">
@@ -1733,11 +1785,11 @@ Known subdecks; reuse them when the content fits:
         <div class="diagram-scroll">
           <svg viewBox="0 0 1000 592" aria-labelledby="native-title native-desc">
             <title id="native-title">Sequenz der nativen PDF-Verarbeitung</title>
-            <desc id="native-desc">cli.generate ruft generate_native_cards auf. native_pdf prüft Endung, Modell-Allowlist, Dateigröße und API-Schlüssel. Danach Upload über files.create, Anfrage über responses.parse mit CardBatch und store=False, Löschen über files.delete im finally-Block. Zurück an die CLI geht eine deduplizierte Kartenliste.</desc>
+            <desc id="native-desc">pipeline.produce_cards meldet den Upload und ruft generate_native_cards auf. native_pdf prüft Endung, Modell-Allowlist, Dateigröße und API-Schlüssel. Danach Upload über files.create, Anfrage über responses.parse mit CardBatch und store=False, Löschen über files.delete im finally-Block. Zurück an den Dienst geht eine deduplizierte Kartenliste.</desc>
             <defs>
               <marker id="arr-nat" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#6b7f8c"/></marker>
             </defs>
-            <a href="#mod-cli"><g class="n-cli"><rect class="box" x="30" y="16" width="240" height="44" rx="10"/><text class="t-title" x="150" y="43" text-anchor="middle">cli.generate()</text></g></a>
+            <a href="#mod-pipeline"><g class="n-pipe"><rect class="box" x="30" y="16" width="240" height="44" rx="10"/><text class="t-title sm" x="150" y="43" text-anchor="middle">pipeline.produce_cards()</text></g></a>
             <a href="#mod-native_pdf"><g class="n-ai"><rect class="box" x="380" y="16" width="240" height="44" rx="10"/><text class="t-title" x="500" y="43" text-anchor="middle">native_pdf</text></g></a>
             <g class="n-ext"><rect class="box" x="730" y="16" width="240" height="44" rx="10"/><text class="t-head" x="850" y="43" text-anchor="middle">OpenAI-API</text></g>
             <line class="life" x1="150" y1="60" x2="150" y2="577"/>
@@ -1860,26 +1912,29 @@ $$A ( \omega ) = \left | \underline { F } ( \omega ) \right |$$
 ├─ huggingface/ · torch/ · cache/ · docling-cache/   Caches</code></pre>
         </article>
       </div>
-      <div class="table-wrap searchable" data-module="cli settings config documents ai native_pdf models apkg structured_pdf docling_pdf pictures model_storage">
+      <div class="table-wrap searchable" data-module="cli pipeline settings config documents ai native_pdf models apkg structured_pdf docling_pdf pictures model_storage">
         <table>
           <thead><tr><th>Objekt</th><th>Modul</th><th>Erzeugt von</th><th>Verwendet von</th></tr></thead>
           <tbody>
             <tr><td><code>AppConfig</code></td><td><code>config</code></td><td><code>load_config()</code></td><td><code>settings</code></td></tr>
-            <tr><td><code>GenerateSettings</code></td><td><code>settings</code></td><td><code>resolve_generate_settings()</code></td><td><code>cli.generate</code>, <code>config show</code></td></tr>
-            <tr><td><code>ExportSettings</code></td><td><code>settings</code></td><td><code>resolve_export_settings()</code></td><td><code>cli.export_cards</code></td></tr>
+            <tr><td><code>GenerateSettings</code></td><td><code>settings</code></td><td><code>resolve_generate_settings()</code></td><td><code>pipeline.run_generate()</code>, <code>pipeline.produce_cards()</code>, <code>config show</code></td></tr>
+            <tr><td><code>ExportSettings</code></td><td><code>settings</code></td><td><code>resolve_export_settings()</code></td><td><code>pipeline.run_export()</code></td></tr>
             <tr><td><code>AISettings</code></td><td><code>ai</code></td><td><code>resolve_generate_settings()</code></td><td><code>generate_cards()</code>, <code>OpenAINativePDFAdapter</code></td></tr>
             <tr><td><code>SourceDocument</code></td><td><code>documents</code></td><td><code>read_document()</code></td><td><code>generate_cards()</code></td></tr>
             <tr><td><code>Card</code> / <code>CardBatch</code></td><td><code>models</code></td><td>KI-Antwort, <code>load_cards()</code></td><td>alle Kernmodule</td></tr>
             <tr><td><code>NativePDFResult</code></td><td><code>native_pdf</code></td><td><code>OpenAINativePDFAdapter.generate()</code></td><td><code>generate_native_cards()</code></td></tr>
-            <tr><td><code>SubdeckContext</code> / <code>ExistingSubdeck</code></td><td><code>subdecks</code></td><td><code>cli._subdeck_context()</code>, <code>apkg.read_subdeck_context()</code></td><td><code>generate_cards()</code>, <code>generate_native_cards()</code></td></tr>
+            <tr><td><code>SubdeckContext</code> / <code>ExistingSubdeck</code></td><td><code>subdecks</code></td><td><code>pipeline.apkg_subdeck_context()</code>, <code>apkg.read_subdeck_context()</code></td><td><code>generate_cards()</code>, <code>generate_native_cards()</code></td></tr>
             <tr><td><code>SubdeckAssigner</code></td><td><code>subdecks</code></td><td><code>generate_cards()</code>, <code>generate_native_cards()</code></td><td><code>_request_batch()</code>, nativer Adapter</td></tr>
-            <tr><td><code>ExportResult</code></td><td><code>apkg</code></td><td><code>create_apkg()</code>, <code>append_apkg()</code></td><td><code>cli._print_result()</code></td></tr>
-            <tr><td><code>ConversionSettings</code></td><td><code>settings</code></td><td><code>resolve_generate_settings()</code></td><td><code>cli._generate_structured_cards()</code></td></tr>
+            <tr><td><code>ExportResult</code></td><td><code>apkg</code></td><td><code>create_apkg()</code>, <code>append_apkg()</code></td><td><code>GenerateResult</code>, <code>cli._print_result()</code></td></tr>
+            <tr><td><code>CardRun</code></td><td><code>pipeline</code></td><td><code>produce_cards()</code></td><td>Aufrufer vor dem Schreiben (Prüfen in Anki Studio), <code>GenerateResult</code></td></tr>
+            <tr><td><code>GenerateResult</code></td><td><code>pipeline</code></td><td><code>run_generate()</code></td><td><code>cli.generate</code></td></tr>
+            <tr><td><code>Notice</code> · <code>StageStarted</code> · <code>StageProgress</code> · <code>StageFinished</code> · <code>ConversionFinished</code></td><td><code>pipeline</code></td><td>alle Abläufe in <code>pipeline</code></td><td>Reporter-Callback: <code>cli._ConsoleReporter</code>, Anki Studio über <code>event_to_dict()</code></td></tr>
+            <tr><td><code>ConversionSettings</code></td><td><code>settings</code></td><td><code>resolve_generate_settings()</code></td><td><code>pipeline._structured_cards()</code></td></tr>
             <tr><td><code>ConversionOptions</code></td><td><code>structured_pdf</code></td><td><code>_resolve_conversion()</code></td><td><code>convert_pdf()</code>, <code>render_document()</code></td></tr>
             <tr><td><code>ExtractedPdf</code> / <code>ExtractedPage</code> / <code>PictureInfo</code></td><td><code>structured_pdf</code></td><td><code>docling_pdf.extract_pdf()</code> oder ein Test-Extraktor</td><td><code>render_document()</code></td></tr>
-            <tr><td><code>StructuredPdf</code> / <code>ConversionStats</code></td><td><code>structured_pdf</code></td><td><code>render_document()</code></td><td><code>cli</code> (Text an <code>generate_cards()</code>, Statistik an <code>_print_conversion()</code>)</td></tr>
+            <tr><td><code>StructuredPdf</code> / <code>ConversionStats</code></td><td><code>structured_pdf</code></td><td><code>render_document()</code></td><td><code>pipeline</code> (Text an <code>generate_cards()</code>, Statistik als <code>ConversionFinished</code>)</td></tr>
             <tr><td><code>PictureContext</code></td><td><code>pictures</code></td><td><code>structured_pdf._describe()</code></td><td>jedes <code>PictureDescriber</code>-Backend</td></tr>
-            <tr><td><code>ModelStorage</code></td><td><code>model_storage</code></td><td><code>configure_model_storage()</code></td><td><code>docling_pdf</code>, <code>cli</code></td></tr>
+            <tr><td><code>ModelStorage</code></td><td><code>model_storage</code></td><td><code>configure_model_storage()</code></td><td><code>docling_pdf</code>, <code>pipeline</code></td></tr>
           </tbody>
         </table>
       </div>
@@ -1920,6 +1975,7 @@ $$A ( \omega ) = \left | \underline { F } ( \omega ) \right |$$
             <tr><td><code>settings._picture_ai</code></td><td>– (prüft das Bildprofil)</td><td>The picture backend 'profile' needs a model profile · Model profile '…' must set image_input: true</td></tr>
             <tr><td><code>pictures.LocalPictureDescriber</code> · <code>ProfilePictureDescriber</code></td><td><code>RuntimeError</code>, <code>ValueError</code>, <code>TypeError</code> · alle (Providergrenze)</td><td>Local picture model failed on page N · Picture model request failed for page N</td></tr>
             <tr><td><code>structured_pdf.save_source_text</code></td><td>vorhandene Datei · <code>OSError</code></td><td>Source text file already exists · Could not save source text</td></tr>
+            <tr><td><code>pipeline._check_cancel</code></td><td>– (fragt <code>cancel</code> ab)</td><td><code>GenerationCancelled</code>: Generation cancelled</td></tr>
             <tr><td><code>cli.run</code></td><td><code>FlashcardError</code></td><td><code>Fehler:</code> auf stderr, Exit-Code 1</td></tr>
           </tbody>
         </table>
@@ -1980,7 +2036,7 @@ $$A ( \omega ) = \left | \underline { F } ( \omega ) \right |$$
       <div class="section-heading">
         <p class="eyebrow">tests/</p>
         <h2>Teststrategie und Test-Nahtstellen</h2>
-        <p>142 Tests in zwölf Dateien (plus ein gesondert markierter Docling-Integrationstest), in der Regel eine Datei pro Modul (<code>cli</code> deckt <code>__main__</code> mit ab, <code>test_docling_pdf</code> auch <code>model_storage</code>). Der Standardlauf braucht weder API-Schlüssel noch Netzwerk noch Docling: KI-Antworten, Docling, Bildmodelle und Downloads werden simuliert, der einzige HTTP-Test läuft gegen einen lokalen Server auf <code>127.0.0.1</code>.</p>
+        <p>153 Tests in dreizehn Dateien (plus ein gesondert markierter Docling-Integrationstest), in der Regel eine Datei pro Modul (<code>cli</code> deckt <code>__main__</code> mit ab, <code>test_docling_pdf</code> auch <code>model_storage</code>). Der Standardlauf braucht weder API-Schlüssel noch Netzwerk noch Docling: KI-Antworten, Docling, Bildmodelle und Downloads werden simuliert, der einzige HTTP-Test läuft gegen einen lokalen Server auf <code>127.0.0.1</code>.</p>
       </div>
       <pre><button class="copy-button" type="button" aria-label="Befehle kopieren">Kopieren</button><code>.venv/bin/python -m ruff check src tests
 .venv/bin/python -m ruff format --check src tests
@@ -2001,22 +2057,24 @@ $$A ( \omega ) = \left | \underline { F } ( \omega ) \right |$$
             <tr><td><code>test_native_pdf.py</code></td><td>17</td><td>Unterdeck-Modus mit Regeln, Kontext und Schema, Allowlist inklusive <code>gpt-4o-mini</code>-Snapshot, Optionsprüfung vor dem Upload, Beispielprofil gegen die echte SDK-Signatur, Upload/Parse/Delete, kein Upload bei falschem Modell, Nicht-PDF oder 50 MiB, Löschen nach Fehler, Löschwarnung, echtes OpenAI-SDK gegen lokalen Server</td></tr>
             <tr><td><code>test_config.py</code></td><td>16</td><td>fehlende/leere/explizite Datei, ungültiges Schema und Secrets (parametrisiert), Profile, atomares Speichern, Gültigkeit von <code>config.example.yaml</code>, <code>pdf_conversion</code>-Defaults und -Validierung, <code>image_input</code></td></tr>
             <tr><td><code>test_settings.py</code></td><td>12</td><td>Konvertierungsoptionen und Pfade (Default → YAML → CLI), Bildprofil mit <code>image_input</code>, Diagnose ohne Bildschlüssel, Unterdeck-Priorität, YAML-Pfade, Prioritäten, Altvariablen ohne Wirkung, Profil-Fallbacks, Export-Defaults, <code>ANKI_CONFIG</code>, Diagnose ohne Secrets</td></tr>
+            <tr><td><code>test_pipeline.py</code></td><td>11</td><td>Ereignisse als JSON, Fortschritt ohne geschriebene Dateien, leeres Ergebnis, vollständiger Lauf mit JSON und APKG, Abbruch nach einem Chunk und während der Aufbereitung ohne Dateien, nativer Upload als <code>transfer</code> und Abbruch davor, Stufen der Bildprofil- und Download-Hinweise, Export, Modell-Downloads</td></tr>
             <tr><td><code>test_apkg.py</code></td><td>9</td><td>Unterdecks neu und erweitert, Duplikate im Decks-Baum, unveränderter Normalmodus, Kontext lesen ohne Änderung, Neu/Erweitern/Inspizieren, Lernstand bleibt, echter moderner Anki-Export mit zstd, HTML-Escaping, Medien bleiben</td></tr>
             <tr><td><code>test_cli.py</code></td><td>30</td><td>Abbruch ohne GPU vor Modellen und Aufbereitung, strukturierter Modus ohne Docling (Statistik, gespeicherter Text, kein <code>read_document</code>/Upload), Abweisung vor Docling (Nicht-PDF, vorhandene Textdatei), <code>models download</code> mit YAML-relativem Ordner, Hilfe zu den neuen Optionen und zu <code>models download</code>, <code>--chunk-size 1000</code> und <code>1001</code> bis zur simulierten KI, Unterdeck-Kontext bei <code>--extend</code>, Export mit Unterdecks, <code>config show</code>, Hilfeseiten, Exit-Codes, alle Befehle, YAML-Integration, nativ ohne lokale Extraktion und umgekehrt, <code>.env</code>, Subprozess ohne Traceback</td></tr>
           </tbody>
         </table>
       </div>
       <h3 style="margin-top:1.5rem">Die Nahtstellen zum Simulieren</h3>
-      <div class="table-wrap searchable" data-module="ai native_pdf cli docling_pdf pictures structured_pdf model_storage">
+      <div class="table-wrap searchable" data-module="ai native_pdf cli pipeline docling_pdf pictures structured_pdf model_storage">
         <table>
           <thead><tr><th>Grenze</th><th>Ersetzt wird</th><th>Wofür</th></tr></thead>
           <tbody>
             <tr><td>LiteLLM</td><td><code>anki_flashcards.ai._completion</code></td><td>Feste KI-Antworten pro Abschnitt; Prüfung der übergebenen Prompts und Parameter</td></tr>
             <tr><td>OpenAI-SDK</td><td><code>anki_flashcards.native_pdf._openai_client</code></td><td><code>FakeOpenAIClient</code> mit <code>files</code> und <code>responses</code>; protokolliert Upload und Löschung</td></tr>
             <tr><td>Adapter</td><td><code>generate_native_cards(adapter=…)</code></td><td>Injektion über das Protocol, ganz ohne Monkeypatching</td></tr>
-            <tr><td>CLI → Kern</td><td><code>anki_flashcards.cli.generate_cards</code>, <code>.read_document</code>, <code>.generate_native_cards</code></td><td>CLI-Abläufe ohne KI; Nachweis, dass nativ nie lokal extrahiert und lokal nie nativ hochlädt</td></tr>
-            <tr><td>GPU</td><td>gefälschtes Modul <code>torch</code> in <code>sys.modules</code> bzw. <code>anki_flashcards.cli.require_accelerator</code> und <code>docling_pdf.available_accelerator</code></td><td>GPU-Pflicht und <code>--allow-cpu</code> ohne echte GPU prüfen</td></tr>
-            <tr><td>Docling</td><td><code>convert_pdf(extractor=…)</code> bzw. <code>anki_flashcards.cli.convert_pdf</code>, <code>.require_docling</code>, <code>.configure_model_storage</code>, <code>.create_describer</code></td><td>Strukturierter Ablauf ohne Docling und ohne Modelle</td></tr>
+            <tr><td>Abläufe → Kern</td><td><code>anki_flashcards.pipeline.generate_cards</code>, <code>.read_document</code>, <code>.generate_native_cards</code></td><td>CLI- und Dienst-Abläufe ohne KI; Nachweis, dass nativ nie lokal extrahiert und lokal nie nativ hochlädt</td></tr>
+            <tr><td>GPU</td><td>gefälschtes Modul <code>torch</code> in <code>sys.modules</code> bzw. <code>anki_flashcards.pipeline.require_accelerator</code> und <code>docling_pdf.available_accelerator</code></td><td>GPU-Pflicht und <code>--allow-cpu</code> ohne echte GPU prüfen</td></tr>
+            <tr><td>Docling</td><td><code>convert_pdf(extractor=…)</code> bzw. <code>anki_flashcards.pipeline.convert_pdf</code>, <code>.require_docling</code>, <code>.configure_model_storage</code>, <code>.create_describer</code></td><td>Strukturierter Ablauf ohne Docling und ohne Modelle</td></tr>
+            <tr><td>Ereignisse und Abbruch</td><td>Argumente <code>report=events.append</code> und <code>cancel=lambda: …</code></td><td>Reihenfolge der Ereignisse und Abbruchpunkte ohne Monkeypatching prüfen</td></tr>
             <tr><td>Downloads</td><td>gefälschte Module <code>docling.utils.model_downloader</code> und <code>huggingface_hub</code> in <code>sys.modules</code></td><td>Download-Logik und Manifest ohne Netzwerk</td></tr>
             <tr><td>Bildmodelle</td><td><code>LocalPictureDescriber(loader=…)</code>, <code>anki_flashcards.pictures._completion</code></td><td>Prompts und Anfragen ohne Transformers oder Provider</td></tr>
           </tbody>
@@ -2024,7 +2082,7 @@ $$A ( \omega ) = \left | \underline { F } ( \omega ) \right |$$
       </div>
       <div class="note">
         <strong>Dort patchen, wo der Name nachgeschlagen wird.</strong>
-        <p><code>cli.py</code> importiert <code>generate_cards</code> mit <code>from … import</code>. Ein Test muss deshalb <code>anki_flashcards.cli.generate_cards</code> ersetzen, nicht <code>anki_flashcards.ai.generate_cards</code>. Für <code>_completion</code> gilt das Gegenteil: Es wird innerhalb von <code>ai.py</code> aufgerufen.</p>
+        <p><code>pipeline.py</code> importiert <code>generate_cards</code> mit <code>from … import</code>. Ein Test muss deshalb <code>anki_flashcards.pipeline.generate_cards</code> ersetzen, nicht <code>anki_flashcards.ai.generate_cards</code> und auch nicht mehr <code>anki_flashcards.cli.generate_cards</code>. Für <code>_completion</code> gilt das Gegenteil: Es wird innerhalb von <code>ai.py</code> aufgerufen.</p>
       </div>
       <div class="grid two">
         <article class="card searchable" data-module="cli">
@@ -2162,10 +2220,10 @@ print(result.added, result.skipped)</code></pre>
           <h3>Herkunftslabels sind dateibasiert</h3>
           <p>Für <code>extend</code>, <code>limit</code>, <code>language</code>, <code>instructions</code> und <code>chunk_size</code> meldet <code>config show</code> <code>config</code>, sobald irgendeine YAML-Datei geladen ist – auch wenn der Schlüssel darin fehlt und der Wert vom Default stammt. <code>input_file</code> erscheint als <code>config</code>, sobald <code>input_dir</code> gesetzt ist, auch bei einem absoluten CLI-Pfad.</p>
         </article>
-        <article class="card searchable" data-module="cli settings">
+        <article class="card searchable" data-module="pipeline settings">
           <span class="tag">Randfall</span>
           <h3>Deckname nur aus Leerzeichen</h3>
-          <p><code>--deck "   "</code> ist ein nicht leerer String und übersteht die Auflösung. Erst <code>_write_deck()</code> lehnt ihn ab – also nach der KI-Generierung. Ohne <code>--json</code> sind die erzeugten Karten dann verloren.</p>
+          <p><code>--deck "   "</code> ist ein nicht leerer String und übersteht die Auflösung. Erst <code>pipeline.write_apkg()</code> lehnt ihn ab – also nach der KI-Generierung. Ohne <code>--json</code> sind die erzeugten Karten dann verloren.</p>
         </article>
         <article class="card searchable" data-module="apkg">
           <span class="tag apkg">Randfall</span>

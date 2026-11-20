@@ -1,49 +1,37 @@
 """Expose document generation, JSON export, and deck inspection as a CLI."""
 
 import json
-from collections.abc import Callable, Iterator
-from contextlib import contextmanager
 from pathlib import Path
 
 import typer
 from dotenv import find_dotenv, load_dotenv
 from rich.console import Console
-from rich.progress import Progress, SpinnerColumn, TextColumn
+from rich.progress import Progress, SpinnerColumn, TaskID, TextColumn
 from rich.table import Table
 
-from anki_flashcards.ai import generate_cards
-from anki_flashcards.apkg import (
-    ExportResult,
-    append_apkg,
-    create_apkg,
-    inspect_apkg,
-    read_subdeck_context,
-)
+from anki_flashcards.apkg import ExportResult, inspect_apkg
 from anki_flashcards.config import PDFMode, PictureBackend
-from anki_flashcards.docling_pdf import (
-    convert_pdf,
-    create_describer,
-    ensure_conversion_models,
-    ensure_picture_model,
-    require_accelerator,
-    require_docling,
-    validate_pdf_input,
-)
-from anki_flashcards.documents import SourceDocument, read_document
 from anki_flashcards.errors import FlashcardError
-from anki_flashcards.model_storage import configure_model_storage
-from anki_flashcards.models import Card, deduplicate_cards, load_cards, save_cards
-from anki_flashcards.native_pdf import generate_native_cards
+from anki_flashcards.pipeline import (
+    ConversionFinished,
+    Notice,
+    NoticeLevel,
+    PipelineEvent,
+    Stage,
+    StageFinished,
+    StageProgress,
+    StageStarted,
+    prepare_models,
+    run_export,
+    run_generate,
+)
 from anki_flashcards.settings import (
-    GenerateSettings,
     configuration_diagnostics,
     load_selected_config,
     resolve_export_settings,
     resolve_generate_settings,
-    resolve_models_dir,
 )
-from anki_flashcards.structured_pdf import ConversionStats, save_source_text
-from anki_flashcards.subdecks import SubdeckContext
+from anki_flashcards.structured_pdf import ConversionStats
 
 MAIN_EPILOG = """
 Examples:
@@ -337,181 +325,8 @@ def generate(
     settings = resolve_generate_settings(
         {"input_file": input_file, **cli_values}, config, config_path
     )
-    _validate_output(settings.output, settings.extend)
-    subdeck_context = _subdeck_context(settings)
-    if settings.pdf_mode == PDFMode.NATIVE:
-        console.print("Native PDF mode: uploading the original document to the selected provider.")
-        cards = generate_native_cards(
-            settings.input_file,
-            settings.ai,
-            limit=settings.limit,
-            language=settings.language,
-            instructions=settings.instructions,
-            subdecks=subdeck_context,
-        )
-    elif settings.pdf_mode == PDFMode.STRUCTURED:
-        cards = _generate_structured_cards(settings, subdeck_context)
-    else:
-        cards = _generate_local_cards(settings, subdeck_context)
-    if not cards:
-        raise FlashcardError("The AI did not return any usable cards")
-
-    if settings.json_output:
-        save_cards(
-            settings.json_output,
-            cards,
-            deck=settings.deck,
-            source=str(settings.input_file),
-        )
-    result = _write_deck(settings.output, settings.deck, cards, settings.extend)
-    _print_result(result, settings.json_output)
-
-
-def _subdeck_context(settings: GenerateSettings) -> SubdeckContext | None:
-    """Build the subdeck context for a generation run and announce it.
-
-    Args:
-        settings: Fully resolved generation settings.
-
-    Returns:
-        None in normal mode, an empty context for a new package, or the
-        existing subdecks read from the package to extend.
-
-    Raises:
-        FlashcardError: If the package to extend cannot be read.
-    """
-    if not settings.subdecks:
-        return None
-    if not settings.extend:
-        return SubdeckContext(parent=settings.deck)
-    context = read_subdeck_context(settings.output, settings.deck)
-    console.print(
-        f"Unterdeck-Modus: {len(context.existing)} vorhandene Unterdecks von "
-        f"'{settings.deck}' werden mit Beispielfragen als Kontext übergeben."
-    )
-    return context
-
-
-def _generate_local_cards(
-    settings: GenerateSettings, subdeck_context: SubdeckContext | None
-) -> list[Card]:
-    """Extract document text and generate cards with progress reporting.
-
-    Args:
-        settings: Fully resolved generation settings using local PDF mode.
-        subdeck_context: Parent deck and known subdecks, or None for normal
-            mode.
-
-    Returns:
-        Validated cards from LiteLLM, possibly empty when the provider returns
-        no usable cards.
-    """
-    return _generate_from_document(settings, read_document(settings.input_file), subdeck_context)
-
-
-def _generate_structured_cards(
-    settings: GenerateSettings, subdeck_context: SubdeckContext | None
-) -> list[Card]:
-    """Convert a PDF locally with Docling and generate cards from the text.
-
-    Args:
-        settings: Fully resolved generation settings using structured mode.
-        subdeck_context: Parent deck and known subdecks, or None.
-
-    Returns:
-        Validated cards from LiteLLM.
-
-    Raises:
-        FlashcardError: If the input is no PDF, the source text file exists,
-            no GPU is available without ``--allow-cpu``, Docling or a model is
-            unavailable, or elements are unreadable.
-    """
-    conversion = settings.conversion
-    validate_pdf_input(settings.input_file)
-    if conversion.source_text is not None and conversion.source_text.exists():
-        raise FlashcardError(f"Source text file already exists: {conversion.source_text}")
-    require_docling()
-    device = require_accelerator(conversion.options.allow_cpu)
-    storage = configure_model_storage(conversion.models_dir)
-    console.print(
-        f"Strukturierter PDF-Modus: {settings.input_file.name} wird lokal mit Docling "
-        f"aufbereitet. GPU: {device}. Modelle und Caches: {storage.root}"
-    )
-    if device == "cpu":
-        console.print(
-            "[yellow]Ohne GPU (--allow-cpu): Die Aufbereitung kann sehr lange dauern.[/yellow]"
-        )
-    describer = create_describer(
-        conversion.picture_backend,
-        storage,
-        picture_model=conversion.picture_model,
-        picture_ai=conversion.picture_ai,
-        announce=console.print,
-        device=device,
-    )
-    with _progress("PDF wird aufbereitet ...") as update:
-        result = convert_pdf(
-            settings.input_file,
-            conversion.options,
-            storage,
-            describer=describer,
-            announce=console.print,
-            progress=update,
-            device=device,
-        )
-    _print_conversion(result.stats)
-    if conversion.source_text is not None:
-        save_source_text(conversion.source_text, result.document.text)
-        console.print(f"Aufbereiteter Text: {conversion.source_text}")
-    return _generate_from_document(settings, result.document, subdeck_context)
-
-
-def _generate_from_document(
-    settings: GenerateSettings,
-    document: SourceDocument,
-    subdeck_context: SubdeckContext | None,
-) -> list[Card]:
-    """Generate cards from prepared document text with progress reporting.
-
-    Args:
-        settings: Fully resolved generation settings.
-        document: Extracted or converted document text.
-        subdeck_context: Parent deck and known subdecks, or None.
-
-    Returns:
-        Validated cards from LiteLLM, possibly empty.
-    """
-    with Progress(SpinnerColumn(), TextColumn("{task.description}"), console=console) as progress:
-        task = progress.add_task("Generating cards with AI...", total=None)
-
-        def update(completed: int, total: int, count: int) -> None:
-            """Render the latest chunk and unique-card count in the progress UI.
-
-            Args:
-                completed: Number of processed document chunks.
-                total: Total document chunks in this generation run.
-                count: Unique cards accumulated so far.
-
-            Returns:
-                None. The Rich progress task is updated in place.
-            """
-            progress.update(
-                task,
-                completed=completed,
-                total=total,
-                description=f"Chunk {completed}/{total}: {count} unique cards",
-            )
-
-        return generate_cards(
-            document,
-            settings.ai,
-            limit=settings.limit,
-            language=settings.language,
-            instructions=settings.instructions,
-            chunk_size=settings.chunk_size,
-            progress=update,
-            subdecks=subdeck_context,
-        )
+    result = run_generate(settings, report=_ConsoleReporter(console))
+    _print_result(result.export, result.json_output)
 
 
 @app.command("export", epilog=EXPORT_EPILOG)
@@ -555,10 +370,7 @@ def export_cards(
     settings = resolve_export_settings(
         {"cards_file": cards_file, **cli_values}, config, config_path
     )
-    _validate_output(settings.output, settings.extend)
-    cards = deduplicate_cards(load_cards(settings.cards_file))
-    result = _write_deck(settings.output, settings.deck, cards, settings.extend)
-    _print_result(result, None)
+    _print_result(run_export(settings), None)
 
 
 @app.command("decks", epilog=DECKS_EPILOG)
@@ -701,33 +513,120 @@ def show_config(
     console.print_json(json.dumps(configuration_diagnostics(settings, config_path)))
 
 
-@contextmanager
-def _progress(description: str) -> Iterator[Callable[[str, int, int], None]]:
-    """Show a Rich progress line that conversion steps can update.
+class _ConsoleReporter:
+    """Render pipeline events on the terminal with Rich.
+
+    Notices are printed as lines, warnings in yellow; each phase shows one
+    spinner line that progress events update in place.
 
     Args:
-        description: Initial text before the first step reports.
-
-    Returns:
-        A context manager yielding ``update(label, completed, total)``.
+        target: Console receiving all output.
     """
-    with Progress(SpinnerColumn(), TextColumn("{task.description}"), console=console) as progress:
-        task = progress.add_task(description, total=None)
 
-        def update(label: str, completed: int, total: int) -> None:
-            """Show the current step with its count.
+    def __init__(self, target: Console) -> None:
+        """Prepare an idle reporter for one command.
 
-            Args:
-                label: Name of the running step.
-                completed: Finished items of the step.
-                total: All items of the step.
+        Args:
+            target: Console receiving all output.
+        """
+        self._console = target
+        self._progress: Progress | None = None
+        self._task: TaskID | None = None
 
-            Returns:
-                None. The progress line is updated in place.
-            """
-            progress.update(task, description=f"{label}: {completed}/{total}")
+    def __call__(self, event: PipelineEvent) -> None:
+        """Render one event.
 
-        yield update
+        Args:
+            event: Event emitted by the pipeline.
+
+        Returns:
+            None. Output is written to the console.
+        """
+        handlers = {
+            Notice: self._notice,
+            StageStarted: self._start,
+            StageProgress: self._advance,
+            StageFinished: self._finish,
+            ConversionFinished: self._conversion,
+        }
+        handlers[type(event)](event)
+
+    def _notice(self, event: Notice) -> None:
+        """Print a notice; warnings are highlighted.
+
+        Args:
+            event: Notice to print.
+
+        Returns:
+            None.
+        """
+        if event.level == NoticeLevel.WARNING:
+            self._console.print(f"[yellow]{event.text}[/yellow]")
+            return
+        self._console.print(event.text)
+
+    def _start(self, event: StageStarted) -> None:
+        """Start a spinner line for a phase.
+
+        Args:
+            event: Phase start with its initial description.
+
+        Returns:
+            None.
+        """
+        self._progress = Progress(
+            SpinnerColumn(), TextColumn("{task.description}"), console=self._console
+        )
+        self._progress.start()
+        self._task = self._progress.add_task(event.description, total=None)
+
+    def _advance(self, event: StageProgress) -> None:
+        """Update the spinner line of the running phase.
+
+        Args:
+            event: Progress of the running phase.
+
+        Returns:
+            None. Events without a running phase are ignored.
+        """
+        if self._progress is None or self._task is None:
+            return
+        if event.stage == Stage.GENERATION:
+            self._progress.update(
+                self._task,
+                completed=event.completed,
+                total=event.total,
+                description=f"Chunk {event.completed}/{event.total}: {event.cards} unique cards",
+            )
+            return
+        self._progress.update(
+            self._task, description=f"{event.label}: {event.completed}/{event.total}"
+        )
+
+    def _finish(self, event: StageFinished) -> None:
+        """Stop the spinner line of the finished phase.
+
+        Args:
+            event: Phase end.
+
+        Returns:
+            None.
+        """
+        if self._progress is not None:
+            self._progress.stop()
+        self._progress = None
+        self._task = None
+
+    def _conversion(self, event: ConversionFinished) -> None:
+        """Print the statistics of a structured conversion.
+
+        Args:
+            event: Finished conversion with its statistics.
+
+        Returns:
+            None.
+        """
+        _print_conversion(event.stats)
 
 
 def _print_conversion(stats: ConversionStats) -> None:
@@ -805,58 +704,14 @@ def download_models(
         None. Models are stored in the configured models folder.
     """
     config, config_path = load_selected_config(config_file)
-    conversion = config.pdf_conversion
-    require_docling()
-    storage = configure_model_storage(resolve_models_dir(config, config_path))
-    with_formulas = conversion.formulas if formulas is None else formulas
-    ensure_conversion_models(storage, formulas=with_formulas, announce=console.print)
-    if (picture_backend or conversion.pictures.backend) == PictureBackend.LOCAL:
-        ensure_picture_model(storage, conversion.pictures.model, console.print)
-    console.print(f"[green]Modelle bereit:[/green] {storage.root}")
-
-
-def _validate_output(output: Path, extend: bool) -> None:
-    """Validate APKG extension and create-versus-extend file semantics.
-
-    Args:
-        output: Requested destination package path.
-        extend: Whether an existing package must be extended.
-
-    Returns:
-        None when the requested operation is valid.
-
-    Raises:
-        FlashcardError: If the suffix is wrong or the output existence does
-            not match the requested operation.
-    """
-    if output.suffix.casefold() != ".apkg":
-        raise FlashcardError("Output path must end in .apkg")
-    if extend and not output.is_file():
-        raise FlashcardError(f"Cannot extend missing APKG: {output}")
-    if not extend and output.exists():
-        raise FlashcardError(f"Output already exists: {output}. Use --extend or another path.")
-
-
-def _write_deck(output: Path, deck: str, cards: list[Card], extend: bool) -> ExportResult:
-    """Dispatch a validated write request to APKG creation or extension.
-
-    Args:
-        output: Destination APKG path.
-        deck: Non-empty target deck name.
-        cards: Validated cards to write.
-        extend: Whether to preserve and extend an existing package.
-
-    Returns:
-        The export result reported to the user.
-
-    Raises:
-        FlashcardError: If the deck name is empty or package writing fails.
-    """
-    if not deck.strip():
-        raise FlashcardError("Deck name must not be empty")
-    if extend:
-        return append_apkg(output, deck, cards)
-    return create_apkg(output, deck, cards)
+    root = prepare_models(
+        config,
+        config_path,
+        formulas=formulas,
+        picture_backend=picture_backend,
+        report=_ConsoleReporter(console),
+    )
+    console.print(f"[green]Modelle bereit:[/green] {root}")
 
 
 def _print_result(result: ExportResult, json_output: Path | None) -> None:
