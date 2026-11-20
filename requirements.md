@@ -405,10 +405,10 @@ Karten erzeugen und Karten schreiben sind getrennt aufrufbar. Eine Oberfläche k
 **R-174 – Ziel Anki-Sammlung · muss · umgesetzt**
 Zusätzlich zur APKG-Datei kann eine vom Aufrufer geöffnete Anki-Sammlung (offizielles `anki.collection.Collection`-Objekt) Ziel sein. Es gelten derselbe Notiztyp, dieselbe Duplikaterkennung über Deck und Unterdecks, dieselben stabilen GUIDs, dasselbe HTML-Escaping und dieselbe Unterdeck-Logik wie beim Erweitern eines Pakets. Alle neuen Notizen eines Aufrufs werden in einer einzigen Anki-Operation hinzugefügt. Decks mit Kartenanzahl und der Unterdeck-Kontext lassen sich ebenso aus einer offenen Sammlung lesen. Das Paket öffnet, synchronisiert oder schließt keine Sammlung selbst; Pfad, Sperren und Sync verantwortet der Aufrufer. Die CLI bleibt bei APKG-Dateien und berührt keine persönliche Sammlung.
 
-**R-175 – Versionierte Schnittstelle · muss · offen**
+**R-175 – Versionierte Schnittstelle · muss · umgesetzt**
 Die von Anki Studio genutzten Funktionen und Klassen sind im Entwicklerhandbuch als öffentliche Schnittstelle beschrieben. Der Stand, der sie erstmals bereitstellt, erhält die Paketversion 0.2.0 und den Git-Tag `v0.2.0`. Spätere inkompatible Änderungen dieser Schnittstelle erhöhen die Version und werden in der Übergabedatei vermerkt.
 
-**R-176 – Übergabe an Anki Studio · muss · offen**
+**R-176 – Übergabe an Anki Studio · muss · umgesetzt**
 [docs/anki-studio-uebergabe.md](./docs/anki-studio-uebergabe.md) bündelt Ziel, Entscheidungen, Infrastruktur, Architektur, Anforderungen an Anki Studio, Risiken und die konkreten Schnittstellen dieses Pakets. Sie wird aktualisiert, sobald R-170 bis R-175 umgesetzt sind.
 
 ## 14. Spätere Erweiterungen
