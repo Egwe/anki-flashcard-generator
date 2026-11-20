@@ -149,16 +149,30 @@ def inspect_apkg(path: Path) -> list[dict[str, Any]]:
         _extract_collection(path, database)
         collection = _open_collection(database)
         try:
-            return [
-                {
-                    "id": deck.id,
-                    "name": deck.name,
-                    "cards": collection.decks.card_count(deck.id, include_subdecks=False),
-                }
-                for deck in collection.decks.all_names_and_ids(include_filtered=False)
-            ]
+            return collection_decks(collection)
         finally:
             collection.close()
+
+
+def collection_decks(collection: Any) -> list[dict[str, Any]]:
+    """List normal decks and their direct card counts in an open collection.
+
+    Args:
+        collection: Open official Anki collection; it is only read.
+
+    Returns:
+        One dictionary per normal deck with ``id``, ``name``, and ``cards``
+        keys; filtered decks are excluded and subdeck cards are not counted
+        for their parents.
+    """
+    return [
+        {
+            "id": deck.id,
+            "name": deck.name,
+            "cards": collection.decks.card_count(deck.id, include_subdecks=False),
+        }
+        for deck in collection.decks.all_names_and_ids(include_filtered=False)
+    ]
 
 
 def read_subdeck_context(
@@ -185,10 +199,65 @@ def read_subdeck_context(
         _extract_collection(path, database)
         collection = _open_collection(database)
         try:
-            existing = _existing_subdecks(collection, deck_name, examples)
+            return collection_subdeck_context(collection, deck_name, examples=examples)
         finally:
             collection.close()
+
+
+def collection_subdeck_context(
+    collection: Any, deck_name: str, *, examples: int = SUBDECK_EXAMPLES
+) -> SubdeckContext:
+    """Read the first-level subdecks of a deck in an open collection.
+
+    Args:
+        collection: Open official Anki collection; it is only read.
+        deck_name: Parent deck; matched case-insensitively like Anki does.
+        examples: Maximum sample questions per subdeck, taken from the
+            subdeck and its descendants.
+
+    Returns:
+        The parent deck name and its subdecks sorted by name, each with plain
+        sample questions of at most 200 characters. A missing parent deck
+        yields no subdecks.
+    """
+    existing = _existing_subdecks(collection, deck_name, examples)
     return SubdeckContext(parent=deck_name, existing=existing)
+
+
+def add_cards_to_collection(collection: Any, deck_name: str, cards: list[Card]) -> ExportResult:
+    """Add unique cards to a deck of an open collection in one Anki operation.
+
+    The rules equal those of ``append_apkg``: same note type, duplicate check
+    against the deck (and all its subdecks when a card has a subdeck), stable
+    GUIDs, HTML-escaped fields, and ``deck_name::subdeck`` targets. Missing
+    decks and the note type are created first; all notes are then added by a
+    single undoable ``add_notes`` call. Opening, locking, syncing, and closing
+    the collection remain the caller's responsibility.
+
+    Args:
+        collection: Open official ``anki.collection.Collection``; modified.
+        deck_name: Non-empty target or parent deck name.
+        cards: Non-empty validated cards in their preferred insertion order.
+
+    Returns:
+        Added and skipped counts plus added cards per deck; ``path`` is the
+        collection file.
+
+    Raises:
+        FlashcardError: If no cards or no deck name are given, the generated
+            note type is incompatible, or Anki rejects the change.
+    """
+    if not cards:
+        raise FlashcardError("Cannot add an empty card list to the collection")
+    if not deck_name.strip():
+        raise FlashcardError("Deck name must not be empty")
+    path = Path(collection.path)
+    try:
+        return _append_to_collection(collection, path, deck_name, cards)
+    except FlashcardError:
+        raise
+    except Exception as error:
+        raise FlashcardError(f"Could not add cards to the collection {path}: {error}") from error
 
 
 def _existing_subdecks(
@@ -291,16 +360,20 @@ def _append_to_collection(
     Returns:
         Added and duplicate counts plus added cards per deck. Duplicates are
         searched in the target deck, and additionally in all of its subdecks
-        when any card carries a subdeck.
+        when any card carries a subdeck. All new notes are added in one
+        ``add_notes`` operation.
 
     Raises:
         FlashcardError: If an existing generated note type has incompatible
             fields.
     """
+    from anki.collection import AddNoteRequest
+
     model = _compatible_note_type(collection)
     deck_id = collection.decks.id(deck_name)
     existing = _existing_fronts(collection, _duplicate_scope(collection, deck_id, cards))
     added_by_deck: dict[str, int] = {}
+    requests = []
     skipped = 0
     for card in cards:
         key = _normalize_front(card.front)
@@ -308,9 +381,12 @@ def _append_to_collection(
             skipped += 1
             continue
         target = _target_deck(deck_name, card)
-        _add_anki_note(collection, model, collection.decks.id(target), deck_name, card)
+        note = _new_anki_note(collection, model, deck_name, card)
+        requests.append(AddNoteRequest(note=note, deck_id=collection.decks.id(target)))
         existing.add(key)
         added_by_deck[target] = added_by_deck.get(target, 0) + 1
+    if requests:
+        collection.add_notes(requests)
     return ExportResult(
         path=path,
         deck=deck_name,
@@ -377,31 +453,24 @@ def _existing_fronts(collection: Any, deck_ids: list[int]) -> set[str]:
     return {_normalize_front(html.unescape(row[1].split("\x1f", 1)[0])) for row in rows}
 
 
-def _add_anki_note(
-    collection: Any,
-    model: dict[str, Any],
-    deck_id: int,
-    deck_name: str,
-    card: Card,
-) -> None:
-    """Write one escaped card with a stable GUID through the Anki API.
+def _new_anki_note(collection: Any, model: dict[str, Any], deck_name: str, card: Card) -> Any:
+    """Build one escaped, not yet persisted note with a stable GUID.
 
     Args:
-        collection: Open Anki collection used for persistence.
+        collection: Open Anki collection that creates the note object.
         model: Compatible Front/Back note type.
-        deck_id: Numeric target deck identifier.
         deck_name: Target deck name included in the stable GUID.
-        card: Plain-text card to persist.
+        card: Plain-text card to convert.
 
     Returns:
-        None. One note and its generated card are added to the collection.
+        A new ``anki.notes.Note`` ready for ``add_notes``.
     """
     note = collection.new_note(model)
     note["Front"] = html.escape(card.front)
     note["Back"] = html.escape(card.back)
     note.tags = card.tags
     note.guid = _stable_guid(deck_name, card.front)
-    collection.add_note(note, deck_id)
+    return note
 
 
 def _new_anki_model(collection: Any) -> dict[str, Any]:

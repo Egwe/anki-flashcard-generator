@@ -402,7 +402,7 @@ Ein Aufrufer kann einen laufenden Generierungsauftrag abbrechen. Der Dienst prü
 **R-173 – Karten erzeugen und Ziel schreiben getrennt · muss · umgesetzt**
 Karten erzeugen und Karten schreiben sind getrennt aufrufbar. Eine Oberfläche kann Karten erzeugen, sie anzeigen und bearbeiten lassen und erst danach in ein Ziel schreiben. Für die geprüften Karten gelten dieselbe Validierung, Duplikaterkennung und Escaping-Regeln wie im direkten Lauf.
 
-**R-174 – Ziel Anki-Sammlung · muss · offen**
+**R-174 – Ziel Anki-Sammlung · muss · umgesetzt**
 Zusätzlich zur APKG-Datei kann eine vom Aufrufer geöffnete Anki-Sammlung (offizielles `anki.collection.Collection`-Objekt) Ziel sein. Es gelten derselbe Notiztyp, dieselbe Duplikaterkennung über Deck und Unterdecks, dieselben stabilen GUIDs, dasselbe HTML-Escaping und dieselbe Unterdeck-Logik wie beim Erweitern eines Pakets. Alle neuen Notizen eines Aufrufs werden in einer einzigen Anki-Operation hinzugefügt. Decks mit Kartenanzahl und der Unterdeck-Kontext lassen sich ebenso aus einer offenen Sammlung lesen. Das Paket öffnet, synchronisiert oder schließt keine Sammlung selbst; Pfad, Sperren und Sync verantwortet der Aufrufer. Die CLI bleibt bei APKG-Dateien und berührt keine persönliche Sammlung.
 
 **R-175 – Versionierte Schnittstelle · muss · offen**

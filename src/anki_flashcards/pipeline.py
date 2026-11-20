@@ -14,7 +14,14 @@ from pathlib import Path
 from typing import Any, ClassVar
 
 from anki_flashcards.ai import generate_cards
-from anki_flashcards.apkg import ExportResult, append_apkg, create_apkg, read_subdeck_context
+from anki_flashcards.apkg import (
+    ExportResult,
+    add_cards_to_collection,
+    append_apkg,
+    collection_subdeck_context,
+    create_apkg,
+    read_subdeck_context,
+)
 from anki_flashcards.config import AppConfig, PDFMode, PictureBackend
 from anki_flashcards.docling_pdf import (
     convert_pdf,
@@ -290,6 +297,35 @@ def apkg_subdeck_context(
     return context
 
 
+def subdeck_context_from_collection(
+    settings: GenerateSettings, collection: Any, *, report: Reporter | None = None
+) -> SubdeckContext | None:
+    """Build the subdeck context for a run that writes into an open collection.
+
+    A collection target always behaves like extending: existing subdecks of
+    ``settings.deck`` and their sample questions are offered to the model.
+    ``settings.output`` and ``settings.extend`` are ignored.
+
+    Args:
+        settings: Fully resolved generation settings.
+        collection: Open official Anki collection; it is only read.
+        report: Callback receiving the notice about existing subdecks.
+
+    Returns:
+        None in normal mode, otherwise the deck's existing subdecks.
+    """
+    if not settings.subdecks:
+        return None
+    context = collection_subdeck_context(collection, settings.deck)
+    (report or _ignore)(
+        Notice(
+            f"Unterdeck-Modus: {len(context.existing)} vorhandene Unterdecks von "
+            f"'{settings.deck}' werden mit Beispielfragen als Kontext übergeben."
+        )
+    )
+    return context
+
+
 def validate_output(output: Path, extend: bool) -> None:
     """Validate APKG extension and create-versus-extend file semantics.
 
@@ -332,6 +368,27 @@ def write_apkg(output: Path, deck: str, cards: list[Card], extend: bool) -> Expo
     if extend:
         return append_apkg(output, deck, cards)
     return create_apkg(output, deck, cards)
+
+
+def write_collection(collection: Any, deck: str, cards: list[Card]) -> ExportResult:
+    """Add cards to a deck of an open Anki collection in one operation.
+
+    The caller opens, locks, syncs, and closes the collection; this function
+    only adds notes (and missing decks or the note type).
+
+    Args:
+        collection: Open official ``anki.collection.Collection``; modified.
+        deck: Non-empty target or parent deck name.
+        cards: Non-empty validated cards, for example a reviewed ``CardRun``.
+
+    Returns:
+        Added and skipped counts plus added cards per deck.
+
+    Raises:
+        FlashcardError: If the deck name or card list is empty, the note type
+            is incompatible, or Anki rejects the change.
+    """
+    return add_cards_to_collection(collection, deck, cards)
 
 
 def run_export(settings: ExportSettings) -> ExportResult:
