@@ -228,3 +228,41 @@ def test_normal_mode_discards_subdecks_returned_by_the_model(
     assert requests[0]["response_format"] is CardBatch
     assert '"subdeck"' not in requests[0]["messages"][0]["content"]
     assert cards[0].subdeck is None
+
+
+def test_figure_rules_are_added_only_for_marked_text(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Verify machine-description rules accompany marked structured text only.
+
+    Args:
+        monkeypatch: Pytest fixture used to replace the external AI client.
+
+    Returns:
+        None. Assertions inspect the system prompts of two requests.
+    """
+    from anki_flashcards.ai import FIGURE_RULES, system_prompt_for
+
+    prompts: list[str] = []
+
+    def fake_completion(**kwargs: Any) -> SimpleNamespace:
+        """Record the system prompt and return one card.
+
+        Args:
+            **kwargs: LiteLLM options supplied by the application.
+
+        Returns:
+            A valid response with one card.
+        """
+        prompts.append(kwargs["messages"][0]["content"])
+        return response({"cards": [{"front": "Was zeigt Bild 1?", "back": "Einen Tiefpass."}]})
+
+    monkeypatch.setattr("anki_flashcards.ai._completion", fake_completion)
+    marked = SourceDocument(
+        path=Path("vl.pdf"), text="[Seite 1]\n[Abbildung S. 1 – Beschreibung: Ein Tiefpass.]"
+    )
+
+    generate_cards(marked, AISettings(model="ollama/test"), limit=1)
+    generate_cards(document(), AISettings(model="ollama/test"), limit=1)
+
+    assert FIGURE_RULES in prompts[0]
+    assert FIGURE_RULES not in prompts[1]
+    assert FIGURE_RULES in system_prompt_for("x [nicht lesbar: Formel S. 2] y")

@@ -26,14 +26,27 @@ DEFAULT_LANGUAGE = "Deutsch"
 DEFAULT_CHUNK_SIZE = 24_000
 DEFAULT_TIMEOUT = 180
 DEFAULT_PDF_MODE = "local"
+DEFAULT_MODELS_DIR = Path("models")
+DEFAULT_PICTURE_MODEL = "HuggingFaceTB/SmolVLM-256M-Instruct"
+DEFAULT_OCR_LANGUAGES = ("de", "en")
 ENVIRONMENT_VARIABLE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+REPOSITORY_ID = r"^[^/\s]+/[^\s]+$"
 
 
 class PDFMode(StrEnum):
-    """Select local text extraction or verified native provider processing."""
+    """Select text-layer extraction, local structured conversion, or native upload."""
 
     LOCAL = "local"
+    STRUCTURED = "structured"
     NATIVE = "native"
+
+
+class PictureBackend(StrEnum):
+    """Select which model describes figures in the structured PDF mode."""
+
+    LOCAL = "local"
+    PROFILE = "profile"
+    NONE = "none"
 
 
 class StrictModel(BaseModel):
@@ -99,7 +112,9 @@ class ModelProfile(StrictModel):
         api_base: Optional provider endpoint override.
         api_key_env: Name of the environment variable holding the API key.
         timeout: Provider request timeout in seconds.
-        pdf_mode: Local extraction or native PDF provider processing.
+        pdf_mode: Text-layer, structured local, or native PDF processing.
+        image_input: Explicit confirmation that the model accepts images, so
+            it may describe figures in the structured PDF mode.
         options: Allowed provider-specific LiteLLM keyword arguments.
     """
 
@@ -108,6 +123,7 @@ class ModelProfile(StrictModel):
     api_key_env: str | None = None
     timeout: int = Field(default=DEFAULT_TIMEOUT, ge=1, le=3_600)
     pdf_mode: PDFMode = PDFMode.LOCAL
+    image_input: bool = False
     options: dict[str, Any] = Field(default_factory=dict)
 
     @field_validator("api_key_env")
@@ -157,6 +173,68 @@ class ModelProfile(StrictModel):
         return options
 
 
+class PictureConfig(StrictModel):
+    """Configure the model that describes figures in the structured PDF mode.
+
+    Attributes:
+        backend: ``local`` model in this process, a model ``profile``, or ``none``.
+        model: Hugging Face identifier of the local picture model.
+        profile: Model profile for the ``profile`` backend; None reuses the
+            profile that generates the cards.
+    """
+
+    backend: PictureBackend = PictureBackend.LOCAL
+    model: str = Field(default=DEFAULT_PICTURE_MODEL, pattern=REPOSITORY_ID)
+    profile: str | None = Field(default=None, min_length=1)
+
+
+class PDFConversionConfig(StrictModel):
+    """Configure the local structured PDF conversion with Docling.
+
+    Attributes:
+        models_dir: Folder for every downloaded model and library cache;
+            relative paths are resolved next to the YAML file.
+        ocr_languages: ISO 639-1 codes for text recognition, primary first.
+        force_ocr: Recognize all page text by OCR instead of the text layer.
+        formulas: Recognize formulas as LaTeX; slow on a CPU.
+        allow_unreadable: Continue with reported placeholders instead of
+            aborting when an element cannot be read.
+        source_text_dir: Optional folder in which the converted Markdown is
+            saved as ``<input name>.md``.
+        pictures: Figure description settings.
+    """
+
+    models_dir: Path = DEFAULT_MODELS_DIR
+    ocr_languages: list[str] = Field(
+        default_factory=lambda: list(DEFAULT_OCR_LANGUAGES), min_length=1
+    )
+    force_ocr: bool = False
+    formulas: bool = True
+    allow_unreadable: bool = False
+    source_text_dir: Path | None = None
+    pictures: PictureConfig = Field(default_factory=PictureConfig)
+
+    @field_validator("ocr_languages")
+    @classmethod
+    def validate_languages(cls, languages: list[str]) -> list[str]:
+        """Accept only two-letter ISO 639-1 language codes.
+
+        Args:
+            languages: Candidate OCR language codes.
+
+        Returns:
+            The lower-case codes.
+
+        Raises:
+            ValueError: If a code is not two ASCII letters.
+        """
+        normalized = [language.casefold() for language in languages]
+        invalid = [code for code in normalized if not re.fullmatch(r"[a-z]{2}", code)]
+        if invalid:
+            raise ValueError(f"OCR languages must be ISO 639-1 codes like 'de': {invalid}")
+        return normalized
+
+
 class AppConfig(StrictModel):
     """Represent the complete versioned YAML configuration.
 
@@ -166,6 +244,7 @@ class AppConfig(StrictModel):
         input_dir: Default directory for bare input filenames.
         output_dir: Default directory for generated files.
         generation: Generation defaults applied beneath environment and CLI values.
+        pdf_conversion: Settings of the structured local PDF conversion.
         models: Reusable model profiles keyed by unique names.
     """
 
@@ -174,6 +253,7 @@ class AppConfig(StrictModel):
     input_dir: Path | None = None
     output_dir: Path | None = None
     generation: GenerationConfig = Field(default_factory=GenerationConfig)
+    pdf_conversion: PDFConversionConfig = Field(default_factory=PDFConversionConfig)
     models: dict[str, ModelProfile] = Field(default_factory=dict)
 
     @model_validator(mode="after")
@@ -188,7 +268,11 @@ class AppConfig(StrictModel):
         """
         if "cli" in self.models:
             raise ValueError("The model profile name 'cli' is reserved")
-        references = (self.default_profile, self.generation.profile)
+        references = (
+            self.default_profile,
+            self.generation.profile,
+            self.pdf_conversion.pictures.profile,
+        )
         for reference in references:
             if reference is not None and reference not in self.models:
                 raise ValueError(f"Unknown model profile: {reference}")

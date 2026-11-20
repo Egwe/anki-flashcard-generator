@@ -137,3 +137,17 @@ def test_explicit_overlap_is_still_validated() -> None:
     """
     with pytest.raises(ValueError, match="Overlap"):
         chunk_text("x" * 2_000, max_chars=1_000, overlap=500)
+
+
+def test_chunking_keeps_a_fitting_table_together() -> None:
+    """Verify a Markdown table that fits a chunk is not split (R-144).
+
+    Returns:
+        None. The assertion finds the complete table in one chunk.
+    """
+    table = "\n".join(["| Größe | Wert |", "|---|---|"] + [f"| R{i} | {i} kΩ |" for i in range(40)])
+    text = "Einleitung " * 60 + "\n\n" + table + "\n\n" + "Ausblick " * 120
+
+    chunks = chunk_text(text, max_chars=1_200)
+
+    assert any(table in chunk for chunk in chunks)

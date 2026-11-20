@@ -19,6 +19,14 @@ Use plain text, concise answers, unambiguous questions, and tags without whitesp
 Do not create meta questions about the document or duplicate the same fact with different wording.
 If the source does not contain enough material, return fewer cards rather than weak cards.
 """
+FIGURE_MARKER = "[Abbildung S. "
+GAP_MARKERS = (FIGURE_MARKER, "[Formel S. ", "[nicht lesbar: ")
+FIGURE_RULES = """
+Text in square brackets starting with "Abbildung S. N" is a machine-generated description of a
+figure on page N. Use it like source text, but never add details it does not state.
+Markers "[Formel S. N – nicht ausgewertet]" and "[nicht lesbar: ...]" stand for missing content;
+do not invent that content and do not ask about the markers themselves.
+"""
 
 
 @dataclass(frozen=True)
@@ -84,6 +92,7 @@ def generate_cards(
 
     chunks = chunk_text(document.text, max_chars=chunk_size)
     assigner = SubdeckAssigner(subdecks)
+    base_prompt = system_prompt_for(document.text)
     cards: list[Card] = []
     for index, chunk in enumerate(chunks):
         prompt = _build_prompt(
@@ -93,13 +102,28 @@ def generate_cards(
             instructions=instructions,
             subdeck_section=assigner.prompt_section(),
         )
-        batch = _request_batch(prompt, settings, index + 1, assigner)
+        batch = _request_batch(prompt, settings, index + 1, assigner, base_prompt)
         cards = deduplicate_cards(cards + assigner.assign(batch.cards), limit)
         if progress is not None:
             progress(index + 1, len(chunks), len(cards))
         if limit > 0 and len(cards) >= limit:
             break
     return cards
+
+
+def system_prompt_for(text: str) -> str:
+    """Choose the card system prompt for a document text.
+
+    Args:
+        text: Complete document text sent in chunks.
+
+    Returns:
+        The shared prompt, extended by figure and gap rules when the text
+        contains markers from the structured PDF conversion.
+    """
+    if any(marker in text for marker in GAP_MARKERS):
+        return SYSTEM_PROMPT + FIGURE_RULES
+    return SYSTEM_PROMPT
 
 
 def _allocation(limit: int, produced: int, remaining: int) -> int | None:
@@ -119,7 +143,11 @@ def _allocation(limit: int, produced: int, remaining: int) -> int | None:
 
 
 def _request_batch(
-    prompt: str, settings: AISettings, chunk_number: int, assigner: SubdeckAssigner
+    prompt: str,
+    settings: AISettings,
+    chunk_number: int,
+    assigner: SubdeckAssigner,
+    base_prompt: str = SYSTEM_PROMPT,
 ) -> CardBatch:
     """Request and validate one card batch at the external provider boundary.
 
@@ -128,6 +156,7 @@ def _request_batch(
         settings: Provider connection settings.
         chunk_number: One-based chunk number used in error messages.
         assigner: Subdeck strategy supplying system prompt and response schema.
+        base_prompt: Card system prompt before subdeck rules are added.
 
     Returns:
         A validated card batch from the provider response.
@@ -140,7 +169,7 @@ def _request_batch(
         response = _completion(
             model=settings.model,
             messages=[
-                {"role": "system", "content": assigner.system_prompt(SYSTEM_PROMPT)},
+                {"role": "system", "content": assigner.system_prompt(base_prompt)},
                 {"role": "user", "content": prompt},
             ],
             response_format=assigner.response_model,
@@ -148,7 +177,7 @@ def _request_batch(
             num_retries=2,
             drop_params=True,
             **settings.options,
-            **_provider_options(settings),
+            **connection_options(settings),
         )
         return assigner.response_model.model_validate_json(_response_content(response))
     except (ValidationError, ValueError, TypeError) as error:
@@ -196,7 +225,7 @@ def _build_prompt(
     )
 
 
-def _provider_options(settings: AISettings) -> dict[str, Any]:
+def connection_options(settings: AISettings) -> dict[str, Any]:
     """Collect optional LiteLLM connection overrides without empty values.
 
     Args:
