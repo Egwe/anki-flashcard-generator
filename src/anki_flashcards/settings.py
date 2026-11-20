@@ -23,6 +23,7 @@ CONVERSION_OPTIONS = (
     "force_ocr",
     "formulas",
     "allow_unreadable",
+    "allow_cpu",
     "picture_backend",
     "picture_profile",
     "source_text",
@@ -299,6 +300,7 @@ def _resolve_conversion(
         force_ocr=cli.get("force_ocr", conversion.force_ocr),
         formulas=cli.get("formulas", conversion.formulas),
         allow_unreadable=cli.get("allow_unreadable", conversion.allow_unreadable),
+        allow_cpu=cli.get("allow_cpu", conversion.allow_cpu),
         language=language,
     )
     backend = cli.get("picture_backend", conversion.pictures.backend)
@@ -777,6 +779,7 @@ def _conversion_diagnostics(conversion: ConversionSettings) -> dict[str, Any]:
         "force_ocr": options.force_ocr,
         "formulas": options.formulas,
         "allow_unreadable": options.allow_unreadable,
+        "allow_cpu": options.allow_cpu,
         "picture_backend": conversion.picture_backend.value,
         "picture_model": conversion.picture_model,
         "picture_profile": conversion.picture_profile,

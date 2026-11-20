@@ -85,6 +85,7 @@ class LocalPictureDescriber:
     Attributes:
         model_dir: Local folder containing a Hugging Face image-text model.
         max_new_tokens: Upper bound for generated description tokens.
+        device: PyTorch device such as ``cuda``, ``mps``, ``xpu``, or ``cpu``.
     """
 
     def __init__(
@@ -92,13 +93,15 @@ class LocalPictureDescriber:
         model_dir: Path,
         *,
         max_new_tokens: int = DEFAULT_MAX_NEW_TOKENS,
-        loader: Callable[[Path, int], Generator] | None = None,
+        device: str = "cpu",
+        loader: Callable[[Path, int, str], Generator] | None = None,
     ) -> None:
         """Remember the model folder without loading the model yet.
 
         Args:
             model_dir: Local folder of the downloaded model.
             max_new_tokens: Upper bound for generated description tokens.
+            device: PyTorch device on which the model runs.
             loader: Optional factory returning ``generate(image, prompt)``;
                 defaults to a Transformers implementation. Tests inject fakes.
 
@@ -107,6 +110,7 @@ class LocalPictureDescriber:
         """
         self.model_dir = model_dir
         self.max_new_tokens = max_new_tokens
+        self.device = device
         self._loader = loader or _load_transformers_generator
         self._generate: Generator | None = None
 
@@ -124,7 +128,7 @@ class LocalPictureDescriber:
             FlashcardError: If the model cannot be loaded or generation fails.
         """
         if self._generate is None:
-            self._generate = self._loader(self.model_dir, self.max_new_tokens)
+            self._generate = self._loader(self.model_dir, self.max_new_tokens, self.device)
         prompt = description_prompt(context, LOCAL_DESCRIPTION_LANGUAGE)
         try:
             return self._generate(image, prompt).strip()
@@ -230,12 +234,13 @@ def _message_text(response: Any) -> str:
     return content.strip() if isinstance(content, str) else ""
 
 
-def _load_transformers_generator(model_dir: Path, max_new_tokens: int) -> Generator:
+def _load_transformers_generator(model_dir: Path, max_new_tokens: int, device: str) -> Generator:
     """Load a local Transformers image-text model and return a generator function.
 
     Args:
         model_dir: Local model folder; nothing is downloaded here.
         max_new_tokens: Upper bound for generated tokens per figure.
+        device: PyTorch device on which the model and its inputs are placed.
 
     Returns:
         A function ``generate(image, prompt)`` returning decoded new text.
@@ -252,7 +257,8 @@ def _load_transformers_generator(model_dir: Path, max_new_tokens: int) -> Genera
     try:
         processor = AutoProcessor.from_pretrained(model_dir, local_files_only=True)
         model = AutoModelForImageTextToText.from_pretrained(model_dir, local_files_only=True)
-    except (OSError, ValueError) as error:
+        model = model.to(device)
+    except (OSError, ValueError, RuntimeError) as error:
         raise FlashcardError(f"Could not load picture model from {model_dir}: {error}") from error
     _disable_image_splitting(processor)
 
@@ -271,6 +277,7 @@ def _load_transformers_generator(model_dir: Path, max_new_tokens: int) -> Genera
         ]
         chat = processor.apply_chat_template(messages, add_generation_prompt=True)
         inputs = processor(text=chat, images=[image.convert("RGB")], return_tensors="pt")
+        inputs = inputs.to(device)
         output = model.generate(**inputs, max_new_tokens=max_new_tokens, do_sample=False)
         new_tokens = output[:, inputs["input_ids"].shape[1] :]
         return processor.batch_decode(new_tokens, skip_special_tokens=True)[0]

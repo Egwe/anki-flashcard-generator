@@ -37,6 +37,7 @@ class ConversionOptions:
         force_ocr: Recognize all page text by OCR instead of the text layer.
         formulas: Recognize formulas as LaTeX; slow on a CPU.
         allow_unreadable: Insert reported placeholders instead of aborting.
+        allow_cpu: Accept CPU-only conversion although it is very slow.
         language: Language requested for figure descriptions.
     """
 
@@ -44,6 +45,7 @@ class ConversionOptions:
     force_ocr: bool = False
     formulas: bool = True
     allow_unreadable: bool = False
+    allow_cpu: bool = False
     language: str = "Deutsch"
 
 

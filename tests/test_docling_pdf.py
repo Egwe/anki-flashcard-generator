@@ -13,6 +13,7 @@ from anki_flashcards.docling_pdf import (
     convert_pdf,
     ensure_conversion_models,
     ensure_picture_model,
+    require_accelerator,
     require_docling,
 )
 from anki_flashcards.errors import FlashcardError
@@ -192,13 +193,14 @@ def test_convert_pdf_uses_extractor_without_docling(
 
     monkeypatch.setattr(docling_pdf, "require_docling", forbidden)
 
-    def extractor(path: Path, options: ConversionOptions, models, progress) -> ExtractedPdf:
+    def extractor(path: Path, options: ConversionOptions, models, device, progress) -> ExtractedPdf:
         """Return one prepared page.
 
         Args:
             path: Requested PDF.
             options: Conversion options.
             models: Model storage.
+            device: Accelerator selected for Docling.
             progress: Optional progress callback.
 
         Returns:
@@ -230,6 +232,111 @@ def test_convert_pdf_rejects_other_formats(storage) -> None:
     with pytest.raises(FlashcardError, match="only accepts .pdf"):
         convert_pdf(
             Path("notes.docx"),
+            ConversionOptions(),
+            storage,
+            describer=None,
+            announce=lambda message: None,
+        )
+
+
+def fake_torch(monkeypatch: pytest.MonkeyPatch, *, cuda: bool, mps: bool = False) -> None:
+    """Install a fake ``torch`` module reporting the given accelerators.
+
+    Args:
+        monkeypatch: Pytest fixture restoring ``sys.modules``.
+        cuda: Whether CUDA (or ROCm through the CUDA API) is available.
+        mps: Whether Apple's Metal backend is available.
+
+    Returns:
+        None.
+    """
+    torch = ModuleType("torch")
+    torch.cuda = ModuleType("torch.cuda")
+    torch.cuda.is_available = lambda: cuda
+    torch.backends = ModuleType("torch.backends")
+    torch.backends.mps = ModuleType("torch.backends.mps")
+    torch.backends.mps.is_available = lambda: mps
+    monkeypatch.setitem(sys.modules, "torch", torch)
+
+
+@pytest.mark.parametrize(("cuda", "mps", "expected"), [(True, False, "cuda"), (False, True, "mps")])
+def test_require_accelerator_returns_detected_gpu(
+    monkeypatch: pytest.MonkeyPatch, cuda: bool, mps: bool, expected: str
+) -> None:
+    """Verify a detected GPU backend is selected for the conversion.
+
+    Args:
+        monkeypatch: Pytest fixture replacing ``torch``.
+        cuda: Fake CUDA availability.
+        mps: Fake MPS availability.
+        expected: Expected Docling device name.
+
+    Returns:
+        None. The assertion compares the device.
+    """
+    fake_torch(monkeypatch, cuda=cuda, mps=mps)
+
+    assert require_accelerator(allow_cpu=False) == expected
+
+
+def test_require_accelerator_without_gpu_points_to_alternatives(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Verify a missing GPU aborts with native/local alternatives unless CPU is allowed.
+
+    Args:
+        monkeypatch: Pytest fixture replacing ``torch``.
+
+    Returns:
+        None. Assertions inspect the error and the explicit CPU override.
+    """
+    fake_torch(monkeypatch, cuda=False)
+
+    with pytest.raises(FlashcardError) as error:
+        require_accelerator(allow_cpu=False)
+
+    message = str(error.value)
+    assert "--pdf-mode native" in message
+    assert "--pdf-mode local" in message
+    assert "--allow-cpu" in message
+    assert require_accelerator(allow_cpu=True) == "cpu"
+
+
+def test_convert_pdf_checks_the_gpu_before_any_download(
+    storage, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Verify the core refuses CPU-only conversion before models are loaded.
+
+    Args:
+        storage: Configured temporary model storage.
+        monkeypatch: Pytest fixture replacing ``torch`` and the downloader.
+
+    Returns:
+        None. The assertion expects the GPU error and no download.
+    """
+    fake_torch(monkeypatch, cuda=False)
+    monkeypatch.setattr(docling_pdf, "require_docling", lambda: None)
+
+    def forbidden(*args: Any, **kwargs: Any) -> None:
+        """Fail if models would be downloaded.
+
+        Args:
+            *args: Ignored positional arguments.
+            **kwargs: Ignored keyword arguments.
+
+        Returns:
+            Never returns.
+
+        Raises:
+            AssertionError: Always.
+        """
+        raise AssertionError("no download without GPU")
+
+    monkeypatch.setattr(docling_pdf, "ensure_conversion_models", forbidden)
+
+    with pytest.raises(FlashcardError, match="GPU"):
+        convert_pdf(
+            Path("skript.pdf"),
             ConversionOptions(),
             storage,
             describer=None,

@@ -364,6 +364,7 @@ def test_conversion_settings_follow_yaml_and_cli_precedence(tmp_path: Path) -> N
             "formulas": True,
             "force_ocr": True,
             "allow_unreadable": True,
+            "allow_cpu": True,
             "picture_backend": PictureBackend.NONE,
             "source_text": Path("eigen.md"),
         },
@@ -383,6 +384,8 @@ def test_conversion_settings_follow_yaml_and_cli_precedence(tmp_path: Path) -> N
     assert cli.conversion.options.formulas is True
     assert cli.conversion.options.force_ocr is True
     assert cli.conversion.options.allow_unreadable is True
+    assert cli.conversion.options.allow_cpu is True
+    assert yaml.conversion.options.allow_cpu is False
     assert cli.conversion.picture_backend == PictureBackend.NONE
     assert cli.conversion.source_text == Path("eigen.md").absolute()
     assert cli.origins["formulas"] == "cli" and yaml.origins["formulas"] == "config"

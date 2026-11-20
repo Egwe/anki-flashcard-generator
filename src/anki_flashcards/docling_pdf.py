@@ -47,7 +47,17 @@ FORMULA_COMPONENT = "code_formula"
 PICTURE_MODEL_IGNORE = ["onnx/*", "*.onnx", "*.gguf", "*.mlpackage/*", "mlx/*"]
 
 Announce = Callable[[str], None]
-Extractor = Callable[[Path, ConversionOptions, ModelStorage, ProgressCallback | None], ExtractedPdf]
+Extractor = Callable[
+    [Path, ConversionOptions, ModelStorage, str, ProgressCallback | None], ExtractedPdf
+]
+NO_GPU_HINT = (
+    "The structured PDF mode needs a GPU accelerator usable by PyTorch (NVIDIA CUDA, "
+    "AMD ROCm, Apple MPS, or Intel XPU); none was found. On a CPU it takes very long "
+    "(measured: over 50 minutes for 15 lecture pages with formulas). Alternatives: "
+    "--pdf-mode native lets a verified provider model read the original PDF, "
+    "--pdf-mode local reads only the embedded text layer. Use --allow-cpu to run on "
+    "the CPU anyway."
+)
 
 
 def convert_pdf(
@@ -58,6 +68,7 @@ def convert_pdf(
     describer: PictureDescriber | None,
     announce: Announce,
     progress: ProgressCallback | None = None,
+    device: str | None = None,
     extractor: Extractor | None = None,
 ) -> StructuredPdf:
     """Convert a local PDF into marked Markdown text without uploading it.
@@ -69,22 +80,24 @@ def convert_pdf(
         describer: Picture model backend, or None to keep figures undescribed.
         announce: Callback receiving download notices.
         progress: Optional callback receiving label, completed, and total.
+        device: Accelerator from ``require_accelerator``; detected when None.
         extractor: Converter replacing Docling in tests; defaults to Docling.
 
     Returns:
         The marked document text and conversion statistics.
 
     Raises:
-        FlashcardError: If the input is not a PDF, Docling or its models are
-            unavailable, conversion fails, or elements are unreadable without
-            ``allow_unreadable``.
+        FlashcardError: If the input is not a PDF, no GPU is available without
+            ``allow_cpu``, Docling or its models are unavailable, conversion
+            fails, or elements are unreadable without ``allow_unreadable``.
     """
     validate_pdf_input(path)
     if extractor is None:
         require_docling()
+        device = device or require_accelerator(options.allow_cpu)
         ensure_conversion_models(storage, formulas=options.formulas, announce=announce)
         extractor = extract_pdf
-    extracted = extractor(path, options, storage, progress)
+    extracted = extractor(path, options, storage, device or "cpu", progress)
     return render_document(path, extracted, options, describer, progress)
 
 
@@ -109,6 +122,49 @@ def validate_pdf_input(path: Path) -> None:
     )
 
 
+def available_accelerator() -> str | None:
+    """Detect a GPU accelerator that PyTorch can use.
+
+    Returns:
+        ``cuda`` (also for AMD ROCm builds), ``xpu``, ``mps``, or None when
+        only the CPU is available or PyTorch is missing.
+    """
+    try:
+        import torch
+    except ImportError:
+        return None
+    checks = (
+        ("cuda", getattr(torch, "cuda", None)),
+        ("xpu", getattr(torch, "xpu", None)),
+        ("mps", getattr(getattr(torch, "backends", None), "mps", None)),
+    )
+    for name, backend in checks:
+        if backend is not None and backend.is_available():
+            return name
+    return None
+
+
+def require_accelerator(allow_cpu: bool) -> str:
+    """Choose the conversion device or refuse CPU-only conversion.
+
+    Args:
+        allow_cpu: Whether the user explicitly accepted the slow CPU mode.
+
+    Returns:
+        The detected GPU device name, or ``cpu`` when explicitly allowed.
+
+    Raises:
+        FlashcardError: If no GPU is available and CPU use was not allowed;
+            the message names ``--pdf-mode native`` and ``--pdf-mode local``.
+    """
+    device = available_accelerator()
+    if device is not None:
+        return device
+    if allow_cpu:
+        return "cpu"
+    raise FlashcardError(NO_GPU_HINT)
+
+
 def create_describer(
     backend: PictureBackend,
     storage: ModelStorage,
@@ -116,6 +172,7 @@ def create_describer(
     picture_model: str,
     picture_ai: AISettings | None,
     announce: Announce,
+    device: str = "cpu",
 ) -> PictureDescriber | None:
     """Create the configured picture-description backend.
 
@@ -125,6 +182,7 @@ def create_describer(
         picture_model: Hugging Face identifier used by the local backend.
         picture_ai: Provider settings used by the profile backend.
         announce: Callback receiving download and transfer notices.
+        device: PyTorch device for the local picture model.
 
     Returns:
         A describer, or None for the ``none`` backend.
@@ -144,7 +202,8 @@ def create_describer(
             f"({endpoint}) gesendet; die PDF selbst wird nicht übertragen."
         )
         return ProfilePictureDescriber(picture_ai)
-    return LocalPictureDescriber(ensure_picture_model(storage, picture_model, announce))
+    model_dir = ensure_picture_model(storage, picture_model, announce)
+    return LocalPictureDescriber(model_dir, device=device)
 
 
 def require_docling() -> None:
@@ -232,6 +291,7 @@ def extract_pdf(
     path: Path,
     options: ConversionOptions,
     storage: ModelStorage,
+    device: str = "cpu",
     progress: ProgressCallback | None = None,
 ) -> ExtractedPdf:
     """Convert a PDF with Docling into page Markdown with figure tokens.
@@ -240,6 +300,7 @@ def extract_pdf(
         path: Local PDF file.
         options: OCR, formula, and language settings.
         storage: Models folder containing the downloaded Docling artifacts.
+        device: Docling accelerator device such as ``cuda`` or ``cpu``.
         progress: Optional callback receiving label, completed, and total.
 
     Returns:
@@ -249,7 +310,7 @@ def extract_pdf(
         FlashcardError: If Docling is missing or cannot convert the file.
     """
     require_docling()
-    converter = _converter(options, storage)
+    converter = _converter(options, storage, device)
     try:
         result = converter.convert(
             path, raises_on_error=False, progress_callback=_progress_adapter(progress)
@@ -261,12 +322,13 @@ def extract_pdf(
     return _extracted(result)
 
 
-def _converter(options: ConversionOptions, storage: ModelStorage) -> Any:
+def _converter(options: ConversionOptions, storage: ModelStorage, device: str) -> Any:
     """Build a Docling converter that only uses local models from ``storage``.
 
     Args:
         options: OCR and formula settings.
         storage: Models folder used as Docling artifacts path.
+        device: Accelerator device for Docling's models.
 
     Returns:
         A configured ``DocumentConverter`` for PDF input.
@@ -294,7 +356,9 @@ def _converter(options: ConversionOptions, storage: ModelStorage) -> Any:
         images_scale=IMAGES_SCALE,
         enable_remote_services=False,
     )
-    pipeline.accelerator_options = AcceleratorOptions(num_threads=os.cpu_count() or 4, device="cpu")
+    pipeline.accelerator_options = AcceleratorOptions(
+        num_threads=os.cpu_count() or 4, device=device
+    )
     pdf_option = PdfFormatOption(pipeline_options=pipeline)
     return DocumentConverter(format_options={InputFormat.PDF: pdf_option})
 
@@ -515,18 +579,31 @@ def _token_picture_serializer(tokens: dict[str, str]) -> Any:
 def _ocr_pages(pages: list[Any]) -> tuple[int, ...]:
     """List pages containing text cells recognized by OCR.
 
+    Docling discards ``parsed_page`` after the conversion, so the OCR flag is
+    read from the cells of the assembled page elements.
+
     Args:
         pages: Docling page objects of the conversion result.
 
     Returns:
         Sorted one-based page numbers.
     """
-    numbers = []
-    for page in pages:
-        cells = page.parsed_page.textline_cells if page.parsed_page else []
-        if any(getattr(cell, "from_ocr", False) for cell in cells):
-            numbers.append(page.page_no)
-    return tuple(sorted(numbers))
+    return tuple(sorted(page.page_no for page in pages if _has_ocr_cells(page)))
+
+
+def _has_ocr_cells(page: Any) -> bool:
+    """Tell whether any assembled element of a page contains OCR text cells.
+
+    Args:
+        page: Docling page object of the conversion result.
+
+    Returns:
+        True when at least one cell carries ``from_ocr``.
+    """
+    elements = page.assembled.elements if page.assembled else []
+    clusters = [getattr(element, "cluster", None) for element in elements]
+    cells = [cell for cluster in clusters if cluster for cell in cluster.cells]
+    return any(getattr(cell, "from_ocr", False) for cell in cells)
 
 
 def _decoded_formulas(document: Any) -> int:

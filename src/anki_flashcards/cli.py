@@ -25,6 +25,7 @@ from anki_flashcards.docling_pdf import (
     create_describer,
     ensure_conversion_models,
     ensure_picture_model,
+    require_accelerator,
     require_docling,
     validate_pdf_input,
 )
@@ -69,7 +70,10 @@ locally with Docling (optional extra "pdf"): OCR for text in images and scans,
 tables as Markdown tables, formulas as LaTeX, and figures replaced by marked
 descriptions from a picture model. Only text reaches the card model. Models and
 caches are stored in the project models folder. Unreadable elements abort the
-run unless --allow-unreadable is given. native uploads the original PDF.
+run unless --allow-unreadable is given. structured needs a GPU accelerator
+(CUDA, ROCm, MPS, or XPU); without one it stops unless --allow-cpu is given.
+Without a GPU, use native (a verified provider model reads the original PDF)
+or local (embedded text only). native uploads the original PDF.
 
 With --subdecks, --deck is the parent deck (for example a lecture) and the AI
 assigns every card to a chapter subdeck DECK::chapter, preferably named after the
@@ -271,6 +275,15 @@ def generate(
         ),
         show_default=False,
     ),
+    allow_cpu: bool | None = typer.Option(
+        None,
+        "--allow-cpu/--no-allow-cpu",
+        help=(
+            "Structured mode: run without a GPU accelerator. Default: off; without a "
+            "GPU the run stops and suggests --pdf-mode native or --pdf-mode local."
+        ),
+        show_default=False,
+    ),
     picture_backend: PictureBackend | None = typer.Option(
         None,
         "--picture-backend",
@@ -315,6 +328,7 @@ def generate(
         formulas=formulas,
         force_ocr=force_ocr,
         allow_unreadable=allow_unreadable,
+        allow_cpu=allow_cpu,
         picture_backend=picture_backend,
         picture_profile=picture_profile,
         source_text=source_text,
@@ -409,24 +423,31 @@ def _generate_structured_cards(
 
     Raises:
         FlashcardError: If the input is no PDF, the source text file exists,
-            Docling or a model is unavailable, or elements are unreadable.
+            no GPU is available without ``--allow-cpu``, Docling or a model is
+            unavailable, or elements are unreadable.
     """
     conversion = settings.conversion
     validate_pdf_input(settings.input_file)
     if conversion.source_text is not None and conversion.source_text.exists():
         raise FlashcardError(f"Source text file already exists: {conversion.source_text}")
     require_docling()
+    device = require_accelerator(conversion.options.allow_cpu)
     storage = configure_model_storage(conversion.models_dir)
     console.print(
         f"Strukturierter PDF-Modus: {settings.input_file.name} wird lokal mit Docling "
-        f"aufbereitet. Modelle und Caches: {storage.root}"
+        f"aufbereitet. GPU: {device}. Modelle und Caches: {storage.root}"
     )
+    if device == "cpu":
+        console.print(
+            "[yellow]Ohne GPU (--allow-cpu): Die Aufbereitung kann sehr lange dauern.[/yellow]"
+        )
     describer = create_describer(
         conversion.picture_backend,
         storage,
         picture_model=conversion.picture_model,
         picture_ai=conversion.picture_ai,
         announce=console.print,
+        device=device,
     )
     with _progress("PDF wird aufbereitet ...") as update:
         result = convert_pdf(
@@ -436,6 +457,7 @@ def _generate_structured_cards(
             describer=describer,
             announce=console.print,
             progress=update,
+            device=device,
         )
     _print_conversion(result.stats)
     if conversion.source_text is not None:
@@ -614,6 +636,7 @@ def show_config(
     formulas: bool | None = typer.Option(None, "--formulas/--no-formulas"),
     force_ocr: bool | None = typer.Option(None, "--force-ocr/--no-force-ocr"),
     allow_unreadable: bool | None = typer.Option(None, "--allow-unreadable/--no-allow-unreadable"),
+    allow_cpu: bool | None = typer.Option(None, "--allow-cpu/--no-allow-cpu"),
     picture_backend: PictureBackend | None = typer.Option(None, "--picture-backend"),
     picture_profile: str | None = typer.Option(None, "--picture-profile"),
     source_text: Path | None = typer.Option(None, "--source-text"),
@@ -640,6 +663,7 @@ def show_config(
         formulas: Optional structured-mode formula recognition override.
         force_ocr: Optional structured-mode full-page OCR override.
         allow_unreadable: Optional structured-mode placeholder override.
+        allow_cpu: Optional structured-mode CPU override.
         picture_backend: Optional figure-description backend override.
         picture_profile: Optional profile for the profile picture backend.
         source_text: Optional file for the converted Markdown.
@@ -665,6 +689,7 @@ def show_config(
         formulas=formulas,
         force_ocr=force_ocr,
         allow_unreadable=allow_unreadable,
+        allow_cpu=allow_cpu,
         picture_backend=picture_backend,
         picture_profile=picture_profile,
         source_text=source_text,

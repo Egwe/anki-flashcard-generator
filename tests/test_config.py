@@ -251,6 +251,7 @@ def test_pdf_conversion_defaults_and_validation() -> None:
     assert config.pdf_conversion.models_dir == Path("models")
     assert config.pdf_conversion.ocr_languages == ["de", "en"]
     assert config.pdf_conversion.formulas is True
+    assert config.pdf_conversion.allow_cpu is False
     assert config.pdf_conversion.pictures.backend == "local"
     with pytest.raises(ValidationError, match="ISO 639-1"):
         AppConfig.model_validate({"pdf_conversion": {"ocr_languages": ["deu"]}})

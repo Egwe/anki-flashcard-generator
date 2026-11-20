@@ -10,7 +10,7 @@ from pathlib import Path
 import pytest
 
 from anki_flashcards.config import PictureBackend
-from anki_flashcards.docling_pdf import convert_pdf, create_describer
+from anki_flashcards.docling_pdf import convert_pdf, create_describer, require_accelerator
 from anki_flashcards.model_storage import configure_model_storage
 from anki_flashcards.structured_pdf import ConversionOptions
 
@@ -46,6 +46,9 @@ def scanned_pdf(path: Path) -> Path:
 def test_real_docling_reads_a_scanned_page_locally(tmp_path: Path) -> None:
     """Verify OCR, page markers, and statistics with real Docling and local models.
 
+    The test uses the GPU when one is available and otherwise allows the CPU,
+    because a single generated page converts quickly.
+
     Args:
         tmp_path: Pytest-provided folder for the generated PDF.
 
@@ -54,20 +57,23 @@ def test_real_docling_reads_a_scanned_page_locally(tmp_path: Path) -> None:
     """
     pytest.importorskip("docling")
     storage = configure_model_storage(PROJECT_MODELS)
+    device = require_accelerator(allow_cpu=True)
     describer = create_describer(
         PictureBackend.LOCAL,
         storage,
         picture_model=PICTURE_MODEL,
         picture_ai=None,
         announce=print,
+        device=device,
     )
 
     result = convert_pdf(
         scanned_pdf(tmp_path / "scan.pdf"),
-        ConversionOptions(formulas=False, allow_unreadable=True),
+        ConversionOptions(formulas=False, allow_unreadable=True, allow_cpu=True),
         storage,
         describer=describer,
         announce=print,
+        device=device,
     )
 
     text = result.document.text

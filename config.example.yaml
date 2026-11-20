@@ -61,6 +61,8 @@ generation:
 # Docling wandelt die PDF lokal in Markdown um: Text in Bildern per OCR,
 # Tabellen als Markdown-Tabellen, Formeln als LaTeX und Abbildungen als
 # markierte Beschreibungen. An das Kartenmodell geht danach nur Text.
+# Benoetigt eine GPU (CUDA, ROCm, MPS oder XPU). Ohne GPU: pdf_mode native
+# (KI-Modell liest die PDF) oder local (nur eingebetteter Text) verwenden.
 pdf_conversion:
   # EIN Ordner fuer alle Modelle und Caches (Docling, Bildmodell, Hugging
   # Face, PyTorch). Relativ zu dieser YAML-Datei. Nichts landet in ~/.cache.
@@ -69,6 +71,7 @@ pdf_conversion:
   force_ocr: false           # true = jede Seite per OCR statt Textebene lesen
   formulas: true             # Formeln als LaTeX; auf der CPU langsam
   allow_unreadable: false    # true = Platzhalter statt Abbruch bei Unlesbarem
+  allow_cpu: false           # true = ohne GPU auf der CPU arbeiten (sehr langsam)
   source_text_dir: null      # z.B. ./output/texte -> <eingabename>.md speichern
   pictures:
     # local   = Bildmodell laeuft lokal im Programm (Standard)

@@ -888,6 +888,7 @@ def test_generate_structured_mode_converts_locally_and_saves_text(
             None, like the ``none`` backend.
         """
         calls["backend"] = backend
+        calls["describer_device"] = kwargs["device"]
         return None
 
     def fake_convert(path, options, storage, **kwargs):
@@ -903,6 +904,7 @@ def test_generate_structured_mode_converts_locally_and_saves_text(
             A one-page structured result.
         """
         calls["options"] = options
+        calls["device"] = kwargs["device"]
         kwargs["progress"]("PDF-Seiten analysieren", 1, 1)
         stats = ConversionStats(pages=1, formulas=2, pictures_described=1, pictures_decorative=3)
         return StructuredPdf(SourceDocument(path, text), stats)
@@ -922,6 +924,7 @@ def test_generate_structured_mode_converts_locally_and_saves_text(
         return [Card(front="Was ist ein Tiefpass?", back="Ein Filter.")]
 
     monkeypatch.setattr("anki_flashcards.cli.require_docling", lambda: None)
+    monkeypatch.setattr("anki_flashcards.cli.require_accelerator", lambda allow_cpu: "cuda")
     monkeypatch.setattr(
         "anki_flashcards.cli.configure_model_storage", lambda root: ModelStorage(root)
     )
@@ -952,9 +955,11 @@ def test_generate_structured_mode_converts_locally_and_saves_text(
 
     assert result.exit_code == 0, result.output
     assert calls["backend"] == "none"
+    assert calls["device"] == calls["describer_device"] == "cuda"
     assert calls["options"].formulas is False
     assert calls["text"] == text
     normalized = " ".join(result.output.split())
+    assert "GPU: cuda" in normalized
     assert "Aufbereitung: 1 Seiten" in normalized
     assert "1 Abbildungen beschrieben, 3 dekorative ausgelassen" in normalized
     assert "Fertig: 1 Karten" in normalized
@@ -1085,3 +1090,60 @@ def test_generate_help_documents_structured_options() -> None:
         "image_input: true",
     ):
         assert fragment in normalized
+
+
+def test_structured_mode_without_gpu_aborts_with_alternatives(tmp_path: Path, monkeypatch) -> None:
+    """Verify a missing GPU stops the structured mode before models or conversion.
+
+    Args:
+        tmp_path: Pytest-provided isolated directory.
+        monkeypatch: Pytest fixture replacing Docling detection and models.
+
+    Returns:
+        None. Assertions inspect the error and that nothing else ran.
+    """
+    from anki_flashcards.docling_pdf import require_accelerator
+
+    source = tmp_path / "vl.pdf"
+    source.write_bytes(b"%PDF-1.4 placeholder")
+    monkeypatch.setattr("anki_flashcards.cli.require_docling", lambda: None)
+    monkeypatch.setattr("anki_flashcards.docling_pdf.available_accelerator", lambda: None)
+    monkeypatch.setattr("anki_flashcards.cli.require_accelerator", require_accelerator)
+
+    def forbidden(*args, **kwargs):
+        """Fail if model storage, picture models, or conversion are used.
+
+        Args:
+            *args: Ignored positional arguments.
+            **kwargs: Ignored keyword arguments.
+
+        Returns:
+            Never returns.
+
+        Raises:
+            AssertionError: Always.
+        """
+        raise AssertionError("must stop before this step")
+
+    monkeypatch.setattr("anki_flashcards.cli.configure_model_storage", forbidden)
+    monkeypatch.setattr("anki_flashcards.cli.create_describer", forbidden)
+    monkeypatch.setattr("anki_flashcards.cli.convert_pdf", forbidden)
+
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            str(source),
+            "-o",
+            str(tmp_path / "deck.apkg"),
+            "-m",
+            "ollama/test",
+            "--pdf-mode",
+            "structured",
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert isinstance(result.exception, FlashcardError)
+    message = str(result.exception)
+    assert "GPU" in message and "--pdf-mode native" in message and "--pdf-mode local" in message

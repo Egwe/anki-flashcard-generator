@@ -199,6 +199,7 @@ class PDFConversionConfig(StrictModel):
         formulas: Recognize formulas as LaTeX; slow on a CPU.
         allow_unreadable: Continue with reported placeholders instead of
             aborting when an element cannot be read.
+        allow_cpu: Run without a GPU accelerator despite the long runtime.
         source_text_dir: Optional folder in which the converted Markdown is
             saved as ``<input name>.md``.
         pictures: Figure description settings.
@@ -211,6 +212,7 @@ class PDFConversionConfig(StrictModel):
     force_ocr: bool = False
     formulas: bool = True
     allow_unreadable: bool = False
+    allow_cpu: bool = False
     source_text_dir: Path | None = None
     pictures: PictureConfig = Field(default_factory=PictureConfig)
 

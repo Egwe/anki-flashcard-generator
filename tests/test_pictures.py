@@ -59,20 +59,21 @@ def test_local_describer_loads_once_and_uses_english(tmp_path: Path) -> None:
     Returns:
         None. Assertions inspect loader calls and prompts.
     """
-    loads: list[tuple[Path, int]] = []
+    loads: list[tuple[Path, int, str]] = []
     prompts: list[str] = []
 
-    def loader(model_dir: Path, max_new_tokens: int):
+    def loader(model_dir: Path, max_new_tokens: int, device: str):
         """Record the load and return a fake generator.
 
         Args:
             model_dir: Requested model folder.
             max_new_tokens: Requested generation limit.
+            device: Requested accelerator.
 
         Returns:
             A generator returning a padded description.
         """
-        loads.append((model_dir, max_new_tokens))
+        loads.append((model_dir, max_new_tokens, device))
 
         def generate(image: object, prompt: str) -> str:
             """Record the prompt and return a padded description.
@@ -89,11 +90,11 @@ def test_local_describer_loads_once_and_uses_english(tmp_path: Path) -> None:
 
         return generate
 
-    describer = LocalPictureDescriber(tmp_path, max_new_tokens=50, loader=loader)
+    describer = LocalPictureDescriber(tmp_path, max_new_tokens=50, device="cuda", loader=loader)
 
     assert describer.describe(object(), CONTEXT) == "A band diagram."
     assert describer.describe(object(), CONTEXT) == "A band diagram."
-    assert loads == [(tmp_path, 50)]
+    assert loads == [(tmp_path, 50, "cuda")]
     assert "in English" in prompts[0]
 
 
@@ -107,12 +108,13 @@ def test_local_describer_reports_generation_errors(tmp_path: Path) -> None:
         None. The assertion expects a FlashcardError.
     """
 
-    def loader(model_dir: Path, max_new_tokens: int):
+    def loader(model_dir: Path, max_new_tokens: int, device: str):
         """Return a generator that always fails.
 
         Args:
             model_dir: Requested model folder.
             max_new_tokens: Requested generation limit.
+            device: Requested accelerator.
 
         Returns:
             A failing generator.
