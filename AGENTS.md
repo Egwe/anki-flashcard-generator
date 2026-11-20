@@ -142,7 +142,8 @@ Triviale anonyme Ein-Zeilen-Schlüssel sind zulässig. Fachliche Logik gehört i
 - SQLite-WAL-Daten müssen vor dem erneuten Verpacken in die Hauptdatenbank übernommen werden.
 - Klassische und zstd-komprimierte Sammlungen bleiben nach der Änderung in ihrem jeweiligen Format lesbar.
 - Kartentext wird als Klartext behandelt und HTML-escaped. Duplikatvergleiche normalisieren Text ohne HTML-Seiteneffekte.
-- Das Programm bearbeitet nur die angegebene APKG-Datei, niemals unbemerkt die persönliche Anki-Sammlung.
+- Die CLI bearbeitet nur die angegebene APKG-Datei, niemals die persönliche Anki-Sammlung.
+- Die Sammlungsfunktionen (R-174) schreiben nur in eine Sammlung, die der Aufrufer ausdrücklich geöffnet und übergeben hat. Das Paket sucht, öffnet, synchronisiert oder schließt keine Sammlung selbst; Sync und Sperren verantwortet der Aufrufer (Anki Studio).
 
 ## 7. Tests und Validierung
 
