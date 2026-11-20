@@ -163,7 +163,7 @@ def test_generate_command_uses_document_and_writes_json(tmp_path: Path, monkeypa
         captured["settings"] = settings
         return [Card(front="Frage?", back="Antwort")]
 
-    monkeypatch.setattr("anki_flashcards.cli.generate_cards", fake_generate)
+    monkeypatch.setattr("anki_flashcards.pipeline.generate_cards", fake_generate)
     result = runner.invoke(
         app,
         [
@@ -298,7 +298,7 @@ def test_generate_uses_yaml_profile_paths_and_cli_overrides(tmp_path: Path, monk
         captured["options"] = kwargs
         return [Card(front="Frage?", back="Antwort")]
 
-    monkeypatch.setattr("anki_flashcards.cli.generate_cards", fake_generate)
+    monkeypatch.setattr("anki_flashcards.pipeline.generate_cards", fake_generate)
     result = runner.invoke(
         app,
         [
@@ -423,8 +423,8 @@ def test_generate_native_pdf_skips_local_extraction_and_exports(
         captured["options"] = kwargs
         return [Card(front="Native?", back="Antwort")]
 
-    monkeypatch.setattr("anki_flashcards.cli.read_document", fail_read_document)
-    monkeypatch.setattr("anki_flashcards.cli.generate_native_cards", fake_native)
+    monkeypatch.setattr("anki_flashcards.pipeline.read_document", fail_read_document)
+    monkeypatch.setattr("anki_flashcards.pipeline.generate_native_cards", fake_native)
 
     result = runner.invoke(
         app,
@@ -504,9 +504,9 @@ def test_generate_local_mode_never_calls_native_adapter(tmp_path: Path, monkeypa
         """
         raise AssertionError("Local mode must not call native adapter")
 
-    monkeypatch.setattr("anki_flashcards.cli.read_document", fake_read)
-    monkeypatch.setattr("anki_flashcards.cli.generate_cards", fake_generate)
-    monkeypatch.setattr("anki_flashcards.cli.generate_native_cards", fail_native)
+    monkeypatch.setattr("anki_flashcards.pipeline.read_document", fake_read)
+    monkeypatch.setattr("anki_flashcards.pipeline.generate_cards", fake_generate)
+    monkeypatch.setattr("anki_flashcards.pipeline.generate_native_cards", fail_native)
 
     result = runner.invoke(
         app,
@@ -706,7 +706,7 @@ def test_generate_subdecks_extend_sends_existing_context(tmp_path: Path, monkeyp
         captured["subdecks"] = kwargs["subdecks"]
         return [Card(front="Was ist ein Knoten?", back="Verbindung", subdeck="Netzwerke")]
 
-    monkeypatch.setattr("anki_flashcards.cli.generate_cards", fake_generate)
+    monkeypatch.setattr("anki_flashcards.pipeline.generate_cards", fake_generate)
     result = runner.invoke(
         app,
         [
@@ -770,7 +770,7 @@ def test_generate_passes_subdeck_context_only_when_enabled(
         captured["subdecks"] = kwargs["subdecks"]
         return [Card(front="F?", back="A")]
 
-    monkeypatch.setattr("anki_flashcards.cli.generate_cards", fake_generate)
+    monkeypatch.setattr("anki_flashcards.pipeline.generate_cards", fake_generate)
     result = runner.invoke(
         app,
         [
@@ -923,16 +923,16 @@ def test_generate_structured_mode_converts_locally_and_saves_text(
         calls["text"] = document.text
         return [Card(front="Was ist ein Tiefpass?", back="Ein Filter.")]
 
-    monkeypatch.setattr("anki_flashcards.cli.require_docling", lambda: None)
-    monkeypatch.setattr("anki_flashcards.cli.require_accelerator", lambda allow_cpu: "cuda")
+    monkeypatch.setattr("anki_flashcards.pipeline.require_docling", lambda: None)
+    monkeypatch.setattr("anki_flashcards.pipeline.require_accelerator", lambda allow_cpu: "cuda")
     monkeypatch.setattr(
-        "anki_flashcards.cli.configure_model_storage", lambda root: ModelStorage(root)
+        "anki_flashcards.pipeline.configure_model_storage", lambda root: ModelStorage(root)
     )
-    monkeypatch.setattr("anki_flashcards.cli.create_describer", fake_describer)
-    monkeypatch.setattr("anki_flashcards.cli.convert_pdf", fake_convert)
-    monkeypatch.setattr("anki_flashcards.cli.generate_cards", fake_generate)
-    monkeypatch.setattr("anki_flashcards.cli.read_document", forbidden)
-    monkeypatch.setattr("anki_flashcards.cli.generate_native_cards", forbidden)
+    monkeypatch.setattr("anki_flashcards.pipeline.create_describer", fake_describer)
+    monkeypatch.setattr("anki_flashcards.pipeline.convert_pdf", fake_convert)
+    monkeypatch.setattr("anki_flashcards.pipeline.generate_cards", fake_generate)
+    monkeypatch.setattr("anki_flashcards.pipeline.read_document", forbidden)
+    monkeypatch.setattr("anki_flashcards.pipeline.generate_native_cards", forbidden)
 
     result = runner.invoke(
         app,
@@ -1006,7 +1006,7 @@ def test_structured_mode_rejects_bad_input_before_docling(
         """
         raise AssertionError("Docling must not be touched")
 
-    monkeypatch.setattr("anki_flashcards.cli.require_docling", forbidden)
+    monkeypatch.setattr("anki_flashcards.pipeline.require_docling", forbidden)
 
     result = runner.invoke(
         app,
@@ -1047,16 +1047,16 @@ def test_models_download_uses_yaml_relative_models_folder(tmp_path: Path, monkey
         encoding="utf-8",
     )
     calls: list[tuple[str, object]] = []
-    monkeypatch.setattr("anki_flashcards.cli.require_docling", lambda: None)
+    monkeypatch.setattr("anki_flashcards.pipeline.require_docling", lambda: None)
     monkeypatch.setattr(
-        "anki_flashcards.cli.configure_model_storage", lambda root: ModelStorage(root)
+        "anki_flashcards.pipeline.configure_model_storage", lambda root: ModelStorage(root)
     )
     monkeypatch.setattr(
-        "anki_flashcards.cli.ensure_conversion_models",
+        "anki_flashcards.pipeline.ensure_conversion_models",
         lambda storage, formulas, announce: calls.append(("docling", (storage.root, formulas))),
     )
     monkeypatch.setattr(
-        "anki_flashcards.cli.ensure_picture_model",
+        "anki_flashcards.pipeline.ensure_picture_model",
         lambda storage, repo_id, announce: calls.append(("picture", repo_id)),
     )
 
@@ -1106,9 +1106,9 @@ def test_structured_mode_without_gpu_aborts_with_alternatives(tmp_path: Path, mo
 
     source = tmp_path / "vl.pdf"
     source.write_bytes(b"%PDF-1.4 placeholder")
-    monkeypatch.setattr("anki_flashcards.cli.require_docling", lambda: None)
+    monkeypatch.setattr("anki_flashcards.pipeline.require_docling", lambda: None)
     monkeypatch.setattr("anki_flashcards.docling_pdf.available_accelerator", lambda: None)
-    monkeypatch.setattr("anki_flashcards.cli.require_accelerator", require_accelerator)
+    monkeypatch.setattr("anki_flashcards.pipeline.require_accelerator", require_accelerator)
 
     def forbidden(*args, **kwargs):
         """Fail if model storage, picture models, or conversion are used.
@@ -1125,9 +1125,9 @@ def test_structured_mode_without_gpu_aborts_with_alternatives(tmp_path: Path, mo
         """
         raise AssertionError("must stop before this step")
 
-    monkeypatch.setattr("anki_flashcards.cli.configure_model_storage", forbidden)
-    monkeypatch.setattr("anki_flashcards.cli.create_describer", forbidden)
-    monkeypatch.setattr("anki_flashcards.cli.convert_pdf", forbidden)
+    monkeypatch.setattr("anki_flashcards.pipeline.configure_model_storage", forbidden)
+    monkeypatch.setattr("anki_flashcards.pipeline.create_describer", forbidden)
+    monkeypatch.setattr("anki_flashcards.pipeline.convert_pdf", forbidden)
 
     result = runner.invoke(
         app,

@@ -390,16 +390,16 @@ Der strukturierte Modus ist für einen GPU-Beschleuniger ausgelegt: NVIDIA über
 
 Entscheidung vom 20.11.2026: Die Web-Oberfläche entsteht als eigenes Projekt „Anki Studio“ in einem eigenen Repository. Sie bindet dieses Paket als versionierte Python-Abhängigkeit ein und ist ein weiterer Client des selbst betriebenen Anki-Sync-Servers. Dieses Repository liefert dafür nur den UI-unabhängigen Kern. Web-Oberfläche, Sync, Authentifizierung und Deployment gehören nicht hierher. Die Übergabe an das neue Projekt beschreibt [docs/anki-studio-uebergabe.md](./docs/anki-studio-uebergabe.md).
 
-**R-170 – Generierungsdienst ohne CLI · muss · offen**
+**R-170 – Generierungsdienst ohne CLI · muss · umgesetzt**
 Die Abläufe von `generate`, `export` und `models download` müssen als UI-unabhängiger Dienst aufrufbar sein: Ausgabe prüfen, Unterdeck-Kontext lesen, Karten im gewählten PDF-Modus erzeugen, JSON schreiben und Paket schreiben. Der Dienst importiert weder Typer noch Rich und gibt nichts auf der Konsole aus. Die CLI wird zu einer dünnen Schicht, die Optionen sammelt, den Dienst aufruft und Ereignisse darstellt. Ihr Verhalten, ihre Ausgaben und ihre Exit-Codes bleiben unverändert.
 
-**R-171 – Fortschritts- und Hinweisereignisse · muss · offen**
+**R-171 – Fortschritts- und Hinweisereignisse · muss · umgesetzt**
 Der Dienst meldet Fortschritt und Hinweise als strukturierte, unveränderliche Ereignisse an einen vom Aufrufer übergebenen Callback: Beginn und Fortschritt einer Phase (Aufbereitung, Generierung), Hinweise mit Stufe (Information, Warnung, Datenübertragung) und die Statistik der strukturierten Aufbereitung. Die Ereignisse lassen sich ohne Verlust in JSON umwandeln, damit eine Web-Oberfläche sie live übertragen kann. Ankündigungen von Datenübertragungen (native PDF, Bild-Profil) sind als eigene Stufe erkennbar.
 
-**R-172 – Abbruch · soll · offen**
+**R-172 – Abbruch · soll · umgesetzt**
 Ein Aufrufer kann einen laufenden Generierungsauftrag abbrechen. Der Dienst prüft eine Abbruchanfrage zwischen Abschnitten der KI-Generierung und zwischen Schritten der Aufbereitung und bricht dann mit einem eigenen Fehler ab. Ein abgebrochener Lauf schreibt weder JSON noch Paket. Ein einzelner laufender Provider-Request oder ein nativer Upload wird nicht unterbrochen; der Abbruch greift danach.
 
-**R-173 – Karten erzeugen und Ziel schreiben getrennt · muss · offen**
+**R-173 – Karten erzeugen und Ziel schreiben getrennt · muss · umgesetzt**
 Karten erzeugen und Karten schreiben sind getrennt aufrufbar. Eine Oberfläche kann Karten erzeugen, sie anzeigen und bearbeiten lassen und erst danach in ein Ziel schreiben. Für die geprüften Karten gelten dieselbe Validierung, Duplikaterkennung und Escaping-Regeln wie im direkten Lauf.
 
 **R-174 – Ziel Anki-Sammlung · muss · offen**

@@ -10,7 +10,7 @@ Ein CLI-Werkzeug, das aus lokalen Dokumenten mit KI überprüfbare Karteikarten 
 - [docs/benutzerhandbuch.html](./docs/benutzerhandbuch.html) ist das ausführliche Benutzerhandbuch mit einfachen Erklärungen, allen Befehlen und Optionen, Suchfunktion und kopierbaren Beispielen. Öffne die Datei direkt in einem Browser; kein Server ist erforderlich.
 - [docs/entwicklerhandbuch.html](./docs/entwicklerhandbuch.html) ist das Entwicklerhandbuch: Architektur, alle Module und Funktionen, ein Ablaufdiagramm vom Befehl bis zum APKG, Konfigurationsauflösung, Teststrategie, Erweiterungsrezepte sowie geprüfte Randfälle. Ebenfalls ohne Server im Browser nutzbar.
 
-Der erste MVP ist funktionsfähig. Never Nesting, kleine fachliche Einheiten und vollständige Funktions-/Klassendokumentation sind im Bestand umgesetzt und durch Ruff abgesichert. Die zentrale YAML-Konfiguration ist einschließlich Modellprofilen, Prioritäten, Pfaden und Diagnose vollständig in die CLI integriert. Native PDF-Verarbeitung ist für ausdrücklich freigegebene OpenAI-Modelle implementiert; lokale Extraktion bleibt Standard. Die strukturierte lokale PDF-Aufbereitung mit Docling (OCR, Tabellen, Formeln, Bildbeschreibungen) ist als optionaler Modus `structured` verfügbar. Web-UI und Proxmox-/Container-Deployment sind weiterhin spätere Ausbaustufen.
+Der erste MVP ist funktionsfähig. Never Nesting, kleine fachliche Einheiten und vollständige Funktions-/Klassendokumentation sind im Bestand umgesetzt und durch Ruff abgesichert. Die zentrale YAML-Konfiguration ist einschließlich Modellprofilen, Prioritäten, Pfaden und Diagnose vollständig in die CLI integriert. Native PDF-Verarbeitung ist für ausdrücklich freigegebene OpenAI-Modelle implementiert; lokale Extraktion bleibt Standard. Die strukturierte lokale PDF-Aufbereitung mit Docling (OCR, Tabellen, Formeln, Bildbeschreibungen) ist als optionaler Modus `structured` verfügbar. Die Web-Oberfläche und das Proxmox-/Container-Deployment entstehen im eigenen Projekt Anki Studio; dieses Paket stellt dafür einen oberflächenfreien Ablaufdienst bereit.
 
 ## Warum Python?
 
@@ -344,9 +344,10 @@ Dokument → Textextraktion → Chunks → LiteLLM → validierte Karten
 - `model_storage.py`: projektlokaler Modellordner, Cache-Variablen und Download-Manifest
 - `models.py`: Karten- und JSON-Schema sowie Deduplizierung
 - `apkg.py`: Erstellung, Erweiterung und Inspektion von Anki-Paketen
-- `cli.py`: ausschließlich Kommandozeilen-Workflow und Darstellung
+- `pipeline.py`: vollständige Abläufe von `generate`, `export` und `models download` ohne Oberfläche; Fortschritt als Ereignisse, Abbruch, getrenntes Erzeugen und Schreiben
+- `cli.py`: ausschließlich Kommandozeilen-Optionen und Darstellung der Ereignisse
 
-Diagramme und Einzelheiten zu jedem Modul stehen im [Entwicklerhandbuch](./docs/entwicklerhandbuch.html). Die Kernfunktionen akzeptieren normale Python-Objekte und sind deshalb ohne CLI aufrufbar. Eine spätere FastAPI-/Web-Schicht muss weder PDF-Verarbeitung noch Anki-Logik duplizieren.
+Diagramme und Einzelheiten zu jedem Modul stehen im [Entwicklerhandbuch](./docs/entwicklerhandbuch.html). Die Kernfunktionen akzeptieren normale Python-Objekte und sind deshalb ohne CLI aufrufbar. Die Web-Oberfläche entsteht als eigenes Projekt „Anki Studio“ und nutzt `pipeline.py` direkt; Ziel, Entscheidungen und Schnittstellen stehen in [docs/anki-studio-uebergabe.md](./docs/anki-studio-uebergabe.md).
 
 ## Qualität und Tests
 
@@ -367,4 +368,4 @@ Die Tests verwenden einen simulierten KI-Client und benötigen keine API-Schlüs
 - KI-Ergebnisse müssen fachlich geprüft werden. Die JSON-Datei ist dafür der empfohlene Zwischenschritt.
 - Bei Cloud-Providern werden Dokumentauszüge an den jeweiligen Anbieter übertragen. Für vertrauliche Dokumente ist ein lokales Modell wie Ollama vorzusehen. Im Unterdeck-Modus mit `--extend` gehen zusätzlich die Namen vorhandener Unterdecks und einige Beispielfragen daraus an den Provider.
 - Als nächste Ausbaustufen bieten sich Quellenangaben pro Karte, eine interaktive Kartenprüfung, ein Zwischenspeicher für aufbereitete PDFs, Cloze-Karten und ein Fortsetzen abgebrochener Generierungen an.
-- Web-UI und Linux-Container/Proxmox-Deployment sind bewusst **noch nicht** Teil dieses MVP. Die Trennung von Kern und CLI bereitet beides vor, ohne jetzt Betriebskomplexität einzuführen.
+- Web-UI und Linux-Container/Proxmox-Deployment sind nicht Teil dieses Repositorys. Sie entstehen im eigenen Projekt Anki Studio (siehe [Übergabe](./docs/anki-studio-uebergabe.md)).
