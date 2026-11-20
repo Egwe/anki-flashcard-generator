@@ -895,6 +895,7 @@ cp .env.example .env</code></pre>
               <tr><td><code>formulas</code></td><td>Formeln als LaTeX erkennen. Standard: <code>true</code>.</td><td><code>--formulas</code></td></tr>
               <tr><td><code>allow_unreadable</code></td><td>Platzhalter statt Abbruch. Standard: <code>false</code>.</td><td><code>--allow-unreadable</code></td></tr>
               <tr><td><code>allow_cpu</code></td><td>Ohne GPU auf dem Prozessor arbeiten. Standard: <code>false</code>.</td><td><code>--allow-cpu</code></td></tr>
+              <tr><td><code>formula_batch_size</code></td><td>Formeln je Aufruf des Formelmodells, 1 bis 64. Standard: <code>null</code> (Docling, 5). Auf GPUs mit 4 GiB Speicher <code>1</code> setzen, sonst bleiben Formeln unlesbar.</td><td>nur YAML</td></tr>
               <tr><td><code>source_text_dir</code></td><td>Ordner, in dem der aufbereitete Text als <code>&lt;eingabename&gt;.md</code> gespeichert wird.</td><td><code>--source-text</code> (Datei)</td></tr>
               <tr><td><code>pictures.backend</code></td><td><code>local</code>, <code>profile</code> oder <code>none</code>.</td><td><code>--picture-backend</code></td></tr>
               <tr><td><code>pictures.model</code></td><td>Hugging-Face-Kennung des lokalen Bildmodells. Standard: <code>HuggingFaceTB/SmolVLM-256M-Instruct</code>.</td><td>–</td></tr>

@@ -200,6 +200,9 @@ class PDFConversionConfig(StrictModel):
         allow_unreadable: Continue with reported placeholders instead of
             aborting when an element cannot be read.
         allow_cpu: Run without a GPU accelerator despite the long runtime.
+        formula_batch_size: Formulas Docling's formula model reads per call,
+            1–64; None keeps Docling's default (5). Smaller values need less
+            GPU memory, for example 1 for GPUs with 4 GiB (R-159).
         source_text_dir: Optional folder in which the converted Markdown is
             saved as ``<input name>.md``.
         pictures: Figure description settings.
@@ -213,6 +216,7 @@ class PDFConversionConfig(StrictModel):
     formulas: bool = True
     allow_unreadable: bool = False
     allow_cpu: bool = False
+    formula_batch_size: int | None = Field(default=None, ge=1, le=64)
     source_text_dir: Path | None = None
     pictures: PictureConfig = Field(default_factory=PictureConfig)
 

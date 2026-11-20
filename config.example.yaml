@@ -72,6 +72,8 @@ pdf_conversion:
   formulas: true             # Formeln als LaTeX; auf der CPU langsam
   allow_unreadable: false    # true = Platzhalter statt Abbruch bei Unlesbarem
   allow_cpu: false           # true = ohne GPU auf der CPU arbeiten (sehr langsam)
+  formula_batch_size: null   # Formeln je Aufruf des Formelmodells, 1..64; null = Docling (5).
+                             # GPUs mit 4 GiB brauchen 1, sonst fehlt Speicher.
   source_text_dir: null      # z.B. ./output/texte -> <eingabename>.md speichern
   pictures:
     # local   = Bildmodell laeuft lokal im Programm (Standard)

@@ -39,6 +39,8 @@ class ConversionOptions:
         allow_unreadable: Insert reported placeholders instead of aborting.
         allow_cpu: Accept CPU-only conversion although it is very slow.
         language: Language requested for figure descriptions.
+        formula_batch_size: Formulas per call of Docling's formula model, or
+            None for Docling's default.
     """
 
     ocr_languages: tuple[str, ...] = ("de", "en")
@@ -47,6 +49,7 @@ class ConversionOptions:
     allow_unreadable: bool = False
     allow_cpu: bool = False
     language: str = "Deutsch"
+    formula_batch_size: int | None = None
 
 
 @dataclass(frozen=True)

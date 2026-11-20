@@ -302,6 +302,7 @@ def _resolve_conversion(
         allow_unreadable=cli.get("allow_unreadable", conversion.allow_unreadable),
         allow_cpu=cli.get("allow_cpu", conversion.allow_cpu),
         language=language,
+        formula_batch_size=conversion.formula_batch_size,
     )
     backend = cli.get("picture_backend", conversion.pictures.backend)
     picture_profile = cli.get("picture_profile") or conversion.pictures.profile or profile_name
@@ -780,6 +781,7 @@ def _conversion_diagnostics(conversion: ConversionSettings) -> dict[str, Any]:
         "formulas": options.formulas,
         "allow_unreadable": options.allow_unreadable,
         "allow_cpu": options.allow_cpu,
+        "formula_batch_size": options.formula_batch_size,
         "picture_backend": conversion.picture_backend.value,
         "picture_model": conversion.picture_model,
         "picture_profile": conversion.picture_profile,

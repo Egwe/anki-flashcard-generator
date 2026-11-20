@@ -3,16 +3,18 @@
 import os
 import sys
 from pathlib import Path
-from types import ModuleType
+from types import ModuleType, SimpleNamespace
 from typing import Any
 
 import pytest
 
 from anki_flashcards import docling_pdf
 from anki_flashcards.docling_pdf import (
+    available_accelerator,
     convert_pdf,
     ensure_conversion_models,
     ensure_picture_model,
+    limit_formula_batch,
     require_accelerator,
     require_docling,
 )
@@ -239,20 +241,33 @@ def test_convert_pdf_rejects_other_formats(storage) -> None:
         )
 
 
-def fake_torch(monkeypatch: pytest.MonkeyPatch, *, cuda: bool, mps: bool = False) -> None:
+def fake_torch(
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    cuda: bool,
+    mps: bool = False,
+    capability: tuple[int, int] = (8, 6),
+    arch_list: tuple[str, ...] = ("sm_80", "sm_86", "sm_90"),
+) -> None:
     """Install a fake ``torch`` module reporting the given accelerators.
 
     Args:
         monkeypatch: Pytest fixture restoring ``sys.modules``.
         cuda: Whether CUDA (or ROCm through the CUDA API) is available.
         mps: Whether Apple's Metal backend is available.
+        capability: Compute capability of CUDA device 0.
+        arch_list: Architectures the fake PyTorch build contains.
 
     Returns:
         None.
     """
     torch = ModuleType("torch")
+    torch.__version__ = "2.99.0+fake"
     torch.cuda = ModuleType("torch.cuda")
     torch.cuda.is_available = lambda: cuda
+    torch.cuda.get_device_capability = lambda device=0: capability
+    torch.cuda.get_arch_list = lambda: list(arch_list)
+    torch.cuda.get_device_name = lambda device=0: "Quadro K1200"
     torch.backends = ModuleType("torch.backends")
     torch.backends.mps = ModuleType("torch.backends.mps")
     torch.backends.mps.is_available = lambda: mps
@@ -277,6 +292,64 @@ def test_require_accelerator_returns_detected_gpu(
     fake_torch(monkeypatch, cuda=cuda, mps=mps)
 
     assert require_accelerator(allow_cpu=False) == expected
+
+
+@pytest.mark.parametrize(
+    ("capability", "arch_list", "supported"),
+    [
+        ((5, 0), ("sm_50", "sm_60", "sm_90"), True),
+        ((5, 2), ("sm_50", "sm_60"), True),
+        ((5, 0), ("sm_75", "sm_80", "sm_90"), False),
+        ((5, 0), ("sm_52",), False),
+        ((9, 0), ("sm_80", "compute_80"), True),
+        ((7, 5), ("sm_80", "compute_80"), False),
+        ((12, 0), ("sm_100", "sm_120"), True),
+    ],
+)
+def test_cuda_architecture_check(
+    monkeypatch: pytest.MonkeyPatch,
+    capability: tuple[int, int],
+    arch_list: tuple[str, ...],
+    supported: bool,
+) -> None:
+    """Verify a CUDA GPU only counts when the PyTorch build has kernels for it (R-160).
+
+    Binary kernels run on the same major architecture with an equal or
+    higher minor version; PTX (``compute_XY``) also serves newer GPUs.
+
+    Args:
+        monkeypatch: Pytest fixture replacing ``torch``.
+        capability: Compute capability of the fake GPU.
+        arch_list: Architectures of the fake PyTorch build.
+        supported: Whether the GPU is expected to be usable.
+
+    Returns:
+        None. The assertion checks the detected device.
+    """
+    fake_torch(monkeypatch, cuda=True, capability=capability, arch_list=arch_list)
+
+    assert available_accelerator() == ("cuda" if supported else None)
+
+
+def test_unsupported_gpu_is_explained(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Verify a GPU without kernels in the PyTorch build gets a precise message.
+
+    Args:
+        monkeypatch: Pytest fixture replacing ``torch``.
+
+    Returns:
+        None. Assertions inspect the error message.
+    """
+    fake_torch(monkeypatch, cuda=True, capability=(5, 0), arch_list=("sm_75", "sm_80"))
+
+    with pytest.raises(FlashcardError) as error:
+        require_accelerator(allow_cpu=False)
+
+    message = str(error.value)
+    assert "Quadro K1200" in message
+    assert "sm_50" in message
+    assert "sm_75, sm_80" in message
+    assert "--pdf-mode local" in message
 
 
 def test_require_accelerator_without_gpu_points_to_alternatives(
@@ -341,4 +414,91 @@ def test_convert_pdf_checks_the_gpu_before_any_download(
             storage,
             describer=None,
             announce=lambda message: None,
+        )
+
+
+class FakeEnrichment:
+    """Stand in for a Docling enrichment model.
+
+    Attributes:
+        progress_step: Docling's stable step identifier.
+        elements_batch_size: Number of elements per model call.
+    """
+
+    def __init__(self, step: str) -> None:
+        """Create a fake model with Docling's default batch size.
+
+        Args:
+            step: Value of ``progress_step``, e.g. ``code_formula``.
+        """
+        self.progress_step = step
+        self.elements_batch_size = 5
+
+
+class FakeConverter:
+    """Stand in for Docling's ``DocumentConverter`` with one PDF pipeline.
+
+    Attributes:
+        models: Enrichment models of the pipeline.
+        initialized: Formats passed to ``initialize_pipeline``.
+        initialized_pipelines: Pipelines keyed like Docling's cache.
+    """
+
+    def __init__(self, *steps: str) -> None:
+        """Create the converter with enrichment models for the given steps.
+
+        Args:
+            *steps: ``progress_step`` values of the pipeline's models.
+        """
+        self.models = [FakeEnrichment(step) for step in steps]
+        self.initialized: list[object] = []
+        self.initialized_pipelines = {"pdf": SimpleNamespace(enrichment_pipe=self.models)}
+
+    def initialize_pipeline(self, input_format: object) -> None:
+        """Record the request to build the pipeline.
+
+        Args:
+            input_format: Docling input format.
+        """
+        self.initialized.append(input_format)
+
+
+def test_formula_batch_size_is_applied_to_the_formula_model() -> None:
+    """Verify only the formula model gets the configured batch size (R-159).
+
+    Returns:
+        None. Assertions compare batch sizes of both fake models.
+    """
+    converter = FakeConverter("picture_classification", "code_formula")
+
+    limit_formula_batch(converter, ConversionOptions(formula_batch_size=1), "pdf")
+
+    assert [model.elements_batch_size for model in converter.models] == [5, 1]
+    assert converter.initialized == ["pdf"]
+
+
+def test_formula_batch_size_is_ignored_without_formulas() -> None:
+    """Verify nothing is built when formulas are off or no size is set.
+
+    Returns:
+        None. The assertion checks that no pipeline was initialized.
+    """
+    converter = FakeConverter("code_formula")
+
+    limit_formula_batch(converter, ConversionOptions(formulas=False, formula_batch_size=1), "pdf")
+    limit_formula_batch(converter, ConversionOptions(), "pdf")
+
+    assert converter.initialized == []
+    assert converter.models[0].elements_batch_size == 5
+
+
+def test_missing_formula_model_is_reported() -> None:
+    """Verify a Docling version without the expected model fails loudly.
+
+    Returns:
+        None. The assertion checks the error message.
+    """
+    with pytest.raises(FlashcardError, match="formula_batch_size"):
+        limit_formula_batch(
+            FakeConverter("picture_classification"), ConversionOptions(formula_batch_size=2), "pdf"
         )

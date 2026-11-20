@@ -10,6 +10,7 @@ from anki_flashcards.config import (
     ModelProfile,
     PDFMode,
     PictureBackend,
+    load_config,
 )
 from anki_flashcards.documents import read_document
 from anki_flashcards.errors import FlashcardError
@@ -444,3 +445,43 @@ def test_conversion_diagnostics_hide_picture_credentials(tmp_path: Path, monkeyp
     assert conversion["picture_backend"] == "profile"
     assert conversion["picture_api_key"] == "set (hidden)"
     assert "vision-secret" not in str(diagnostics)
+
+
+def test_formula_batch_size_comes_from_yaml(tmp_path: Path) -> None:
+    """Verify ``pdf_conversion.formula_batch_size`` reaches the conversion options.
+
+    Args:
+        tmp_path: Temporary folder for the YAML file and input.
+
+    Returns:
+        None. Assertions check the resolved value and the diagnostics.
+    """
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text("pdf_conversion:\n  formula_batch_size: 1\n", encoding="utf-8")
+    config = load_config(config_path)
+
+    settings = resolve_generate_settings(
+        {"input_file": tmp_path / "a.pdf", "output": tmp_path / "a.apkg"}, config, config_path
+    )
+
+    assert settings.conversion.options.formula_batch_size == 1
+    assert (
+        configuration_diagnostics(settings, config_path)["pdf_conversion"]["formula_batch_size"]
+        == 1
+    )
+
+
+def test_formula_batch_size_must_be_positive(tmp_path: Path) -> None:
+    """Verify a batch size of zero is rejected by the schema.
+
+    Args:
+        tmp_path: Temporary folder for the YAML file.
+
+    Returns:
+        None. The assertion expects a configuration error.
+    """
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text("pdf_conversion:\n  formula_batch_size: 0\n", encoding="utf-8")
+
+    with pytest.raises(FlashcardError, match="formula_batch_size"):
+        load_config(config_path)
