@@ -6,6 +6,7 @@ so the base installation works without the optional ``pdf`` extra.
 
 import importlib.util
 import os
+import re
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -58,6 +59,11 @@ NO_GPU_HINT = (
     "--pdf-mode local reads only the embedded text layer. Use --allow-cpu to run on "
     "the CPU anyway."
 )
+ALTERNATIVES_HINT = (
+    "Alternatives: --pdf-mode native lets a verified provider model read the original "
+    "PDF, --pdf-mode local reads only the embedded text layer, --allow-cpu runs on the CPU."
+)
+ARCHITECTURE = re.compile(r"(sm|compute)_(\d+)")
 
 
 def convert_pdf(
@@ -125,9 +131,14 @@ def validate_pdf_input(path: Path) -> None:
 def available_accelerator() -> str | None:
     """Detect a GPU accelerator that PyTorch can use.
 
+    A CUDA GPU only counts if the installed PyTorch build contains kernels
+    for its architecture (R-160); ``torch.cuda.is_available()`` alone also
+    reports GPUs that the build no longer supports.
+
     Returns:
         ``cuda`` (also for AMD ROCm builds), ``xpu``, ``mps``, or None when
-        only the CPU is available or PyTorch is missing.
+        only the CPU is available, PyTorch is missing, or the CUDA GPU is
+        not supported by the PyTorch build.
     """
     try:
         import torch
@@ -139,9 +150,65 @@ def available_accelerator() -> str | None:
         ("mps", getattr(getattr(torch, "backends", None), "mps", None)),
     )
     for name, backend in checks:
-        if backend is not None and backend.is_available():
-            return name
+        if backend is None or not backend.is_available():
+            continue
+        if name == "cuda" and cuda_architecture_problem(torch) is not None:
+            continue
+        return name
     return None
+
+
+def cuda_architecture_problem(torch: Any) -> str | None:
+    """Explain why a PyTorch build cannot run kernels on CUDA device 0.
+
+    Args:
+        torch: The imported ``torch`` module with an available CUDA device.
+
+    Returns:
+        A message naming the GPU, its architecture, and the architectures of
+        the build, or None if the build supports the GPU, is a ROCm build,
+        or reports no architectures.
+    """
+    if getattr(getattr(torch, "version", None), "hip", None):
+        return None
+    major, minor = torch.cuda.get_device_capability(0)
+    built = list(torch.cuda.get_arch_list())
+    if not built or _architecture_supported(major, minor, built):
+        return None
+    return (
+        f"PyTorch {torch.__version__} has no kernels for the GPU "
+        f"{torch.cuda.get_device_name(0)} (sm_{major}{minor}); the build contains "
+        f"{', '.join(built)}. Install a PyTorch build that includes sm_{major}{minor}, "
+        "for Maxwell GPUs the CUDA 12.6 build (https://download.pytorch.org/whl/cu126)."
+    )
+
+
+def _architecture_supported(major: int, minor: int, built: list[str]) -> bool:
+    """Tell whether a build's architectures can run on a GPU.
+
+    Binary kernels (``sm_XY``) run on GPUs with the same major and an equal
+    or higher minor version; PTX (``compute_XY``) is compiled for any GPU
+    of the same or a newer architecture.
+
+    Args:
+        major: Major compute capability of the GPU.
+        minor: Minor compute capability of the GPU.
+        built: Entries of ``torch.cuda.get_arch_list()``.
+
+    Returns:
+        True if one entry fits the GPU.
+    """
+    for entry in built:
+        match = ARCHITECTURE.fullmatch(entry.rstrip("af"))
+        if match is None:
+            continue
+        number = int(match.group(2))
+        arch_major, arch_minor = divmod(number, 10)
+        if match.group(1) == "sm" and arch_major == major and arch_minor <= minor:
+            return True
+        if match.group(1) == "compute" and (arch_major, arch_minor) <= (major, minor):
+            return True
+    return False
 
 
 def require_accelerator(allow_cpu: bool) -> str:
@@ -154,15 +221,37 @@ def require_accelerator(allow_cpu: bool) -> str:
         The detected GPU device name, or ``cpu`` when explicitly allowed.
 
     Raises:
-        FlashcardError: If no GPU is available and CPU use was not allowed;
-            the message names ``--pdf-mode native`` and ``--pdf-mode local``.
+        FlashcardError: If no usable GPU is available and CPU use was not
+            allowed; the message names ``--pdf-mode native`` and
+            ``--pdf-mode local`` and, for a GPU the PyTorch build does not
+            support, the GPU and the build's architectures.
     """
     device = available_accelerator()
     if device is not None:
         return device
     if allow_cpu:
         return "cpu"
+    problem = _unsupported_cuda_gpu()
+    if problem is not None:
+        raise FlashcardError(f"{problem} {ALTERNATIVES_HINT}")
     raise FlashcardError(NO_GPU_HINT)
+
+
+def _unsupported_cuda_gpu() -> str | None:
+    """Describe a present CUDA GPU that the PyTorch build cannot use.
+
+    Returns:
+        The explanation from ``cuda_architecture_problem``, or None if there
+        is no CUDA GPU or PyTorch is missing.
+    """
+    try:
+        import torch
+    except ImportError:
+        return None
+    cuda = getattr(torch, "cuda", None)
+    if cuda is None or not cuda.is_available():
+        return None
+    return cuda_architecture_problem(torch)
 
 
 def create_describer(
