@@ -5,7 +5,7 @@
 Diese Regeln gelten für das gesamte Repository und für menschliche wie automatisierte Mitwirkende.
 
 - [requirements.md](./requirements.md) ist die verbindliche, konsolidierte Fach- und Technikspezifikation.
-- [req.md](./req.md), [req-2.md](./req-2.md), [req-3.md](./req-3.md) und [req-4.md](./req-4.md) sind die unveränderten Originalvorgaben.
+- [req.md](./req.md), [req-2.md](./req-2.md), [req-3.md](./req-3.md), [req-4.md](./req-4.md) und [req-5.md](./req-5.md) sind die unveränderten Originalvorgaben.
 - [README.md](./README.md) beschreibt den aktuell nutzbaren Stand und konkrete Bedienung.
 - [docs/entwicklerhandbuch.html](./docs/entwicklerhandbuch.html) erklärt Architektur, Module, Abläufe, Datenformate, Test-Nahtstellen und Erweiterungspunkte des aktuellen Codes.
 - Diese Datei beschreibt **wie** gearbeitet wird, nicht den behaupteten Implementierungsstand.
